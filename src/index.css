@@ -1,0 +1,699 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Discover Egypt Brand Identity Palette */
+  --primary: #12304A;          /* Midnight Indigo */
+  --primary-dark: #0A1C2C;
+  --primary-light: #1E466B;
+  --primary-surface: #F0F5FA;
+  
+  --secondary: #0F766E;        /* Turquoise Green */
+  --secondary-dark: #0A534E;
+  --secondary-light: #14B8A6;
+  --secondary-surface: #E6F7F5;
+  
+  --gold: #D4A64A;             /* Gold */
+  --gold-dark: #B8892D;
+  --gold-light: #F0C46B;
+  --gold-surface: #FDF8ED;
+  
+  --beige: #F3E9D2;            /* Sandy Beige */
+  --beige-dark: #DECFA9;
+  --beige-light: #FAF6ED;
+  
+  --white: #FFFFFF;
+  --surface: #F8FAFD;
+  --surface-low: #EFF4F9;
+  --surface-container: #E4ECF4;
+  
+  --text-main: #12304A;
+  --text-muted: #536476;
+  --text-light: #8A99A8;
+  
+  --border: #E2E8F0;
+  --border-focus: #0F766E;
+  --error: #DC2626;
+  --error-bg: #FEF2F2;
+  --success: #16A34A;
+  --success-bg: #F0FDF4;
+
+  /* Typography */
+  --font-arabic: 'Cairo', system-ui, -apple-system, sans-serif;
+  --font-latin: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(18, 48, 74, 0.06);
+  --shadow-md: 0 4px 14px rgba(18, 48, 74, 0.08);
+  --shadow-lg: 0 10px 30px rgba(18, 48, 74, 0.12);
+  --shadow-gold: 0 4px 20px rgba(212, 166, 74, 0.25);
+  --shadow-teal: 0 4px 20px rgba(15, 118, 110, 0.25);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--surface);
+  color: var(--text-main);
+  line-height: 1.6;
+  scroll-behavior: smooth;
+  transition: background-color 0.3s ease;
+}
+
+body {
+  overflow-x: clip;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+img, svg, video {
+  max-width: 100%;
+  display: block;
+}
+
+html[dir="rtl"], body[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+  font-family: var(--font-arabic);
+}
+
+html[dir="ltr"], body[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+  font-family: var(--font-latin), var(--font-arabic);
+}
+
+/* Bi-directional icon rotation helper for navigation arrows */
+html[dir="ltr"] .icon-flip-ltr {
+  transform: scaleX(-1);
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+.material-filled {
+  font-variation-settings: 'FILL' 1;
+}
+
+/* Base Links & Buttons */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  outline: none;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  outline: none;
+  max-width: 100%;
+}
+
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========================================================
+   UTILITY CONTAINERS
+   ======================================================== */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-inline: clamp(16px, 4vw, 32px);
+}
+
+.container-narrow {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding-inline: clamp(14px, 3vw, 24px);
+}
+
+/* ========================================================
+   BRAND BUTTON STYLES
+   ======================================================== */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--secondary) 0%, #0d615b 100%);
+  color: var(--white);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: var(--shadow-teal);
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(15, 118, 110, 0.35);
+  background: linear-gradient(135deg, #138980 0%, #0d615b 100%);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--gold) 0%, #be9037 100%);
+  color: #1a1505;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: var(--shadow-gold);
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.btn-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(212, 166, 74, 0.4);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--white);
+  color: var(--primary);
+  border: 1.5px solid var(--border);
+  padding: 11px 22px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-outline:hover {
+  background: var(--surface-low);
+  border-color: var(--primary);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.badge-unesco {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.badge-wonder {
+  background: rgba(254, 243, 199, 0.95);
+  color: #92400E;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.badge-secondary {
+  background: var(--secondary-surface);
+  color: var(--secondary);
+}
+
+.badge-primary {
+  background: var(--primary-surface);
+  color: var(--primary);
+}
+
+/* Glassmorphism Classes */
+.glass-header {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(18, 48, 74, 0.08);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-fade {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
+}
+
+/* Hide scrollbar for clean carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ========================================================
+   RESPONSIVE DESIGN SYSTEM
+   ======================================================== */
+
+/* 1. Brand Pillars Grid (Responsive 5 -> 3 -> 2 -> 1) */
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1100px) {
+  .pillars-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .pillars-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 359px) {
+  .pillars-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Pillar card mobile adjustments */
+@media (max-width: 600px) {
+  .pillars-grid > div {
+    padding: 16px 12px !important;
+  }
+  .pillars-grid > div h3 {
+    font-size: 14px !important;
+  }
+  .pillars-grid > div p {
+    font-size: 12px !important;
+  }
+}
+
+/* 2. Places Cards Grid (Responsive 3 -> 2 -> 1) */
+.places-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .places-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .places-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* 3. Hero Section Responsive Elements */
+.hero-title {
+  font-size: clamp(26px, 5.2vw, 50px);
+  font-weight: 900;
+  line-height: 1.25;
+  margin-bottom: 16px;
+  text-wrap: balance;
+  word-break: break-word;
+}
+
+.hero-subtitle {
+  font-size: clamp(13px, 2.2vw, 17px);
+  line-height: 1.7;
+  margin-bottom: 28px;
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+/* Hero search form — default horizontal layout */
+.hero-search-form {
+  display: flex;
+  align-items: center;
+  background-color: #FFFFFF;
+  border-radius: 18px;
+  padding: 6px 8px 6px 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+  max-width: 620px;
+  margin: 0 auto 20px;
+  width: 100%;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+/* Hero search input wrap — always flex */
+.hero-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mobile: stack search form vertically */
+@media (max-width: 600px) {
+  .hero-search-form {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    border-radius: 16px;
+    gap: 10px;
+    width: min(100%, 620px);
+  }
+  .hero-search-input-wrap {
+    width: 100%;
+    min-height: 46px;
+    background: var(--surface);
+    border-radius: 12px;
+    padding-inline: 12px;
+  }
+  .hero-search-btn {
+    width: 100% !important;
+    min-height: 46px !important;
+    height: 46px !important;
+    border-radius: 12px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-title {
+    font-size: clamp(22px, 7vw, 32px);
+  }
+  .hero-subtitle {
+    font-size: 13px;
+  }
+}
+
+/* Hero destination city pills */
+.hero-cities-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+
+@media (max-width: 480px) {
+  .hero-cities-wrap {
+    gap: 6px;
+    font-size: 12px;
+  }
+  .hero-city-pill {
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* 4. Journey Banner Responsive */
+.journey-banner {
+  padding: 36px 32px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--primary) 0%, #0c2134 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+  border: 2px solid var(--gold);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+  .journey-banner {
+    padding: 24px 20px;
+    border-radius: 20px;
+    gap: 20px;
+  }
+  .journey-banner-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px !important;
+  }
+  .journey-banner-actions a {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+/* 5. Mobile Bottom Nav & Floating Action Bar Content Protection */
+.place-details-bar {
+  bottom: 0;
+}
+
+@media (max-width: 860px) {
+  body {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom)); /* Prevents mobile bottom nav from covering content */
+  }
+  .place-details-bar {
+    bottom: calc(62px + env(safe-area-inset-bottom)); /* Lifts floating action bar above Mobile Bottom Nav */
+  }
+  .place-details-page {
+    padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important; /* Ensure content is never cut off */
+  }
+}
+
+/* ========================================================
+   NAVBAR RESPONSIVE SYSTEM
+   ======================================================== */
+
+/* Desktop nav & mobile menu button base states (controlled via inline style + media queries) */
+
+/* Tablet/Mobile: hide desktop nav, show hamburger */
+@media (max-width: 1024px) {
+  .desktop-nav {
+    display: none !important;
+  }
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+  .auth-label {
+    display: none !important;
+  }
+}
+
+/* Tablet: moderate adjustments */
+@media (max-width: 768px) {
+  .header-inner {
+    gap: 8px !important;
+    height: 64px !important;
+  }
+  .brand-shell {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  .nav-controls {
+    gap: 6px !important;
+  }
+}
+
+/* Mobile (<= 640px): hide top account button to prevent header cramping; accessible via MobileNav and Drawer */
+@media (max-width: 640px) {
+  .nav-account-btn {
+    display: none !important;
+  }
+  .nav-language-btn span:last-child {
+    display: none !important;
+  }
+  .nav-language-btn {
+    padding-inline: 8px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    justify-content: center !important;
+  }
+}
+
+/* Small mobile (<= 480px): optimize logo sizing and icon margins */
+@media (max-width: 480px) {
+  .header-inner {
+    height: 58px !important;
+    padding-inline: 12px !important;
+    gap: 6px !important;
+  }
+  .brand-shell {
+    gap: 8px !important;
+  }
+  .mobile-menu-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    border-radius: 10px !important;
+  }
+  .mobile-menu-btn span {
+    font-size: 22px !important;
+  }
+  .brand-logo-title {
+    font-size: 16px !important;
+    gap: 4px !important;
+  }
+  .brand-logo-symbol {
+    font-size: 14px !important;
+  }
+  .brand-logo-subtitle {
+    font-size: 9px !important;
+    letter-spacing: 0.06em !important;
+  }
+  .nav-action-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* Ultra compact (<= 360px): hide language switcher from header, fully preserved in Drawer */
+@media (max-width: 360px) {
+  .nav-language-btn {
+    display: none !important;
+  }
+}
+
+/* ========================================================
+   HERO SECTION MOBILE REFINEMENTS
+   ======================================================== */
+@media (max-width: 600px) {
+  .hero-section {
+    padding-block: 40px !important;
+    padding-inline: 20px !important;
+    min-height: auto !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-section {
+    padding-block: 32px !important;
+    padding-inline: 16px !important;
+  }
+}
+
+/* ========================================================
+   PILLARS SECTION MOBILE SPACING
+   ======================================================== */
+@media (max-width: 600px) {
+  .pillars-section {
+    padding-block: 40px 24px !important;
+  }
+  .pillars-section .section-header {
+    margin-bottom: 24px !important;
+  }
+  .pillars-section .section-header h2 {
+    font-size: clamp(20px, 5vw, 28px) !important;
+  }
+}
+
+/* ========================================================
+   MOBILE BOTTOM NAV
+   ======================================================== */
+@media (max-width: 860px) {
+  .mobile-bottom-nav {
+    display: block !important;
+  }
+}

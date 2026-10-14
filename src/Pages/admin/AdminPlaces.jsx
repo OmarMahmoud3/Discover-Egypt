@@ -1,0 +1,607 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useOutletContext, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { useAdminTranslation } from '../../lib/useAdminTranslation';
+import AdminHeader from '../../Components/admin/AdminHeader';
+import ConfirmDialog from '../../Components/admin/ConfirmDialog';
+
+const PAGE_SIZE = 12;
+
+/**
+ * AdminPlaces — Full places management with search, filter, sort, paginate,
+ * publish/unpublish, and delete functionality.
+ */
+export default function AdminPlaces() {
+  const { onToggleSidebar } = useOutletContext();
+  const { ta, isArabic } = useAdminTranslation();
+  const navigate = useNavigate();
+
+  // Data state
+  const [places, setPlaces] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Filters
+  const [search, setSearch] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState('date'); // 'date' | 'name'
+  const [page, setPage] = useState(0);
+
+  // Distinct cities / categories for filter dropdowns
+  const [cities, setCities] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  // Dialog state
+  const [confirmDialog, setConfirmDialog] = useState({ open: false });
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Fetch places
+  const fetchPlaces = useCallback(async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      let query = supabase
+        .from('places')
+        .select('id, name, name_en, slug, city, category, image_url, is_published, created_at', { count: 'exact' });
+
+      // Search
+      if (search.trim()) {
+        const term = `%${search.trim()}%`;
+        query = query.or(`name.ilike.${term},name_en.ilike.${term},city.ilike.${term},slug.ilike.${term}`);
+      }
+
+      // Filters
+      if (cityFilter) query = query.eq('city', cityFilter);
+      if (categoryFilter) query = query.eq('category', categoryFilter);
+      if (statusFilter === 'published') query = query.eq('is_published', true);
+      if (statusFilter === 'draft') query = query.eq('is_published', false);
+
+      // Sort
+      if (sortBy === 'name') {
+        query = query.order('name', { ascending: true });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Pagination
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      query = query.range(from, to);
+
+      const { data, error: fetchError, count } = await query;
+
+      if (fetchError) throw fetchError;
+
+      setPlaces(data || []);
+      setTotalCount(count || 0);
+    } catch (err) {
+      console.error('Error fetching places:', err);
+      setError(err?.message || 'Failed to load places');
+    } finally {
+      setLoading(false);
+    }
+  }, [search, cityFilter, categoryFilter, statusFilter, sortBy, page]);
+
+  // Fetch filter options
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      const [citiesRes, catsRes] = await Promise.all([
+        supabase.from('places').select('city'),
+        supabase.from('places').select('category'),
+      ]);
+
+      if (citiesRes.data) {
+        const unique = [...new Set(citiesRes.data.map((p) => p.city).filter(Boolean))];
+        setCities(unique.sort());
+      }
+      if (catsRes.data) {
+        const unique = [...new Set(catsRes.data.map((p) => p.category).filter(Boolean))];
+        setCategories(unique.sort());
+      }
+    } catch (err) {
+      console.warn('Failed to fetch filter options:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPlaces();
+  }, [fetchPlaces]);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, [fetchFilterOptions]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [search, cityFilter, categoryFilter, statusFilter, sortBy]);
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      return new Date(dateStr).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Publish / Unpublish
+  const handleTogglePublish = (place) => {
+    const willPublish = !place.is_published;
+    setConfirmDialog({
+      open: true,
+      title: willPublish ? ta('admin.confirmPublish') : ta('admin.confirmUnpublish'),
+      message: willPublish
+        ? ta('admin.confirmPublishMsg', { name: place.name })
+        : ta('admin.confirmUnpublishMsg', { name: place.name }),
+      variant: willPublish ? 'info' : 'warning',
+      onConfirm: async () => {
+        setActionLoading(true);
+        try {
+          const { error } = await supabase
+            .from('places')
+            .update({ is_published: willPublish })
+            .eq('id', place.id);
+
+          if (error) throw error;
+
+          showToast(willPublish ? ta('admin.placePublished') : ta('admin.placeUnpublished'));
+          fetchPlaces();
+        } catch (err) {
+          showToast(err.message || ta('admin.operationFailed'), 'error');
+        } finally {
+          setActionLoading(false);
+          setConfirmDialog({ open: false });
+        }
+      },
+    });
+  };
+
+  // Delete
+  const handleDelete = (place) => {
+    setConfirmDialog({
+      open: true,
+      title: ta('admin.confirmDelete'),
+      message: ta('admin.confirmDeleteMsg', { name: place.name }),
+      variant: 'danger',
+      onConfirm: async () => {
+        setActionLoading(true);
+        try {
+          const { error } = await supabase
+            .from('places')
+            .delete()
+            .eq('id', place.id);
+
+          if (error) throw error;
+
+          showToast(ta('admin.placeDeleted'));
+          fetchPlaces();
+          fetchFilterOptions();
+        } catch (err) {
+          showToast(err.message || ta('admin.operationFailed'), 'error');
+        } finally {
+          setActionLoading(false);
+          setConfirmDialog({ open: false });
+        }
+      },
+    });
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setCityFilter('');
+    setCategoryFilter('');
+    setStatusFilter('');
+    setSortBy('date');
+    setPage(0);
+  };
+
+  const hasActiveFilters = search || cityFilter || categoryFilter || statusFilter;
+
+  return (
+    <>
+      <AdminHeader
+        title={ta('admin.placesManagement')}
+        onToggleSidebar={onToggleSidebar}
+        breadcrumbs={[
+          { label: ta('admin.dashboard'), to: '/admin' },
+          { label: ta('admin.places') },
+        ]}
+      />
+
+      <div className="admin-content">
+        {error && (
+          <div className="admin-error-banner">
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
+            {error}
+          </div>
+        )}
+
+        <div className="admin-section-card">
+          {/* Filters */}
+          <div className="admin-filters-bar">
+            <input
+              type="search"
+              className="admin-search-input"
+              placeholder={ta('admin.searchPlaces')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <select
+              className="admin-filter-select"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+            >
+              <option value="">{ta('admin.allCities')}</option>
+              {cities.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            <select
+              className="admin-filter-select"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="">{ta('admin.allCategories')}</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            <select
+              className="admin-filter-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">{ta('admin.allStatuses')}</option>
+              <option value="published">{ta('admin.published')}</option>
+              <option value="draft">{ta('admin.draft')}</option>
+            </select>
+
+            <select
+              className="admin-filter-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{ minWidth: '140px' }}
+            >
+              <option value="date">{ta('admin.sortByDate')}</option>
+              <option value="name">{ta('admin.sortByName')}</option>
+            </select>
+
+            {hasActiveFilters && (
+              <button onClick={clearFilters} className="admin-btn admin-btn-ghost">
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>filter_alt_off</span>
+                {ta('admin.clearFilters')}
+              </button>
+            )}
+
+            <button onClick={fetchPlaces} className="admin-btn-icon" title={ta('admin.refresh')}>
+              <span className="material-symbols-outlined">refresh</span>
+            </button>
+
+            <div style={{ flex: 1 }} />
+
+            <Link to="/admin/places/new" className="admin-btn admin-btn-primary">
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>add</span>
+              {ta('admin.addPlace')}
+            </Link>
+          </div>
+
+          {/* Count indicator */}
+          {!loading && (
+            <div style={{ padding: '10px 20px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
+              {ta('admin.showing', { count: places.length, total: totalCount })}
+            </div>
+          )}
+
+          {/* Table — Desktop */}
+          {loading ? (
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="admin-skeleton admin-skeleton-card" />
+              ))}
+            </div>
+          ) : places.length === 0 ? (
+            <div className="admin-empty-state">
+              <div className="admin-empty-icon">
+                <span className="material-symbols-outlined">search_off</span>
+              </div>
+              <h3 className="admin-empty-title">
+                {hasActiveFilters ? (isArabic ? 'لا توجد نتائج' : 'No results') : ta('admin.noPlacesYet')}
+              </h3>
+              <p className="admin-empty-desc">
+                {hasActiveFilters
+                  ? (isArabic ? 'جرب تغيير معايير البحث' : 'Try different search criteria')
+                  : ta('admin.noPlacesDesc')}
+              </p>
+              {hasActiveFilters ? (
+                <button onClick={clearFilters} className="admin-btn admin-btn-outline">
+                  {ta('admin.clearFilters')}
+                </button>
+              ) : (
+                <Link to="/admin/places/new" className="admin-btn admin-btn-primary">
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>add</span>
+                  {ta('admin.addPlace')}
+                </Link>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="admin-table-wrap admin-table-desktop">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>{ta('admin.image')}</th>
+                      <th>{ta('admin.name')}</th>
+                      <th>{ta('admin.city')}</th>
+                      <th>{ta('admin.category')}</th>
+                      <th>{ta('admin.status')}</th>
+                      <th>{ta('admin.date')}</th>
+                      <th>{ta('admin.actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {places.map((place) => (
+                      <tr key={place.id}>
+                        <td>
+                          {place.image_url ? (
+                            <img
+                              src={place.image_url}
+                              alt={place.name}
+                              className="admin-table-thumb"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div
+                              className="admin-table-thumb"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--text-light)' }}>
+                                image
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 700 }}>{place.name}</div>
+                          {place.name_en && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }} dir="ltr">
+                              {place.name_en}
+                            </div>
+                          )}
+                        </td>
+                        <td>{place.city}</td>
+                        <td>{place.category}</td>
+                        <td>
+                          <span className={`admin-badge ${place.is_published ? 'admin-badge-published' : 'admin-badge-draft'}`}>
+                            {place.is_published ? ta('admin.published') : ta('admin.draft')}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                          {formatDate(place.created_at)}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={() => navigate(`/admin/places/${place.id}`)}
+                              className="admin-btn-icon"
+                              title={ta('admin.edit')}
+                            >
+                              <span className="material-symbols-outlined">edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleTogglePublish(place)}
+                              className="admin-btn-icon"
+                              title={place.is_published ? ta('admin.unpublish') : ta('admin.publish')}
+                              style={{
+                                borderColor: place.is_published ? '#FEF3C7' : 'var(--secondary-surface)',
+                                background: place.is_published ? '#FFFBEB' : 'var(--secondary-surface)',
+                              }}
+                            >
+                              <span className="material-symbols-outlined" style={{ color: place.is_published ? '#92400E' : 'var(--success)' }}>
+                                {place.is_published ? 'unpublished' : 'public'}
+                              </span>
+                            </button>
+                            {place.slug && (
+                              <Link
+                                to={`/places/${place.slug}`}
+                                target="_blank"
+                                className="admin-btn-icon"
+                                title={ta('admin.preview')}
+                              >
+                                <span className="material-symbols-outlined">open_in_new</span>
+                              </Link>
+                            )}
+                            <button
+                              onClick={() => handleDelete(place)}
+                              className="admin-btn-icon"
+                              title={ta('admin.delete')}
+                              style={{ borderColor: 'rgba(220,38,38,0.15)', background: 'var(--error-bg)' }}
+                            >
+                              <span className="material-symbols-outlined" style={{ color: 'var(--error)' }}>delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="admin-mobile-cards" style={{ padding: '12px' }}>
+                {places.map((place) => (
+                  <div key={place.id} className="admin-mobile-card">
+                    <div className="admin-mobile-card-header">
+                      {place.image_url ? (
+                        <img
+                          src={place.image_url}
+                          alt={place.name}
+                          style={{ width: '56px', height: '42px', borderRadius: '10px', objectFit: 'cover' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '56px',
+                            height: '42px',
+                            borderRadius: '10px',
+                            background: 'var(--surface-low)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--text-light)' }}>image</span>
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>{place.name}</div>
+                        {place.name_en && (
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }} dir="ltr">{place.name_en}</div>
+                        )}
+                      </div>
+                      <span className={`admin-badge ${place.is_published ? 'admin-badge-published' : 'admin-badge-draft'}`}>
+                        {place.is_published ? ta('admin.published') : ta('admin.draft')}
+                      </span>
+                    </div>
+                    <div className="admin-mobile-card-body">
+                      <div className="admin-mobile-card-row">
+                        <span className="admin-mobile-card-label">{ta('admin.city')}</span>
+                        <span>{place.city}</span>
+                      </div>
+                      <div className="admin-mobile-card-row">
+                        <span className="admin-mobile-card-label">{ta('admin.category')}</span>
+                        <span>{place.category}</span>
+                      </div>
+                      <div className="admin-mobile-card-row">
+                        <span className="admin-mobile-card-label">{ta('admin.date')}</span>
+                        <span>{formatDate(place.created_at)}</span>
+                      </div>
+                    </div>
+                    <div className="admin-mobile-card-actions">
+                      <button
+                        onClick={() => navigate(`/admin/places/${place.id}`)}
+                        className="admin-btn admin-btn-outline"
+                        style={{ flex: 1 }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>edit</span>
+                        {ta('admin.edit')}
+                      </button>
+                      <button
+                        onClick={() => handleTogglePublish(place)}
+                        className="admin-btn admin-btn-outline"
+                        style={{ flex: 1 }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                          {place.is_published ? 'unpublished' : 'public'}
+                        </span>
+                        {place.is_published ? ta('admin.unpublish') : ta('admin.publish')}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(place)}
+                        className="admin-btn admin-btn-danger"
+                        style={{ flex: 0 }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="admin-pagination">
+                  <button
+                    className="admin-pagination-btn"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                  >
+                    <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '16px' }}>
+                      chevron_right
+                    </span>
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
+                    let pageNum = i;
+                    if (totalPages > 7) {
+                      if (page < 3) {
+                        pageNum = i;
+                      } else if (page > totalPages - 4) {
+                        pageNum = totalPages - 7 + i;
+                      } else {
+                        pageNum = page - 3 + i;
+                      }
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        className={`admin-pagination-btn ${page === pageNum ? 'active' : ''}`}
+                        onClick={() => setPage(pageNum)}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    );
+                  })}
+                  <button
+                    className="admin-pagination-btn"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                  >
+                    <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '16px' }}>
+                      chevron_left
+                    </span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        confirmLabel={ta('admin.confirm')}
+        cancelLabel={ta('admin.cancel')}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ open: false })}
+        loading={actionLoading}
+      />
+
+      {/* Toast */}
+      {toast && (
+        <div className={`admin-toast ${toast.type === 'error' ? 'admin-toast-error' : 'admin-toast-success'}`}>
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+            {toast.type === 'error' ? 'error' : 'check_circle'}
+          </span>
+          {toast.message}
+        </div>
+      )}
+    </>
+  );
+}

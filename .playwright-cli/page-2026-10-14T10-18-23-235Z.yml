@@ -1,0 +1,309 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "اكتشف مصر ☥ DISCOVER EGYPT" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: اكتشف مصر
+            - generic "مفتاح الحياة (عنخ)" [ref=e24]: ☥
+          - generic [ref=e25]: DISCOVER EGYPT
+      - navigation [ref=e26]:
+        - link "home الرئيسية" [ref=e27] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e28]: home
+          - generic [ref=e29]: الرئيسية
+        - link "explore استكشف الأماكن" [ref=e30] [cursor=pointer]:
+          - /url: /explore
+          - generic [ref=e31]: explore
+          - generic [ref=e32]: استكشف الأماكن
+        - link "visibility تفاصيل المعالم" [ref=e33] [cursor=pointer]:
+          - /url: /places/giza-pyramids
+          - generic [ref=e34]: visibility
+          - generic [ref=e35]: تفاصيل المعالم
+        - link "favorite المفضلة 3" [ref=e36] [cursor=pointer]:
+          - /url: /favorites
+          - generic [ref=e37]: favorite
+          - generic [ref=e38]: المفضلة
+          - generic [ref=e39]: "3"
+      - generic [ref=e40]:
+        - button "البحث" [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]: search
+        - button "language English" [ref=e43] [cursor=pointer]:
+          - generic [ref=e44]: language
+          - generic [ref=e45]: English
+        - button "person دخول" [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]: person
+          - generic [ref=e49]: دخول
+  - dialog "القائمة الرئيسية" [ref=e50]:
+    - generic [ref=e51]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]: اكتشف مصر
+          - generic "مفتاح الحياة (عنخ)" [ref=e68]: ☥
+        - generic [ref=e69]: DISCOVER EGYPT
+      - button "إغلاق" [ref=e70] [cursor=pointer]:
+        - generic [ref=e71]: close
+    - generic [ref=e72]:
+      - button "العربية" [ref=e73] [cursor=pointer]
+      - button "English" [ref=e74] [cursor=pointer]
+    - navigation [ref=e75]:
+      - link "home الرئيسية" [ref=e76] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e77]:
+          - generic [ref=e78]: home
+          - generic [ref=e79]: الرئيسية
+      - link "explore استكشف الأماكن" [ref=e80] [cursor=pointer]:
+        - /url: /explore
+        - generic [ref=e81]:
+          - generic [ref=e82]: explore
+          - generic [ref=e83]: استكشف الأماكن
+      - link "visibility تفاصيل المعالم" [ref=e84] [cursor=pointer]:
+        - /url: /places/giza-pyramids
+        - generic [ref=e85]:
+          - generic [ref=e86]: visibility
+          - generic [ref=e87]: تفاصيل المعالم
+      - link "favorite المفضلة 3" [ref=e88] [cursor=pointer]:
+        - /url: /favorites
+        - generic [ref=e89]:
+          - generic [ref=e90]: favorite
+          - generic [ref=e91]: المفضلة
+        - generic [ref=e92]: "3"
+    - button "login دخول" [ref=e94] [cursor=pointer]:
+      - generic [ref=e95]: login
+      - generic [ref=e96]: دخول
+  - main [ref=e97]:
+    - generic [ref=e98]:
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - generic [ref=e104]: ☥
+          - generic [ref=e105]: بوابتك الرسمية لاستكشاف أرض الحضارة والسحر
+          - generic [ref=e106]: ☥
+        - heading "اكتشف عظمة مصر عبر آلاف السنين" [level=1] [ref=e107]
+        - paragraph [ref=e108]: من أهرامات الجيزة الخالدة ومعابد الفراعنة بطيبة، إلى شواطئ البحر الأحمر الفيروزية وأزقة القاهرة الفاطمية العتيقة.
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - generic [ref=e111]: search
+            - textbox "ابحث عن وجهة، معبد، متحف، أو مدينة..." [ref=e112]
+          - button "استكشف" [ref=e113] [cursor=pointer]
+        - generic [ref=e115]:
+          - generic [ref=e116]: "وجهات سريعة:"
+          - button "الجيزة" [ref=e117] [cursor=pointer]
+          - button "الأقصر" [ref=e118] [cursor=pointer]
+          - button "القاهرة" [ref=e119] [cursor=pointer]
+          - button "أسوان" [ref=e120] [cursor=pointer]
+          - button "الإسكندرية" [ref=e121] [cursor=pointer]
+      - generic [ref=e123]:
+        - generic [ref=e124]:
+          - text: هويتنا ورسالتنا
+          - heading "ركائز تجربة \"اكتشف مصر\"" [level=2] [ref=e125]
+          - paragraph [ref=e126]: معايير صُممت لتمنحك رحلة غنية بالأصالة، الدقة، والأمان في كل خطوة.
+        - generic [ref=e127]:
+          - generic [ref=e128]:
+            - generic [ref=e129]: explore
+            - heading "استكشف بأصالة" [level=3] [ref=e131]
+            - generic [ref=e132]: Explore Authentically
+            - paragraph [ref=e133]: جولات وتجارب واقعية تنبض بروح مصر الحقيقية وتفاصيلها العريقة.
+          - generic [ref=e134]:
+            - generic [ref=e135]: change_history
+            - heading "متجذر في الحضارة" [level=3] [ref=e137]
+            - generic [ref=e138]: Rooted in Heritage
+            - paragraph [ref=e139]: أكثر من 7000 عام من السحر والآثار والمعابد الخالدة بين يديك.
+          - generic [ref=e140]:
+            - generic [ref=e141]: verified_user
+            - heading "موثوق ومُعتمد" [level=3] [ref=e143]
+            - generic [ref=e144]: Trusted & Reliable
+            - paragraph [ref=e145]: معلومات رسمية، إرشادات محدثة، وتنسيق دقيق لرحلة ممتعة وآمنة.
+          - generic [ref=e146]:
+            - generic [ref=e147]: navigation
+            - heading "مرشدك في كل خطوة" [level=3] [ref=e149]
+            - generic [ref=e150]: Guiding Your Journey
+            - paragraph [ref=e151]: مسارات جغرافية ذكية وإحداثيات GPS مباشرة لأجمل الوجهات.
+          - generic [ref=e152]:
+            - generic [ref=e153]: favorite
+            - heading "صُنع لعشاق مصر" [level=3] [ref=e155]
+            - generic [ref=e156]: Made for Egypt Lovers
+            - paragraph [ref=e157]: صُمم خصيصاً ليمنح كل زائر تجربة استثنائية لا تُنسى في أرض الكنانة.
+      - generic [ref=e159]:
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - text: روائع لا تُفوّت
+            - heading "أبرز المعالم الأثرية والتاريخية" [level=2] [ref=e162]
+          - link "عرض جميع الأماكن arrow_back" [ref=e163] [cursor=pointer]:
+            - /url: /explore
+            - generic [ref=e164]: عرض جميع الأماكن
+            - generic [ref=e165]: arrow_back
+        - generic [ref=e166]:
+          - generic [ref=e167]:
+            - generic [ref=e168]:
+              - img "أهرامات الجيزة وتمثال أبو الهول" [ref=e169]
+              - generic [ref=e171]: الجيزة
+              - button "home.removeFavorite" [ref=e172] [cursor=pointer]:
+                - generic [ref=e173]: favorite
+              - generic [ref=e174]:
+                - generic [ref=e175]: star
+                - generic [ref=e176]: "4.9"
+                - generic [ref=e177]: (142,850)
+            - generic [ref=e178]:
+              - generic [ref=e179]:
+                - heading "أهرامات الجيزة وتمثال أبو الهول" [level=3] [ref=e180]
+                - paragraph [ref=e181]: شُيدت أهرامات الجيزة الخالدة خلال عصر الأسرة الرابعة من الدولة القديمة (نحو 2580 - 2560 ق.م)، لتمثل أوج الهندسة المعمارية والفلكية في مصر القديمة. يرتفع الهرم الأكبر للملك خوفو كمعجزة صامدة لأكثر من 4500 عام، وتكتمل اللوحة بهرمي خفرع ومنكاورع وحارس الهضبة الأبدي تمثال أبو الهول المنحوت من صخرة حجرية واحدة.
+              - generic [ref=e182]:
+                - generic [ref=e183]:
+                  - generic [ref=e184]: schedule
+                  - generic [ref=e185]: 3 إلى 4 ساعات
+                - link "التفاصيل arrow_back" [ref=e186] [cursor=pointer]:
+                  - /url: /places/giza-pyramids
+                  - generic [ref=e187]: التفاصيل
+                  - generic [ref=e188]: arrow_back
+          - generic [ref=e189]:
+            - generic [ref=e190]:
+              - img "مجمع معابد الكرنك" [ref=e191]
+              - generic [ref=e193]: الأقصر
+              - button "home.removeFavorite" [ref=e194] [cursor=pointer]:
+                - generic [ref=e195]: favorite
+              - generic [ref=e196]:
+                - generic [ref=e197]: star
+                - generic [ref=e198]: "4.9"
+                - generic [ref=e199]: (98,400)
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - heading "مجمع معابد الكرنك" [level=3] [ref=e202]
+                - paragraph [ref=e203]: أكبر دور عبادة شُيدت في العالم القديم، استمر بناؤها وتوسعتها لأكثر من 2000 عام بمشاركة نحو 30 فرعوناً. تميزها صالة الأعمدة الضخمة المكونة من 134 عموداً أسطورياً تحاكي غابة البردي على ضفاف النيل الخالد.
+              - generic [ref=e204]:
+                - generic [ref=e205]:
+                  - generic [ref=e206]: schedule
+                  - generic [ref=e207]: 2 إلى 3 ساعات
+                - link "التفاصيل arrow_back" [ref=e208] [cursor=pointer]:
+                  - /url: /places/karnak-temple
+                  - generic [ref=e209]: التفاصيل
+                  - generic [ref=e210]: arrow_back
+          - generic [ref=e211]:
+            - generic [ref=e212]:
+              - img "سوق خان الخليلي وحي المعز" [ref=e213]
+              - generic [ref=e215]: القاهرة
+              - button "home.removeFavorite" [ref=e216] [cursor=pointer]:
+                - generic [ref=e217]: favorite
+              - generic [ref=e218]:
+                - generic [ref=e219]: star
+                - generic [ref=e220]: "4.8"
+                - generic [ref=e221]: (87,200)
+            - generic [ref=e222]:
+              - generic [ref=e223]:
+                - heading "سوق خان الخليلي وحي المعز" [level=3] [ref=e224]
+                - paragraph [ref=e225]: قلب القاهرة الفاطمية والمملوكية النابض بالألوان والتاريخ لأكثر من 600 عام. يتميز بروائح البخور والتوابل والمشغولات النحاسية والفضية العتيقة، ومقاهيه الأدبية التاريخية مثل مقهى الفيشاوي المتصل بشارع المعز لدين الله الفاطمي.
+              - generic [ref=e226]:
+                - generic [ref=e227]:
+                  - generic [ref=e228]: schedule
+                  - generic [ref=e229]: مساءً (ساعتان فأكثر)
+                - link "التفاصيل arrow_back" [ref=e230] [cursor=pointer]:
+                  - /url: /places/khan-el-khalili
+                  - generic [ref=e231]: التفاصيل
+                  - generic [ref=e232]: arrow_back
+          - generic [ref=e233]:
+            - generic [ref=e234]:
+              - img "معبد فيلة وجزيرة أجيليكا" [ref=e235]
+              - generic [ref=e237]: أسوان
+              - button "home.addFavorite" [ref=e238] [cursor=pointer]:
+                - generic [ref=e239]: favorite_border
+              - generic [ref=e240]:
+                - generic [ref=e241]: star
+                - generic [ref=e242]: "4.9"
+                - generic [ref=e243]: (45,100)
+            - generic [ref=e244]:
+              - generic [ref=e245]:
+                - heading "معبد فيلة وجزيرة أجيليكا" [level=3] [ref=e246]
+                - paragraph [ref=e247]: معبد الإلهة إيزيس الأسطوري الذي أُنقذ بنقله حجراً بحجر إلى جزيرة أجيليكا بعد بناء السد العالي، ليبقى صامداً وسط مياه النيل الزرقاء الهادئة كأحد أروع المعابد البطلمية والرومانية.
+              - generic [ref=e248]:
+                - generic [ref=e249]:
+                  - generic [ref=e250]: schedule
+                  - generic [ref=e251]: ساعتان إلى 3 ساعات
+                - link "التفاصيل arrow_back" [ref=e252] [cursor=pointer]:
+                  - /url: /places/philae-temple
+                  - generic [ref=e253]: التفاصيل
+                  - generic [ref=e254]: arrow_back
+          - generic [ref=e255]:
+            - generic [ref=e256]:
+              - img "قلعة قايتباي والبحر المتوسط" [ref=e257]
+              - generic [ref=e259]: الإسكندرية
+              - button "home.addFavorite" [ref=e260] [cursor=pointer]:
+                - generic [ref=e261]: favorite_border
+              - generic [ref=e262]:
+                - generic [ref=e263]: star
+                - generic [ref=e264]: "4.7"
+                - generic [ref=e265]: (52,300)
+            - generic [ref=e266]:
+              - generic [ref=e267]:
+                - heading "قلعة قايتباي والبحر المتوسط" [level=3] [ref=e268]
+                - paragraph [ref=e269]: شيدها السلطان المملوكي الأشرف قايتباي في القرن الخامس عشر الميلادي على نفس موقع فنار الإسكندرية القديم (إحدى عجائب العالم القديم) لحماية السواحل المصرية من الغزوات.
+              - generic [ref=e270]:
+                - generic [ref=e271]:
+                  - generic [ref=e272]: schedule
+                  - generic [ref=e273]: ساعة ونصف إلى ساعتين
+                - link "التفاصيل arrow_back" [ref=e274] [cursor=pointer]:
+                  - /url: /places/qaitbay-citadel
+                  - generic [ref=e275]: التفاصيل
+                  - generic [ref=e276]: arrow_back
+      - generic [ref=e279]:
+        - generic [ref=e280]:
+          - generic [ref=e281]:
+            - generic [ref=e282]: auto_awesome
+            - generic [ref=e283]: خطط رحلتك السياحية المتكاملة
+          - heading "احفظ وجهاتك المفضلة وسافر بدون اتصال بالإنترنت" [level=2] [ref=e284]
+          - paragraph [ref=e285]: يمكنك تخصيص جدول رحلتك، حفظ تذاكر وإرشادات الزيارة الميدانية، والوصول إلى الإحداثيات الجغرافية المباشرة في أي وقت.
+        - generic [ref=e286]:
+          - link "bookmark عرض الأماكن المحفوظة" [ref=e287] [cursor=pointer]:
+            - /url: /favorites
+            - generic [ref=e288]: bookmark
+            - generic [ref=e289]: عرض الأماكن المحفوظة
+          - link "تصفح الكل" [ref=e290] [cursor=pointer]:
+            - /url: /explore
+  - contentinfo [ref=e292]:
+    - generic [ref=e293]:
+      - generic [ref=e294]:
+        - generic [ref=e295]:
+          - generic [ref=e310]:
+            - generic [ref=e311]:
+              - generic [ref=e312]: اكتشف مصر
+              - generic "مفتاح الحياة (عنخ)" [ref=e313]: ☥
+            - generic [ref=e314]: DISCOVER EGYPT
+          - paragraph [ref=e315]: المنصة السياحية والتراثية الرائدة لاستكشاف معالم مصر الخالدة، عجائب الفراعنة، أسرار النيل، والتجارب الثقافية الأصيلة عبر تقنيات حديثة وتوجيهات معتمدة.
+          - generic [ref=e316]:
+            - generic "#12304A Midnight Indigo" [ref=e317]
+            - generic "#0F766E Turquoise Green" [ref=e318]
+            - generic "#D4A64A Gold" [ref=e319]
+            - generic "#F3E9D2 Sandy Beige" [ref=e320]
+            - generic [ref=e321]: الهوية البصرية الرسمية
+        - generic [ref=e322]:
+          - heading "أبرز الوجهات التاريخية" [level=4] [ref=e323]
+          - list [ref=e324]:
+            - listitem [ref=e325]:
+              - link "أهرامات الجيزة وأبو الهول" [ref=e326] [cursor=pointer]:
+                - /url: /places/giza-pyramids
+            - listitem [ref=e327]:
+              - link "معابد الكرنك وطريق الكباش بالأقصر" [ref=e328] [cursor=pointer]:
+                - /url: /places/karnak-temple
+            - listitem [ref=e329]:
+              - link "خان الخليلي وشارع المعز بالقاهرة" [ref=e330] [cursor=pointer]:
+                - /url: /places/khan-el-khalili
+            - listitem [ref=e331]:
+              - link "معبد فيلة ونيل أسوان" [ref=e332] [cursor=pointer]:
+                - /url: /places/philae-temple
+        - generic [ref=e333]:
+          - heading "ركائز المنصة" [level=4] [ref=e334]
+          - list [ref=e335]:
+            - listitem [ref=e336]:
+              - generic [ref=e337]: explore
+              - generic [ref=e338]: استكشاف أصيل (Explore Authentically)
+            - listitem [ref=e339]:
+              - generic [ref=e340]: change_history
+              - generic [ref=e341]: تراث ضارب في التاريخ (Rooted in Heritage)
+            - listitem [ref=e342]:
+              - generic [ref=e343]: verified_user
+              - generic [ref=e344]: إرشادات موثوقة (Trusted & Reliable)
+            - listitem [ref=e345]:
+              - generic [ref=e346]: favorite
+              - generic [ref=e347]: صُنع لعشاق مصر (Made for Egypt Lovers)
+      - generic [ref=e348]:
+        - generic [ref=e349]: جميع الحقوق محفوظة © 2026 اكتشف مصر — Discover Egypt.
+        - generic [ref=e350]: بوابة السياحة والتراث المصري • القاهرة — الجيزة — الأقصر — أسوان

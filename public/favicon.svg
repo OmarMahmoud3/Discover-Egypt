@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <!-- Circular Base -->
+  <circle cx="60" cy="60" r="56" fill="#F3E9D2" stroke="#D4A64A" stroke-width="2.5"/>
+  <circle cx="60" cy="60" r="50" fill="#FFFFFF"/>
+  
+  <!-- Stepped Pyramid Shadow & Body (Midnight Indigo #12304A) -->
+  <!-- Left Side Steps -->
+  <path d="M60 48 L28 88 L35 88 L60 56 Z" fill="#0D2235"/>
+  <path d="M36 84 L60 54 L60 51 L32 86 Z" fill="#12304A"/>
+  
+  <!-- Main Pyramid Body -->
+  <polygon points="60,42 26,88 94,88" fill="#12304A"/>
+  
+  <!-- Right Light Face (Teal Accent #0F766E) -->
+  <polygon points="60,42 60,88 94,88" fill="#0F766E" opacity="0.9"/>
+  
+  <!-- Ascending Sun Rays / Road Stripes (Sandy Beige & Gold) -->
+  <polygon points="60,46 54,88 66,88" fill="#D4A64A"/>
+  <polygon points="60,50 57,88 63,88" fill="#F3E9D2"/>
+  
+  <!-- Golden Egyptian Ankh Motif subtle overlay -->
+  <circle cx="60" cy="30" r="14" fill="#0F766E" stroke="#12304A" stroke-width="2"/>
+  <circle cx="60" cy="30" r="6" fill="#D4A64A"/>
+</svg>

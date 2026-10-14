@@ -1,0 +1,332 @@
+{
+  "steps": [],
+  "issuesFound": [],
+  "consoleLogs": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 934,
+        "column": 8,
+        "lineNumber": 934,
+        "columnNumber": 8
+      }
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=fcaffad3",
+        "line": 15804,
+        "column": 48,
+        "lineNumber": 15804,
+        "columnNumber": 48
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 1047,
+        "column": 11,
+        "lineNumber": 1047,
+        "columnNumber": 11
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 934,
+        "column": 8,
+        "lineNumber": 934,
+        "columnNumber": 8
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 1047,
+        "column": 11,
+        "lineNumber": 1047,
+        "columnNumber": 11
+      }
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=fcaffad3",
+        "line": 15804,
+        "column": 48,
+        "lineNumber": 15804,
+        "columnNumber": 48
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 934,
+        "column": 8,
+        "lineNumber": 934,
+        "columnNumber": 8
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 1047,
+        "column": 11,
+        "lineNumber": 1047,
+        "columnNumber": 11
+      }
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=fcaffad3",
+        "line": 15804,
+        "column": 48,
+        "lineNumber": 15804,
+        "columnNumber": 48
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 934,
+        "column": 8,
+        "lineNumber": 934,
+        "columnNumber": 8
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 1047,
+        "column": 11,
+        "lineNumber": 1047,
+        "columnNumber": 11
+      }
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=fcaffad3",
+        "line": 15804,
+        "column": 48,
+        "lineNumber": 15804,
+        "columnNumber": 48
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 934,
+        "column": 8,
+        "lineNumber": 934,
+        "columnNumber": 8
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 1047,
+        "column": 11,
+        "lineNumber": 1047,
+        "columnNumber": 11
+      }
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=fcaffad3",
+        "line": 15804,
+        "column": 48,
+        "lineNumber": 15804,
+        "columnNumber": 48
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 934,
+        "column": 8,
+        "lineNumber": 934,
+        "columnNumber": 8
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 1047,
+        "column": 11,
+        "lineNumber": 1047,
+        "columnNumber": 11
+      }
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=fcaffad3",
+        "line": 15804,
+        "column": 48,
+        "lineNumber": 15804,
+        "columnNumber": 48
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 934,
+        "column": 8,
+        "lineNumber": 934,
+        "columnNumber": 8
+      }
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5174/@vite/client",
+        "line": 1047,
+        "column": 11,
+        "lineNumber": 1047,
+        "columnNumber": 11
+      }
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=fcaffad3",
+        "line": 15804,
+        "column": 48,
+        "lineNumber": 15804,
+        "columnNumber": 48
+      }
+    }
+  ],
+  "pageErrors": [],
+  "requestFailures": [],
+  "screenshots": [
+    {
+      "name": "01_home_ar",
+      "caption": "الصفحة الرئيسية باللغة العربية (الافتراضية)",
+      "filename": "01_home_ar.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\01_home_ar.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\01_home_ar.png"
+    },
+    {
+      "name": "02_home_en",
+      "caption": "الصفحة الرئيسية بعد التبديل للغة الإنجليزية",
+      "filename": "02_home_en.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\02_home_en.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\02_home_en.png"
+    },
+    {
+      "name": "03_search_filter",
+      "caption": "اختبار شريط البحث وأزرار الوجهات السريعة (الأقصر)",
+      "filename": "03_search_filter.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\03_search_filter.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\03_search_filter.png"
+    },
+    {
+      "name": "04_favorite_toggle",
+      "caption": "تبديل حالة الإضافة/الحذف من المفضلة في البطاقات",
+      "filename": "04_favorite_toggle.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\04_favorite_toggle.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\04_favorite_toggle.png"
+    },
+    {
+      "name": "05_explore_page",
+      "caption": "صفحة استكشاف المعالم (/explore)",
+      "filename": "05_explore_page.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\05_explore_page.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\05_explore_page.png"
+    },
+    {
+      "name": "06_place_details",
+      "caption": "صفحة تفاصيل المعلم (/places/giza-pyramids)",
+      "filename": "06_place_details.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\06_place_details.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\06_place_details.png"
+    },
+    {
+      "name": "07_favorites_page",
+      "caption": "صفحة الأماكن المفضلة المحفوظة (/favorites)",
+      "filename": "07_favorites_page.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\07_favorites_page.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\07_favorites_page.png"
+    },
+    {
+      "name": "08_login_modal",
+      "caption": "نافذة تسجيل الدخول المنبثقة (Auth Modal)",
+      "filename": "08_login_modal.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\08_login_modal.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\08_login_modal.png"
+    },
+    {
+      "name": "08b_login_validation",
+      "caption": "التحقق من صحة مدخلات نموذج الدخول (Form Validation)",
+      "filename": "08b_login_validation.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\08b_login_validation.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\08b_login_validation.png"
+    },
+    {
+      "name": "09_admin_unauthorized",
+      "caption": "محاولة الوصول إلى لوحة الإدارة (/admin) لغير المصرح لهم",
+      "filename": "09_admin_unauthorized.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\09_admin_unauthorized.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\09_admin_unauthorized.png"
+    },
+    {
+      "name": "10_not_found",
+      "caption": "صفحة الخطأ 404 (الصفحة غير موجودة)",
+      "filename": "10_not_found.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\10_not_found.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\10_not_found.png"
+    },
+    {
+      "name": "11_mobile_view",
+      "caption": "معاينة الواجهة على الهاتف المحمول (Mobile Viewport)",
+      "filename": "11_mobile_view.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\11_mobile_view.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\11_mobile_view.png"
+    },
+    {
+      "name": "12_mobile_menu_drawer",
+      "caption": "قائمة التنقل الجانبية للهاتف المحمول (Mobile Drawer)",
+      "filename": "12_mobile_menu_drawer.png",
+      "localPath": "C:\\Users\\om776\\Desktop\\Discover Egypt\\discover-egypt\\tests\\test-results\\screenshots\\12_mobile_menu_drawer.png",
+      "artifactPath": "C:\\Users\\om776\\.gemini\\antigravity-ide\\brain\\cf1f975c-7b39-4934-b30d-0c0d1d60f82a\\12_mobile_menu_drawer.png"
+    }
+  ]
+}
