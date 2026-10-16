@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import SearchModal from './SearchModal';
@@ -38,13 +38,25 @@ export default function Navbar({ session, onOpenAuth }) {
     return () => { document.body.style.overflow = ''; };
   }, [drawerOpen]);
 
-  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  const menuTriggerRef = useRef(null);
+  const searchTriggerRef = useRef(null);
+
+  const handleOpenDrawer = (e) => {
+    menuTriggerRef.current = e.currentTarget;
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    if (menuTriggerRef.current && typeof menuTriggerRef.current.focus === 'function') {
+      menuTriggerRef.current.focus();
+    }
+  }, []);
 
   const navLinks = [
     { path: '/', label: t('nav.home'), icon: 'home' },
     { path: '/explore', label: t('nav.explore'), icon: 'explore' },
-    { path: '/places/giza-pyramids', label: t('nav.details'), icon: 'visibility' },
-    { path: '/favorites', label: t('nav.favorites'), icon: 'bookmark', badge: favoriteIds.length },
+    { path: '/favorites', label: t('nav.favorites'), icon: 'bookmark', badge: Array.isArray(favoriteIds) ? favoriteIds.length : 0 },
   ];
 
   const isActive = (path) => {
@@ -128,7 +140,8 @@ export default function Navbar({ session, onOpenAuth }) {
           {/* Menu Toggle & Brand Logo */}
           <div className="brand-shell" style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flexShrink: 1 }}>
             <button
-              onClick={() => setDrawerOpen(true)}
+              ref={menuTriggerRef}
+              onClick={handleOpenDrawer}
               className="mobile-menu-btn"
               aria-label={t('nav.menu')}
               aria-expanded={drawerOpen}
@@ -241,6 +254,7 @@ export default function Navbar({ session, onOpenAuth }) {
           <div className="nav-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {/* Search Trigger */}
             <button
+              ref={searchTriggerRef}
               type="button"
               onClick={() => setSearchOpen(true)}
               aria-label={t('nav.search')}
@@ -573,7 +587,16 @@ export default function Navbar({ session, onOpenAuth }) {
       </aside>
 
       {/* Global Search Modal */}
-      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SearchModal
+        isOpen={searchOpen}
+        onClose={() => {
+          setSearchOpen(false);
+          if (searchTriggerRef.current && typeof searchTriggerRef.current.focus === 'function') {
+            searchTriggerRef.current.focus();
+          }
+        }}
+      />
     </>
   );
 }
+

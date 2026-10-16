@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PLACES_DATA } from '../data/placesData';
 import { useLanguage } from '../context/LanguageContext';
@@ -6,7 +6,35 @@ import { useLanguage } from '../context/LanguageContext';
 export default function SearchModal({ isOpen, onClose }) {
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
-  const { t, getPlaceName, getPlaceCity, getPlaceCategory } = useLanguage();
+  const { t, getPlaceName, getPlaceCity, getPlaceCategory, isArabic } = useLanguage();
+  const inputRef = useRef(null);
+
+  // Close on Escape key & trap scroll
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Auto focus search field
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 50);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -31,6 +59,9 @@ export default function SearchModal({ isOpen, onClose }) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('nav.searchModalLabel')}
       style={{
         position: 'fixed',
         inset: 0,
@@ -55,6 +86,7 @@ export default function SearchModal({ isOpen, onClose }) {
           backgroundColor: '#FFFFFF',
           borderRadius: 'var(--radius-card)',
           boxShadow: '0 20px 40px rgba(18, 48, 74, 0.25)',
+          border: '1px solid var(--border)',
           overflow: 'hidden',
           animation: 'fadeIn 0.2s ease-out forwards',
         }}
@@ -74,20 +106,49 @@ export default function SearchModal({ isOpen, onClose }) {
             search
           </span>
           <input
+            ref={inputRef}
             type="text"
+            aria-label={t('search.inputLabel')}
             placeholder={t('search.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            autoFocus
+            autoComplete="off"
             style={{
               flex: 1,
               border: 'none',
+              background: 'transparent',
               fontSize: '16px',
               fontWeight: '600',
               color: 'var(--primary)',
+              outline: 'none',
             }}
           />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label={isArabic ? 'مسح البحث' : 'Clear search'}
+              style={{
+                width: '32px',
+                height: '32px',
+                minWidth: '32px',
+                minHeight: '32px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--surface-low)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                close
+              </span>
+            </button>
+          )}
           <button
+            type="button"
             onClick={onClose}
             aria-label={t('nav.closeModal')}
             style={{
@@ -102,6 +163,7 @@ export default function SearchModal({ isOpen, onClose }) {
               justifyContent: 'center',
               color: 'var(--text-muted)',
               cursor: 'pointer',
+              transition: 'background-color 0.2s',
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
@@ -111,7 +173,12 @@ export default function SearchModal({ isOpen, onClose }) {
         </div>
 
         {/* Results List */}
-        <div style={{ maxHeight: 'calc(80vh - 90px)', overflowY: 'auto', padding: '12px' }}>
+        <div
+          role="region"
+          aria-label={isArabic ? 'نتائج البحث' : 'Search Results'}
+          tabIndex={0}
+          style={{ maxHeight: 'calc(80vh - 90px)', overflowY: 'auto', padding: '12px' }}
+        >
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '40px', color: 'var(--gold)' }}>
@@ -122,67 +189,99 @@ export default function SearchModal({ isOpen, onClose }) {
               </p>
             </div>
           ) : (
-            filtered.map((place) => (
-              <div
-                key={place.id}
-                onClick={() => handleSelect(place.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '10px 14px',
-                  borderRadius: '14px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s',
-                  marginBottom: '4px',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface-low)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <img
-                  src={place.image}
-                  alt={getPlaceName(place)}
-                  style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover' }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--primary)' }}>
-                    {getPlaceName(place)}
-                  </h4>
+            filtered.map((place) => {
+              const placeName = getPlaceName(place);
+              const placeCity = getPlaceCity(place);
+              const placeCategory = getPlaceCategory(place);
+
+              return (
+                <button
+                  key={place.id}
+                  type="button"
+                  onClick={() => handleSelect(place.id)}
+                  aria-label={`${placeName} — ${placeCity} — ${placeCategory}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid transparent',
+                    cursor: 'pointer',
+                    textAlign: isArabic ? 'right' : 'left',
+                    transition: 'background-color 0.15s, border-color 0.15s',
+                    marginBottom: '4px',
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--surface)';
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--surface)';
+                    e.currentTarget.style.borderColor = 'var(--secondary)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                >
+                  <img
+                    src={place.image}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=400&q=80';
+                    }}
+                    style={{ width: '52px', height: '52px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--primary)', lineHeight: 1.3 }}>
+                      {placeName}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                        marginTop: '3px',
+                      }}
+                    >
+                      <span style={{ color: 'var(--secondary)', fontWeight: '600' }}>{placeCity}</span>
+                      <span>•</span>
+                      <span>{placeCategory}</span>
+                    </div>
+                  </div>
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      gap: '4px',
+                      backgroundColor: 'var(--gold-surface)',
+                      padding: '4px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--gold-dark)',
+                      fontWeight: '700',
                       fontSize: '12px',
-                      color: 'var(--text-muted)',
-                      marginTop: '2px',
+                      flexShrink: 0,
                     }}
                   >
-                    <span style={{ color: 'var(--secondary)', fontWeight: '600' }}>{getPlaceCity(place)}</span>
-                    <span>•</span>
-                    <span>{getPlaceCategory(place)}</span>
+                    <span className="material-symbols-outlined material-filled" style={{ fontSize: '14px' }}>
+                      star
+                    </span>
+                    <span>{place.rating}</span>
                   </div>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    backgroundColor: 'var(--gold-surface)',
-                    padding: '4px 8px',
-                    borderRadius: '8px',
-                    color: 'var(--gold-dark)',
-                    fontWeight: '700',
-                    fontSize: '12px',
-                  }}
-                >
-                  <span className="material-symbols-outlined material-filled" style={{ fontSize: '14px' }}>
-                    star
-                  </span>
-                  <span>{place.rating}</span>
-                </div>
-              </div>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
       </div>

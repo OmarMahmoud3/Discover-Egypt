@@ -311,27 +311,18 @@ export default function PlaceDetails() {
   return (
     <div className="place-details-page" style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', paddingBottom: '90px' }}>
       {/* Sub-Header Breadcrumb & Action Bar */}
-      <div
-        className="place-details-subheader"
-        style={{
-          position: 'sticky',
-          top: 'var(--navbar-height, 72px)',
-          zIndex: 80,
-          backgroundColor: '#FFFFFF',
-          borderBottom: '1px solid var(--border)',
-          padding: '10px 16px',
-        }}
-      >
+      <div className="place-details-subheader">
         <div
           className="container"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
             <Link
               to="/explore"
               style={{
                 width: '36px',
                 height: '36px',
+                minWidth: '36px',
                 borderRadius: 'var(--radius-sm)',
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border)',
@@ -339,6 +330,7 @@ export default function PlaceDetails() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'var(--primary)',
+                flexShrink: 0,
               }}
               title={t('details.back')}
             >
@@ -346,18 +338,18 @@ export default function PlaceDetails() {
                 arrow_forward
               </span>
             </Link>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-              <Link to="/explore" style={{ color: 'var(--text-light)', fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', minWidth: 0, overflow: 'hidden' }}>
+              <Link to="/explore" style={{ color: 'var(--text-light)', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
                 {t('nav.explore')}
               </Link>
-              <span style={{ color: 'var(--text-light)' }}>/</span>
-              <span style={{ color: 'var(--primary)', fontWeight: 700, maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ color: 'var(--text-light)', flexShrink: 0 }}>/</span>
+              <span style={{ color: 'var(--primary)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
                 {placeName}
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <button
               onClick={handleShare}
               style={{

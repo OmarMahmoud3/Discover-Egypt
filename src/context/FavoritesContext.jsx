@@ -17,12 +17,16 @@ function readStoredFavorites(userId) {
     const key = getStorageKey(userId);
     const stored = localStorage.getItem(key);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
     }
     // Backward compatibility for existing guest favorites
     if (!userId) {
       const legacy = localStorage.getItem('discover_egypt_favorites');
-      if (legacy) return JSON.parse(legacy);
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (Array.isArray(parsed)) return parsed;
+      }
     }
   } catch (e) {
     console.warn('Could not read favorites from localStorage', e);
@@ -98,77 +102,101 @@ export function FavoritesProvider({ children }) {
     }
   }, [favoriteIds, userId]);
 
+  const toastTimeoutRef = useRef(null);
+
   const showToast = useCallback((text) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage(text);
-    setTimeout(() => {
+    toastTimeoutRef.current = setTimeout(() => {
       setToastMessage('');
     }, 2800);
   }, []);
 
-  const isFavorite = useCallback((id) => favoriteIds.includes(id), [favoriteIds]);
+  const isFavorite = useCallback(
+    (id) => Array.isArray(favoriteIds) && favoriteIds.includes(id),
+    [favoriteIds]
+  );
+
+  // Safe async cloud persistence helper (never throws or crashes on missing .catch)
+  const syncFavoriteToCloud = useCallback(async (currentUserId, placeId, willRemove) => {
+    if (!currentUserId || !placeId) return;
+    try {
+      if (willRemove) {
+        await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', currentUserId)
+          .eq('place_id', placeId);
+      } else {
+        await supabase
+          .from('favorites')
+          .insert({ user_id: currentUserId, place_id: placeId });
+      }
+    } catch (err) {
+      console.warn('[Favorites] Cloud sync deferred:', err?.message || err);
+    }
+  }, []);
+
+  const clearCloudFavorites = useCallback(async (currentUserId) => {
+    if (!currentUserId) return;
+    try {
+      await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', currentUserId);
+    } catch (err) {
+      console.warn('[Favorites] Cloud clear deferred:', err?.message || err);
+    }
+  }, []);
 
   const toggleFavorite = useCallback(
     (id, placeName = '', customMessage = '') => {
+      if (!id) return;
       const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
+      const willRemove = Array.isArray(favoriteIds) && favoriteIds.includes(id);
+
+      const msg =
+        customMessage ||
+        (willRemove
+          ? isEn
+            ? `${placeName || 'Place'} removed from favorites`
+            : `تمت إزالة ${placeName || 'المكان'} من المفضلة`
+          : isEn
+          ? `${placeName || 'Place'} added to favorites ❤️`
+          : `تمت إضافة ${placeName || 'المكان'} إلى قائمة المفضلة ❤️`);
 
       setFavoriteIds((prev) => {
-        const willRemove = prev.includes(id);
-        const next = willRemove ? prev.filter((item) => item !== id) : [...prev, id];
-
-        const msg =
-          customMessage ||
-          (willRemove
-            ? isEn
-              ? `${placeName || 'Place'} removed from favorites`
-              : `تمت إزالة ${placeName || 'المكان'} من المفضلة`
-            : isEn
-            ? `${placeName || 'Place'} added to favorites ❤️`
-            : `تمت إضافة ${placeName || 'المكان'} إلى قائمة المفضلة ❤️`);
-
-        showToast(msg);
-
-        // Optimistically update cloud database if logged in
-        if (userId) {
-          if (willRemove) {
-            supabase
-              .from('favorites')
-              .delete()
-              .eq('user_id', userId)
-              .eq('place_id', id)
-              .catch(() => {});
-          } else {
-            supabase
-              .from('favorites')
-              .insert({ user_id: userId, place_id: id })
-              .catch(() => {});
-          }
-        }
-
-        return next;
+        const current = Array.isArray(prev) ? prev : [];
+        return willRemove ? current.filter((item) => item !== id) : [...current, id];
       });
+
+      showToast(msg);
+
+      if (userId) {
+        syncFavoriteToCloud(userId, id, willRemove);
+      }
     },
-    [userId, showToast]
+    [favoriteIds, userId, showToast, syncFavoriteToCloud]
   );
 
   const removeFavorite = useCallback(
     (id, placeName = '', customMessage = '') => {
+      if (!id) return;
       const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
-      setFavoriteIds((prev) => prev.filter((item) => item !== id));
+      setFavoriteIds((prev) => (Array.isArray(prev) ? prev.filter((item) => item !== id) : []));
+
       const msg =
         customMessage ||
         (isEn ? `${placeName || 'Place'} removed from favorites` : `تمت إزالة ${placeName || 'المكان'} من المفضلة`);
       showToast(msg);
 
       if (userId) {
-        supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', userId)
-          .eq('place_id', id)
-          .catch(() => {});
+        syncFavoriteToCloud(userId, id, true);
       }
     },
-    [userId, showToast]
+    [userId, showToast, syncFavoriteToCloud]
   );
 
   const clearAllFavorites = useCallback(
@@ -181,17 +209,15 @@ export function FavoritesProvider({ children }) {
       showToast(msg);
 
       if (userId) {
-        supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', userId)
-          .catch(() => {});
+        clearCloudFavorites(userId);
       }
     },
-    [userId, showToast]
+    [userId, showToast, clearCloudFavorites]
   );
 
-  const favoritePlaces = PLACES_DATA.filter((place) => favoriteIds.includes(place.id));
+  const favoritePlaces = PLACES_DATA.filter(
+    (place) => Array.isArray(favoriteIds) && favoriteIds.includes(place.id)
+  );
 
   return (
     <FavoritesContext.Provider

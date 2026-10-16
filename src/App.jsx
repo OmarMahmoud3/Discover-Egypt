@@ -1,9 +1,12 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 
+import SkipLink from './Components/SkipLink';
+import ScrollToTop from './Components/ScrollToTop';
+import ErrorBoundary from './Components/ErrorBoundary';
 import Navbar from './Components/Navbar';
 import Footer from './Components/Footer';
 import MobileNav from './Components/MobileNav';
@@ -46,9 +49,46 @@ function AdminSuspenseFallback() {
 function AppContent() {
   const { session, isAdmin, isReady } = useAdminAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const triggerRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { dir, lang } = useLanguage();
+  const { dir, lang, t } = useLanguage();
+
+  const handleOpenAuth = (e) => {
+    if (e && e.currentTarget) {
+      triggerRef.current = e.currentTarget;
+    } else {
+      triggerRef.current = document.activeElement;
+    }
+    setAuthModalOpen(true);
+  };
+
+  const handleCloseAuth = () => {
+    setAuthModalOpen(false);
+    if (triggerRef.current && typeof triggerRef.current.focus === 'function') {
+      triggerRef.current.focus();
+    }
+  };
+
+  // Close on Escape key & manage scroll lock
+  useEffect(() => {
+    if (!authModalOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleCloseAuth();
+      }
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [authModalOpen]);
 
   // Only hide public chrome when authenticated and verified as admin
   const isAdminRoute = location.pathname.startsWith('/admin') && isReady && isAdmin;
@@ -65,16 +105,22 @@ function AppContent() {
         backgroundColor: 'var(--surface)',
       }}
     >
+      {/* Automatically scroll to top on page navigation */}
+      <ScrollToTop />
+
+      {/* Skip to Main Content Link for Keyboard / Assistive Tech */}
+      {!isAdminRoute && <SkipLink targetId="main-content" />}
+
       {/* Navigation Bar — hidden on admin routes */}
       {!isAdminRoute && (
         <Navbar
           session={session}
-          onOpenAuth={() => setAuthModalOpen(true)}
+          onOpenAuth={handleOpenAuth}
         />
       )}
 
-      {/* Main Content Router */}
-      <main style={{ flex: 1 }}>
+      {/* Main Content Landmark */}
+      <main id="main-content" style={{ flex: 1, outline: 'none' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/explore" element={<Explore />} />
@@ -115,12 +161,15 @@ function AppContent() {
       {!isAdminRoute && <Footer />}
 
       {/* Bottom Navigation for Mobile — hidden on admin & place details routes */}
-      {!isAdminRoute && !isPlaceDetails && <MobileNav onOpenAuth={() => setAuthModalOpen(true)} />}
+      {!isAdminRoute && !isPlaceDetails && <MobileNav onOpenAuth={handleOpenAuth} />}
 
-      {/* Auth Modal Backdrop */}
+      {/* Accessible Auth Modal */}
       {authModalOpen && (
         <div
-          onClick={() => setAuthModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('nav.authModalLabel')}
+          onClick={handleCloseAuth}
           style={{
             position: 'fixed',
             inset: 0,
@@ -137,7 +186,7 @@ function AppContent() {
           }}
         >
           <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '460px', margin: 'auto' }}>
-            <LogIn session={session} onClose={() => setAuthModalOpen(false)} />
+            <LogIn session={session} onClose={handleCloseAuth} />
           </div>
         </div>
       )}
@@ -147,13 +196,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AdminAuthProvider>
-        <FavoritesProvider>
-          <AppContent />
-        </FavoritesProvider>
-      </AdminAuthProvider>
-    </LanguageProvider>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AdminAuthProvider>
+          <FavoritesProvider>
+            <AppContent />
+          </FavoritesProvider>
+        </AdminAuthProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 }
 
