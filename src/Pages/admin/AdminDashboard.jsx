@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
@@ -23,67 +23,81 @@ export default function AdminDashboard() {
   const [recentPlaces, setRecentPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [refreshIndex, setRefreshIndex] = useState(0);
 
-  const fetchStats = useCallback(async () => {
+  const handleRefresh = () => {
     setLoading(true);
     setError('');
-
-    try {
-      // Fetch places and related stats
-      const [placesRes, usersRes, favsRes] = await Promise.all([
-        supabase
-          .from('places')
-          .select('id, name, name_en, slug, city, category, image_url, is_published, created_at')
-          .order('created_at', { ascending: false }),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('favorites').select('user_id', { count: 'exact', head: true }),
-      ]);
-
-      const dbPlaces = (placesRes.data && Array.isArray(placesRes.data)) ? placesRes.data : [];
-      const dbIds = new Set(dbPlaces.map((p) => p.id));
-
-      const defaultPlaces = PLACES_DATA.map((p) => ({
-        id: p.id,
-        name: p.name,
-        name_en: p.nameEn || p.name,
-        slug: p.slug || p.id,
-        city: p.city || p.locationShort || 'مصر',
-        category: p.category,
-        image_url: p.image,
-        is_published: true,
-        created_at: null,
-        isDefault: true,
-      }));
-
-      // Combine Supabase places with unsynced default places
-      const mergedPlaces = [
-        ...dbPlaces,
-        ...defaultPlaces.filter((p) => !dbIds.has(p.id)),
-      ];
-
-      const publishedCount = mergedPlaces.filter((p) => p.is_published !== false).length;
-      const draftCount = mergedPlaces.length - publishedCount;
-
-      setStats({
-        totalPlaces: mergedPlaces.length,
-        publishedPlaces: publishedCount,
-        draftPlaces: draftCount,
-        totalUsers: usersRes?.count ?? 0,
-        totalFavorites: favsRes?.count ?? 0,
-      });
-
-      setRecentPlaces(mergedPlaces.slice(0, 5));
-    } catch (err) {
-      console.error('Error fetching admin stats:', err);
-      setError(err?.message || 'Failed to load stats');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    setRefreshIndex((prev) => prev + 1);
+  };
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    let ignore = false;
+
+    const loadStats = async () => {
+      try {
+        const [placesRes, usersRes, favsRes] = await Promise.all([
+          supabase
+            .from('places')
+            .select('id, name, name_en, slug, city, category, image_url, is_published, created_at')
+            .order('created_at', { ascending: false }),
+          supabase.from('profiles').select('id', { count: 'exact', head: true }),
+          supabase.from('favorites').select('user_id', { count: 'exact', head: true }),
+        ]);
+
+        if (ignore) return;
+
+        const dbPlaces = (placesRes.data && Array.isArray(placesRes.data)) ? placesRes.data : [];
+        const dbIds = new Set(dbPlaces.map((p) => p.id));
+
+        const defaultPlaces = PLACES_DATA.map((p) => ({
+          id: p.id,
+          name: p.name,
+          name_en: p.nameEn || p.name,
+          slug: p.slug || p.id,
+          city: p.city || p.locationShort || 'مصر',
+          category: p.category,
+          image_url: p.image,
+          is_published: true,
+          created_at: null,
+          isDefault: true,
+        }));
+
+        const mergedPlaces = [
+          ...dbPlaces,
+          ...defaultPlaces.filter((p) => !dbIds.has(p.id)),
+        ];
+
+        const publishedCount = mergedPlaces.filter((p) => p.is_published !== false).length;
+        const draftCount = mergedPlaces.length - publishedCount;
+
+        setStats({
+          totalPlaces: mergedPlaces.length,
+          publishedPlaces: publishedCount,
+          draftPlaces: draftCount,
+          totalUsers: usersRes?.count ?? 0,
+          totalFavorites: favsRes?.count ?? 0,
+        });
+
+        setRecentPlaces(mergedPlaces.slice(0, 5));
+      } catch (err) {
+        if (!ignore) {
+          console.error('Error fetching admin stats:', err);
+          setError(err?.message || 'Failed to load stats');
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      ignore = true;
+    };
+  }, [refreshIndex]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
@@ -115,7 +129,7 @@ export default function AdminDashboard() {
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
             {error}
             <button
-              onClick={fetchStats}
+              onClick={handleRefresh}
               className="admin-btn admin-btn-ghost"
               style={{ marginInlineStart: 'auto' }}
             >
