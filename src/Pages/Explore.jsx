@@ -39,33 +39,65 @@ export default function Explore() {
   const cities = isArabic
     ? [
         { key: 'all', label: 'جميع المدن' },
-        { key: 'الجيزة', label: 'الجيزة' },
-        { key: 'الأقصر', label: 'الأقصر' },
         { key: 'القاهرة', label: 'القاهرة' },
-        { key: 'أسوان', label: 'أسوان' },
+        { key: 'الجيزة', label: 'الجيزة' },
         { key: 'الإسكندرية', label: 'الإسكندرية' },
+        { key: 'الأقصر', label: 'الأقصر' },
+        { key: 'أسوان', label: 'أسوان' },
+        { key: 'جنوب سيناء', label: 'جنوب سيناء' },
+        { key: 'البحر الأحمر', label: 'البحر الأحمر' },
+        { key: 'الفيوم', label: 'الفيوم' },
+        { key: 'مطروح', label: 'مطروح وسيوة' },
+        { key: 'الوادي الجديد', label: 'الوادي الجديد' },
+        { key: 'البحيرة', label: 'البحيرة ورشيد' },
+        { key: 'الشرقية', label: 'الشرقية' },
+        { key: 'قنا', label: 'قنا' },
+        { key: 'سوهاج', label: 'سوهاج' },
       ]
     : [
         { key: 'all', label: 'All Cities' },
-        { key: 'giza', label: 'Giza' },
-        { key: 'luxor', label: 'Luxor' },
         { key: 'cairo', label: 'Cairo' },
-        { key: 'aswan', label: 'Aswan' },
+        { key: 'giza', label: 'Giza' },
         { key: 'alexandria', label: 'Alexandria' },
+        { key: 'luxor', label: 'Luxor' },
+        { key: 'aswan', label: 'Aswan' },
+        { key: 'south-sinai', label: 'South Sinai' },
+        { key: 'red-sea', label: 'Red Sea' },
+        { key: 'fayoum', label: 'Fayoum' },
+        { key: 'matrouh', label: 'Matrouh & Siwa' },
+        { key: 'new-valley', label: 'New Valley' },
+        { key: 'beheira', label: 'Beheira & Rosetta' },
+        { key: 'sharqia', label: 'Sharqia' },
+        { key: 'qena', label: 'Qena' },
+        { key: 'sohag', label: 'Sohag' },
       ];
 
   const categories = isArabic
     ? [
         { key: 'all', label: 'كل التصنيفات' },
-        { key: 'آثار وتاريخ', label: 'آثار وتاريخ' },
-        { key: 'أسواق وتراث', label: 'أسواق وتراث' },
-        { key: 'متاحف', label: 'متاحف' },
+        { key: 'historical', label: 'آثار وتاريخ' },
+        { key: 'museum', label: 'متاحف' },
+        { key: 'religious', label: 'معالم دينية' },
+        { key: 'heritage', label: 'تراث وأسواق' },
+        { key: 'nature', label: 'محميات وطبيعة' },
+        { key: 'beach', label: 'شواطئ ومنتجعات' },
+        { key: 'landmark', label: 'معالم بارزة' },
+        { key: 'garden', label: 'حدائق ومتنزهات' },
+        { key: 'cultural', label: 'مراكز ثقافية' },
+        { key: 'engineering', label: 'معالم هندسية' },
       ]
     : [
         { key: 'all', label: 'All Categories' },
-        { key: 'monuments', label: 'Monuments & History' },
-        { key: 'markets', label: 'Markets & Heritage' },
-        { key: 'museums', label: 'Museums' },
+        { key: 'historical', label: 'Monuments & History' },
+        { key: 'museum', label: 'Museums' },
+        { key: 'religious', label: 'Religious Landmarks' },
+        { key: 'heritage', label: 'Heritage & Markets' },
+        { key: 'nature', label: 'Nature & Reserves' },
+        { key: 'beach', label: 'Beaches & Resorts' },
+        { key: 'landmark', label: 'Iconic Landmarks' },
+        { key: 'garden', label: 'Gardens & Parks' },
+        { key: 'cultural', label: 'Cultural Centers' },
+        { key: 'engineering', label: 'Engineering Marvels' },
       ];
 
   // Combine local rich places with any dynamic supabase places (Supabase edits take priority)
@@ -127,14 +159,24 @@ export default function Explore() {
         selectedCity === 'all' ||
         p.cityKey === selectedCity.toLowerCase() ||
         p.city === selectedCity ||
-        (p.cityEn && p.cityEn.toLowerCase() === selectedCity.toLowerCase());
+        (p.city && p.city.includes(selectedCity)) ||
+        (p.cityEn && p.cityEn.toLowerCase().includes(selectedCity.toLowerCase())) ||
+        (p.locationShort && p.locationShort.includes(selectedCity));
 
       const matchCategory =
         selectedCategory === 'all' ||
         p.category === selectedCategory ||
-        (selectedCategory === 'monuments' && (p.category === 'آثار وتاريخ' || p.categoryEn?.includes('Monuments'))) ||
-        (selectedCategory === 'markets' && (p.category === 'أسواق وتراث' || p.categoryEn?.includes('Markets'))) ||
-        (selectedCategory === 'museums' && (p.category === 'متاحف' || p.categoryEn?.includes('Museums')));
+        p.categoryKey === selectedCategory ||
+        (selectedCategory === 'historical' && (p.category === 'آثار وتاريخ' || p.categoryKey === 'historical' || p.categoryEn?.includes('Monuments'))) ||
+        (selectedCategory === 'museum' && (p.category === 'متاحف' || p.categoryKey === 'museum' || p.categoryEn?.includes('Museum'))) ||
+        (selectedCategory === 'religious' && (p.category === 'معالم دينية' || p.categoryKey === 'religious' || p.categoryEn?.includes('Religious'))) ||
+        (selectedCategory === 'heritage' && (p.category === 'تراث وأسواق' || p.category === 'أسواق وتراث' || p.categoryKey === 'heritage' || p.categoryEn?.includes('Heritage') || p.categoryEn?.includes('Markets'))) ||
+        (selectedCategory === 'nature' && (p.category === 'محميات وطبيعة' || p.categoryKey === 'nature' || p.categoryEn?.includes('Nature'))) ||
+        (selectedCategory === 'beach' && (p.category === 'شواطئ ومنتجعات' || p.categoryKey === 'beach' || p.categoryKey === 'island' || p.categoryEn?.includes('Beach'))) ||
+        (selectedCategory === 'landmark' && (p.category === 'معالم بارزة' || p.categoryKey === 'landmark' || p.categoryEn?.includes('Landmark'))) ||
+        (selectedCategory === 'garden' && (p.category === 'حدائق ومتنزهات' || p.categoryKey === 'garden' || p.categoryEn?.includes('Garden'))) ||
+        (selectedCategory === 'cultural' && (p.category === 'مراكز ثقافية' || p.categoryKey === 'cultural' || p.categoryEn?.includes('Cultural'))) ||
+        (selectedCategory === 'engineering' && (p.category === 'معالم هندسية' || p.categoryKey === 'engineering' || p.categoryEn?.includes('Engineering')));
 
       return matchQuery && matchCity && matchCategory;
     });

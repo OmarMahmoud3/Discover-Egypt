@@ -164,7 +164,7 @@ export default function PlaceDetails() {
   const { t, isArabic, getPlaceName, getPlaceLocation, getPlaceDescription, getPlaceGateInfo } = useLanguage();
 
   // Find static place as immediate fallback
-  const staticPlace = PLACES_DATA.find((p) => p.id === placeId || p.slug === placeId);
+  const staticPlace = PLACES_DATA.find((p) => p.id === placeId || p.slug === placeId || p.alias === placeId);
 
   // Check Supabase database so administrative edits take precedence
   useEffect(() => {

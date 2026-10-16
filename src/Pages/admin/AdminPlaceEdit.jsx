@@ -36,27 +36,27 @@ export default function AdminPlaceEdit() {
         const { data, error: fetchErr } = await supabase
           .from('places')
           .select('*')
-          .eq('id', id)
+          .or(`id.eq.${id},slug.eq.${id}`)
           .maybeSingle();
 
         if (!fetchErr && data) {
           loadedPlace = data;
         } else {
           // 2. Fallback to default static PLACES_DATA
-          const staticMatch = PLACES_DATA.find((p) => p.id === id || p.slug === id);
+          const staticMatch = PLACES_DATA.find((p) => p.id === id || p.slug === id || p.alias === id);
           if (staticMatch) {
             loadedPlace = {
               id: staticMatch.id,
               name: staticMatch.name,
               name_en: staticMatch.nameEn,
-              slug: staticMatch.id,
+              slug: staticMatch.slug || staticMatch.id,
               city: staticMatch.city,
               category: staticMatch.category,
               description: staticMatch.historicalText || staticMatch.historicalTextEn || staticMatch.description || '',
               image_url: staticMatch.image,
-              gallery: (staticMatch.gallery || []).map((g) => g.url),
-              latitude: 29.9792,
-              longitude: 31.1342,
+              gallery: (staticMatch.gallery || []).map((g) => g.url || g),
+              latitude: staticMatch.latitude || 29.9792,
+              longitude: staticMatch.longitude || 31.1342,
               is_published: true,
             };
           }

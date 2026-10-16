@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BrandLogo from '../Components/BrandLogo';
 import { useLanguage } from '../context/LanguageContext';
+import { useAdminAuth } from '../context/AdminAuthContext';
 
 export default function LogIn({ session, onClose }) {
   const navigate = useNavigate();
+  const { isAdmin } = useAdminAuth();
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -17,16 +19,16 @@ export default function LogIn({ session, onClose }) {
 
   const { t, isArabic } = useLanguage();
 
-  // If user is already authenticated on /login route, automatically redirect to home
+  // If user is already authenticated on /login route, automatically redirect
   useEffect(() => {
     if (session && window.location.pathname.toLowerCase().includes('/login')) {
       const timer = setTimeout(() => {
         if (onClose) onClose();
-        navigate('/');
+        navigate(isAdmin ? '/admin' : '/');
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [session, onClose, navigate]);
+  }, [session, isAdmin, onClose, navigate]);
 
   // Google OAuth Login
   const handleGoogleLogin = async () => {
@@ -73,16 +75,21 @@ export default function LogIn({ session, onClose }) {
           setMessage(t('auth.successSignupConfirm'));
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
 
+        const emailClean = (email || '').toLowerCase().trim();
+        const isAdminUser = ['om7765355@gmail.com', 'omarmahmoud3@gmail.com'].includes(emailClean) ||
+          data?.user?.app_metadata?.role === 'admin' ||
+          data?.user?.user_metadata?.role === 'admin';
+
         setMessage(t('auth.successLogin'));
         setTimeout(() => {
           if (onClose) onClose();
-          navigate('/');
+          navigate(isAdminUser ? '/admin' : '/');
         }, 800);
       }
     } catch (err) {
@@ -217,51 +224,83 @@ export default function LogIn({ session, onClose }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
-            <button
-              type="button"
-              onClick={() => {
-                if (onClose) onClose();
-                navigate('/');
-              }}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--primary)',
-                color: '#FFFFFF',
-                fontWeight: 700,
-                fontSize: '13px',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                travel_explore
-              </span>
-              <span>{isArabic ? 'الانتقال إلى الموقع' : 'Go to Website'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--error-bg)',
-                color: 'var(--error)',
-                fontWeight: 700,
-                fontSize: '13px',
-                border: '1px solid rgba(185, 28, 28, 0.2)',
-                cursor: 'pointer',
-              }}
-            >
-              {t('auth.logoutBtn')}
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '18px' }}>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onClose) onClose();
+                  navigate('/admin');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--gold-surface)',
+                  color: 'var(--primary)',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  border: '1px solid var(--gold)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--gold-dark)' }}>
+                  admin_panel_settings
+                </span>
+                <span>{isArabic ? 'الدخول إلى لوحة التحكم' : 'Go to Admin Dashboard'}</span>
+              </button>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onClose) onClose();
+                  navigate('/');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--primary)',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  travel_explore
+                </span>
+                <span>{isArabic ? 'تصفح الموقع' : 'Explore Website'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--error-bg)',
+                  color: 'var(--error)',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  border: '1px solid rgba(185, 28, 28, 0.2)',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('auth.logoutBtn')}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
