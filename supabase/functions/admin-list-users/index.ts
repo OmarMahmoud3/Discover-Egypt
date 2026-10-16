@@ -247,38 +247,37 @@ serve(async (req: Request) => {
         }
       }
 
-      // Update or insert profile
-      if (targetProfile) {
-        const { error: updateErr } = await adminClient
-          .from('profiles')
-          .update({ role: newRole })
-          .eq('id', targetUserId);
+      // Update or insert profile cleanly using upsert
+      const { data: authTarget } = await adminClient.auth.admin.getUserById(targetUserId);
+      const name = authTarget?.user?.user_metadata?.full_name || authTarget?.user?.user_metadata?.name || null;
 
-        if (updateErr) {
-          return new Response(
-            JSON.stringify({ error: `Failed to update role: ${updateErr.message}` }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      } else {
-        const { data: authTarget } = await adminClient.auth.admin.getUserById(targetUserId);
-        const name = authTarget?.user?.user_metadata?.full_name || authTarget?.user?.user_metadata?.name || null;
-
-        const { error: insertErr } = await adminClient
-          .from('profiles')
-          .insert({
+      const { error: upsertErr } = await adminClient
+        .from('profiles')
+        .upsert(
+          {
             id: targetUserId,
-            display_name: name,
+            display_name: targetProfile?.display_name || name,
             role: newRole,
-            preferred_language: 'ar',
-          });
+            preferred_language: targetProfile?.preferred_language || 'ar',
+          },
+          { onConflict: 'id' }
+        );
 
-        if (insertErr) {
-          return new Response(
-            JSON.stringify({ error: `Failed to create profile with role: ${insertErr.message}` }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      if (upsertErr) {
+        return new Response(
+          JSON.stringify({ error: `Failed to update profile role: ${upsertErr.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Synchronize role into Auth user metadata
+      try {
+        await adminClient.auth.admin.updateUserById(targetUserId, {
+          app_metadata: { role: newRole },
+          user_metadata: { role: newRole },
+        });
+      } catch (authMetaErr: any) {
+        console.warn('Could not update Auth metadata:', authMetaErr?.message);
       }
 
       return new Response(

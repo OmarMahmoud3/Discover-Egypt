@@ -1,5 +1,5 @@
 -- Discover Egypt: Supabase Schema & Security Hardening
--- Profiles table, trigger, and Row Level Security (RLS) policies
+-- Profiles table, trigger, permissions, and atomic role management
 
 -- 1. Create profiles table if it doesn't already exist
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 -- Enable RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Grant schema and table permissions so queries never fail with "permission denied"
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.profiles TO anon, authenticated, service_role;
 
 -- 2. Auto-create profile trigger on new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -28,7 +32,7 @@ BEGIN
     ),
     NEW.raw_user_meta_data->>'avatar_url',
     COALESCE(NEW.raw_user_meta_data->>'preferred_language', 'ar'),
-    'user' -- New users always default to normal user
+    'user'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
@@ -65,7 +69,6 @@ CREATE POLICY "Admins can read all profiles"
   );
 
 -- Policy C: Users can update their own profile fields EXCEPT role
--- (role must match existing database role to prevent client-side privilege escalation)
 DROP POLICY IF EXISTS "Users can update own profile non-role fields" ON public.profiles;
 CREATE POLICY "Users can update own profile non-role fields"
   ON public.profiles
@@ -96,10 +99,7 @@ CREATE POLICY "Admins can update any profile"
     )
   );
 
--- Policy E: Service role has full access (used by Edge Functions)
--- Note: In Supabase, service_role bypasses RLS automatically, but policy explicitly documented.
-
--- 4. Atomic Role Update Function (Protected Invariants)
+-- 4. Atomic Role Update Function (SECURITY DEFINER to safely bypass RLS)
 CREATE OR REPLACE FUNCTION public.admin_update_user_role(
   target_user_id uuid,
   new_role text
@@ -108,7 +108,6 @@ RETURNS json AS $$
 DECLARE
   caller_id uuid;
   caller_role text;
-  target_current_role text;
   admin_count integer;
 BEGIN
   caller_id := auth.uid();
@@ -134,24 +133,19 @@ BEGIN
     RAISE EXCEPTION 'Forbidden: You cannot alter or revoke permissions for your active admin account';
   END IF;
 
-  -- Check target user's current role
-  SELECT role INTO target_current_role FROM public.profiles WHERE id = target_user_id;
-  IF target_current_role IS NULL THEN
-    RAISE EXCEPTION 'Not Found: Target user profile not found';
-  END IF;
-
   -- Prevent demoting the last remaining administrator
-  IF target_current_role = 'admin' AND new_role = 'user' THEN
+  IF new_role = 'user' THEN
     SELECT count(*) INTO admin_count FROM public.profiles WHERE role = 'admin';
-    IF admin_count <= 1 THEN
+    IF admin_count <= 1 AND EXISTS (SELECT 1 FROM public.profiles WHERE id = target_user_id AND role = 'admin') THEN
       RAISE EXCEPTION 'Forbidden: Cannot demote the last remaining administrator in the system';
     END IF;
   END IF;
 
-  -- Perform role update
-  UPDATE public.profiles
-  SET role = new_role
-  WHERE id = target_user_id;
+  -- Perform role update or insert (upsert)
+  INSERT INTO public.profiles (id, role, preferred_language)
+  VALUES (target_user_id, new_role, 'ar')
+  ON CONFLICT (id) DO UPDATE
+  SET role = EXCLUDED.role;
 
   RETURN json_build_object(
     'success', true,
@@ -160,3 +154,22 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.admin_update_user_role TO authenticated;
+
+-- 5. Sync any existing registered auth users into public.profiles
+INSERT INTO public.profiles (id, display_name, role)
+SELECT 
+  id, 
+  COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)),
+  'user'
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
+-- Ensure primary admin account keeps admin role
+UPDATE public.profiles 
+SET role = 'admin' 
+WHERE id IN (
+  SELECT id FROM auth.users 
+  WHERE email IN ('om7765355@gmail.com', 'omarmahmoud3@gmail.com')
+);

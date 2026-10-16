@@ -213,7 +213,7 @@ export default function AdminUsers() {
               new_role: newRole,
             });
 
-            if (!rpcErr && rpcData?.success) {
+            if (!rpcErr && (rpcData?.success || rpcData === true)) {
               updatedSuccessfully = true;
             } else if (rpcErr) {
               lastError = rpcErr;
@@ -222,7 +222,42 @@ export default function AdminUsers() {
             lastError = rpcCatchErr;
           }
 
-          // Strategy 2: Supabase Edge Functions (admin-list-users / admin-users)
+          // Strategy 2: Direct database update or upsert into public.profiles
+          if (!updatedSuccessfully) {
+            try {
+              const { data: updateData, error: updateErr } = await supabase
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', targetUser.id)
+                .select();
+
+              if (!updateErr && updateData && updateData.length > 0) {
+                updatedSuccessfully = true;
+              } else {
+                const { data: upsertData, error: upsertErr } = await supabase
+                  .from('profiles')
+                  .upsert(
+                    {
+                      id: targetUser.id,
+                      role: newRole,
+                      display_name: targetUser.display_name || targetUser.email?.split('@')[0] || 'User',
+                    },
+                    { onConflict: 'id' }
+                  )
+                  .select();
+
+                if (!upsertErr && upsertData && upsertData.length > 0) {
+                  updatedSuccessfully = true;
+                } else if (upsertErr || updateErr) {
+                  lastError = upsertErr || updateErr;
+                }
+              }
+            } catch (dbCatchErr) {
+              lastError = dbCatchErr;
+            }
+          }
+
+          // Strategy 3: Supabase Edge Functions (admin-list-users / admin-users)
           if (!updatedSuccessfully && edgeFunctionAvailable !== false) {
             try {
               let updateRes = await supabase.functions.invoke('admin-list-users', {
@@ -233,44 +268,35 @@ export default function AdminUsers() {
                 },
               });
 
-              if (updateRes.error && updateRes.error?.context?.status === 404) {
-                updateRes = await supabase.functions.invoke('admin-users', {
+              let errorMsg = null;
+              if (updateRes.error) {
+                try {
+                  const errorJson = await updateRes.error.context?.json();
+                  if (errorJson?.error) errorMsg = errorJson.error;
+                } catch {
+                  // ignore
+                }
+
+                const fallbackRes = await supabase.functions.invoke('admin-users', {
                   body: {
                     action: 'update_user_role',
                     targetUserId: targetUser.id,
                     newRole,
                   },
                 });
-              }
 
-              if (!updateRes.error && !updateRes.data?.error) {
+                if (!fallbackRes.error && !fallbackRes.data?.error) {
+                  updatedSuccessfully = true;
+                } else {
+                  lastError = new Error(errorMsg || fallbackRes.error?.message || ta('admin.roleUpdateFailed'));
+                }
+              } else if (!updateRes.data?.error) {
                 updatedSuccessfully = true;
               } else {
-                lastError = updateRes.error || new Error(updateRes.data?.error);
+                lastError = new Error(updateRes.data?.error);
               }
             } catch (edgeCatchErr) {
               lastError = edgeCatchErr;
-            }
-          }
-
-          // Strategy 3: Direct database upsert into public.profiles
-          if (!updatedSuccessfully) {
-            const { data: upsertData, error: dbErr } = await supabase
-              .from('profiles')
-              .upsert(
-                {
-                  id: targetUser.id,
-                  role: newRole,
-                  display_name: targetUser.display_name || targetUser.email?.split('@')[0] || 'User',
-                },
-                { onConflict: 'id' }
-              )
-              .select();
-
-            if (!dbErr && upsertData && upsertData.length > 0) {
-              updatedSuccessfully = true;
-            } else {
-              lastError = dbErr || lastError || new Error(ta('admin.roleUpdateFailed'));
             }
           }
 
@@ -283,14 +309,20 @@ export default function AdminUsers() {
             prev.map((u) => (u.id === targetUser.id ? { ...u, role: newRole, has_profile: true } : u))
           );
 
-          showToast(ta('admin.roleUpdateSuccess'), 'success');
+          showToast(
+            newRole === 'admin'
+              ? (isArabic ? 'تمت ترقية المستخدم إلى مسؤول بنجاح' : 'User promoted to administrator successfully')
+              : (isArabic ? 'تم تحويل المستخدم إلى مستخدم عادي بنجاح' : 'User changed to regular user successfully'),
+            'success'
+          );
 
-          // Refresh from authoritative database
-          await fetchUsers(true);
-
-          if (isSelf) {
-            await refreshProfile();
-          }
+          // Allow database replication to complete before refreshing
+          setTimeout(async () => {
+            await fetchUsers(true);
+            if (isSelf) {
+              await refreshProfile();
+            }
+          }, 500);
         } catch (err) {
           console.error('Role update error:', err);
           showToast(err?.message || ta('admin.roleUpdateFailed'), 'error');
