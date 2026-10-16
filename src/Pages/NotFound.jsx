@@ -92,50 +92,15 @@ export default function NotFound() {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Link
-            to="/"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 24px',
-              borderRadius: '12px',
-              backgroundColor: 'var(--primary)',
-              color: '#FFFFFF',
-              fontWeight: '700',
-              fontSize: '15px',
-              textDecoration: 'none',
-              transition: 'transform 0.15s ease, background-color 0.2s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1d4568')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--primary)')}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          <Link to="/" className="btn-primary">
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               home
             </span>
             <span>{isArabic ? 'العودة للرئيسية' : 'Back to Home'}</span>
           </Link>
 
-          <Link
-            to="/explore"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 24px',
-              borderRadius: '12px',
-              backgroundColor: 'var(--surface-low)',
-              color: 'var(--primary)',
-              fontWeight: '700',
-              fontSize: '15px',
-              textDecoration: 'none',
-              border: '1px solid var(--border)',
-              transition: 'background-color 0.2s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface-container)')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface-low)')}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          <Link to="/explore" className="btn-outline">
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               explore
             </span>
             <span>{isArabic ? 'استكشف المعالم' : 'Explore Places'}</span>

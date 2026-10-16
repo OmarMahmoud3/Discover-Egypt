@@ -21,7 +21,6 @@ export default function AdminPlaceEdit() {
 
   useEffect(() => {
     if (!isEdit) {
-      setLoading(false);
       return;
     }
 
@@ -65,8 +64,8 @@ export default function AdminPlaceEdit() {
       <AdminHeader
         title={isEdit ? ta('admin.editPlace') : ta('admin.addPlace')}
         breadcrumbs={[
-          { label: ta('admin.dashboard'), path: '/admin' },
-          { label: ta('admin.places'), path: '/admin/places' },
+          { label: ta('admin.dashboard'), to: '/admin' },
+          { label: ta('admin.places'), to: '/admin/places' },
           { label: isEdit ? (place?.name || ta('admin.editPlace')) : ta('admin.addPlace') },
         ]}
         onToggleSidebar={onToggleSidebar}

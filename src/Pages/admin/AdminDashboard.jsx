@@ -71,8 +71,59 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    let active = true;
+    const run = async () => {
+      try {
+        const results = await Promise.allSettled([
+          supabase.from('places').select('id', { count: 'exact', head: true }),
+          supabase.from('places').select('id', { count: 'exact', head: true }).eq('is_published', true),
+          supabase.from('places').select('id', { count: 'exact', head: true }).eq('is_published', false),
+          supabase.from('profiles').select('id', { count: 'exact', head: true }),
+          supabase.from('favorites').select('user_id', { count: 'exact', head: true }),
+          supabase
+            .from('places')
+            .select('id, name, name_en, slug, city, category, image_url, is_published, created_at')
+            .order('created_at', { ascending: false })
+            .limit(5),
+        ]);
+
+        if (active) {
+          const placesRes = results[0].status === 'fulfilled' ? results[0].value : null;
+          const pubRes = results[1].status === 'fulfilled' ? results[1].value : null;
+          const draftRes = results[2].status === 'fulfilled' ? results[2].value : null;
+          const usersRes = results[3].status === 'fulfilled' ? results[3].value : null;
+          const favsRes = results[4].status === 'fulfilled' ? results[4].value : null;
+          const recentRes = results[5].status === 'fulfilled' ? results[5].value : null;
+
+          setStats({
+            totalPlaces: placesRes?.count ?? 0,
+            publishedPlaces: pubRes?.count ?? 0,
+            draftPlaces: draftRes?.count ?? 0,
+            totalUsers: usersRes?.count ?? 0,
+            totalFavorites: favsRes?.count ?? 0,
+          });
+
+          if (recentRes && !recentRes.error && Array.isArray(recentRes.data)) {
+            setRecentPlaces(recentRes.data);
+          } else {
+            setRecentPlaces([]);
+          }
+          setLoading(false);
+        }
+      } catch (err) {
+        if (active) {
+          console.error('Error fetching admin stats:', err);
+          setError(err?.message || 'Failed to load stats');
+          setLoading(false);
+        }
+      }
+    };
+
+    run();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
@@ -194,77 +245,145 @@ export default function AdminDashboard() {
                 </Link>
               </div>
             ) : (
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>{ta('admin.image')}</th>
-                      <th>{ta('admin.name')}</th>
-                      <th>{ta('admin.city')}</th>
-                      <th>{ta('admin.category')}</th>
-                      <th>{ta('admin.status')}</th>
-                      <th>{ta('admin.date')}</th>
-                      <th>{ta('admin.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentPlaces.map((place) => (
-                      <tr key={place.id}>
-                        <td>
-                          {place.image_url ? (
-                            <img
-                              src={place.image_url}
-                              alt={place.name}
-                              className="admin-table-thumb"
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div
-                              className="admin-table-thumb"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
+              <>
+                {/* Desktop Table View */}
+                <div className="admin-table-wrap admin-table-desktop">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>{ta('admin.image')}</th>
+                        <th>{ta('admin.name')}</th>
+                        <th>{ta('admin.city')}</th>
+                        <th>{ta('admin.category')}</th>
+                        <th>{ta('admin.status')}</th>
+                        <th>{ta('admin.date')}</th>
+                        <th>{ta('admin.actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentPlaces.map((place) => (
+                        <tr key={place.id}>
+                          <td>
+                            {place.image_url ? (
+                              <img
+                                src={place.image_url}
+                                alt={place.name}
+                                className="admin-table-thumb"
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div
+                                className="admin-table-thumb"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--text-light)' }}>
+                                  image
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 700, fontSize: '14px' }}>{place.name}</div>
+                            {place.name_en && (
+                              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }} dir="ltr">
+                                {place.name_en}
+                              </div>
+                            )}
+                          </td>
+                          <td>{place.city}</td>
+                          <td>{place.category}</td>
+                          <td>
+                            <span className={`admin-badge ${place.is_published ? 'admin-badge-published' : 'admin-badge-draft'}`}>
+                              {place.is_published ? ta('admin.published') : ta('admin.draft')}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                            {formatDate(place.created_at)}
+                          </td>
+                          <td>
+                            <Link
+                              to={`/admin/places/${place.id}`}
+                              className="admin-btn-icon"
+                              title={ta('admin.edit')}
                             >
-                              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--text-light)' }}>
-                                image
-                              </span>
-                            </div>
-                          )}
-                        </td>
-                        <td>
+                              <span className="material-symbols-outlined">edit</span>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="admin-mobile-cards" style={{ padding: '12px' }}>
+                  {recentPlaces.map((place) => (
+                    <div key={place.id} className="admin-mobile-card">
+                      <div className="admin-mobile-card-header">
+                        {place.image_url ? (
+                          <img
+                            src={place.image_url}
+                            alt={place.name}
+                            style={{ width: '56px', height: '42px', borderRadius: '10px', objectFit: 'cover' }}
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '56px',
+                              height: '42px',
+                              borderRadius: '10px',
+                              background: 'var(--surface-low)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--text-light)' }}>image</span>
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, fontSize: '14px' }}>{place.name}</div>
                           {place.name_en && (
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }} dir="ltr">
-                              {place.name_en}
-                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }} dir="ltr">{place.name_en}</div>
                           )}
-                        </td>
-                        <td>{place.city}</td>
-                        <td>{place.category}</td>
-                        <td>
-                          <span className={`admin-badge ${place.is_published ? 'admin-badge-published' : 'admin-badge-draft'}`}>
-                            {place.is_published ? ta('admin.published') : ta('admin.draft')}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                          {formatDate(place.created_at)}
-                        </td>
-                        <td>
-                          <Link
-                            to={`/admin/places/${place.id}`}
-                            className="admin-btn-icon"
-                            title={ta('admin.edit')}
-                          >
-                            <span className="material-symbols-outlined">edit</span>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                        <span className={`admin-badge ${place.is_published ? 'admin-badge-published' : 'admin-badge-draft'}`}>
+                          {place.is_published ? ta('admin.published') : ta('admin.draft')}
+                        </span>
+                      </div>
+                      <div className="admin-mobile-card-body">
+                        <div className="admin-mobile-card-row">
+                          <span className="admin-mobile-card-label">{ta('admin.city')}</span>
+                          <span>{place.city}</span>
+                        </div>
+                        <div className="admin-mobile-card-row">
+                          <span className="admin-mobile-card-label">{ta('admin.category')}</span>
+                          <span>{place.category}</span>
+                        </div>
+                        <div className="admin-mobile-card-row">
+                          <span className="admin-mobile-card-label">{ta('admin.date')}</span>
+                          <span>{formatDate(place.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="admin-mobile-card-actions">
+                        <Link
+                          to={`/admin/places/${place.id}`}
+                          className="admin-btn admin-btn-outline"
+                          style={{ flex: 1, textDecoration: 'none', justifyContent: 'center' }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>edit</span>
+                          {ta('admin.edit')}
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

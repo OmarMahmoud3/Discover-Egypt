@@ -23,7 +23,8 @@ export const translations = {
     brand: {
       title: 'اكتشف مصر',
       titleEn: 'DISCOVER EGYPT',
-      badge: 'بوابتك الرسمية لاستكشاف أرض الحضارة والسحر',
+      tagline: 'تاريخ يُروى، وتجارب تُكتشف',
+      badge: 'تاريخ يُروى، وتجارب تُكتشف',
       heroTitle: 'اكتشف عظمة مصر عبر آلاف السنين',
       heroSubtitle: 'من أهرامات الجيزة الخالدة ومعابد الفراعنة بطيبة، إلى شواطئ البحر الأحمر الفيروزية وأزقة القاهرة الفاطمية العتيقة.',
       heroSearchPlaceholder: 'ابحث عن وجهة، معبد، متحف، أو مدينة...',
@@ -187,7 +188,8 @@ export const translations = {
     brand: {
       title: 'Discover Egypt',
       titleEn: 'DISCOVER EGYPT',
-      badge: 'Your Official Gateway to the Land of Magic & Heritage',
+      tagline: 'History Told, Experiences Discovered',
+      badge: 'History Told, Experiences Discovered',
       heroTitle: 'Discover Egypt’s Timeless Majesty Across Millennia',
       heroSubtitle: 'From the eternal Great Pyramids and ancient Theban temples, to the turquoise shores of the Red Sea and historic Fatimid Cairo.',
       heroSearchPlaceholder: 'Search for a destination, temple, museum, or city...',

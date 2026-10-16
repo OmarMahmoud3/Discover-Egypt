@@ -1,6 +1,6 @@
+import { Link } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
-import NotFound from '../../Pages/NotFound';
 import '../../styles/admin.css';
 
 /**
@@ -100,8 +100,8 @@ export default function AdminRoute({ children }) {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <a
-              href="/login"
+            <Link
+              to="/login"
               className="btn-primary"
               style={{
                 display: 'flex',
@@ -116,10 +116,10 @@ export default function AdminRoute({ children }) {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>login</span>
               <span>{dir === 'rtl' ? 'تسجيل دخول المسؤول' : 'Sign In as Admin'}</span>
-            </a>
+            </Link>
 
-            <a
-              href="/"
+            <Link
+              to="/"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -138,7 +138,7 @@ export default function AdminRoute({ children }) {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
               <span>{dir === 'rtl' ? 'العودة للرئيسية' : 'Return to Home'}</span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -199,8 +199,8 @@ export default function AdminRoute({ children }) {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <a
-              href="/"
+            <Link
+              to="/"
               className="btn-primary"
               style={{
                 display: 'flex',
@@ -215,10 +215,10 @@ export default function AdminRoute({ children }) {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>home</span>
               <span>{dir === 'rtl' ? 'العودة للرئيسية' : 'Return to Home'}</span>
-            </a>
+            </Link>
 
-            <a
-              href="/login"
+            <Link
+              to="/login"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -236,7 +236,7 @@ export default function AdminRoute({ children }) {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>switch_account</span>
               <span>{dir === 'rtl' ? 'تبديل الحساب' : 'Switch Account'}</span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -116,17 +116,85 @@ export default function AdminPlaces() {
   }, []);
 
   useEffect(() => {
-    fetchPlaces();
-  }, [fetchPlaces]);
+    let active = true;
+    const run = async () => {
+      try {
+        let query = supabase
+          .from('places')
+          .select('id, name, name_en, slug, city, category, image_url, is_published, created_at', { count: 'exact' });
+
+        if (search.trim()) {
+          const term = `%${search.trim()}%`;
+          query = query.or(`name.ilike.${term},name_en.ilike.${term},city.ilike.${term},slug.ilike.${term}`);
+        }
+
+        if (cityFilter) query = query.eq('city', cityFilter);
+        if (categoryFilter) query = query.eq('category', categoryFilter);
+        if (statusFilter === 'published') query = query.eq('is_published', true);
+        if (statusFilter === 'draft') query = query.eq('is_published', false);
+
+        if (sortBy === 'name') {
+          query = query.order('name', { ascending: true });
+        } else {
+          query = query.order('created_at', { ascending: false });
+        }
+
+        const from = page * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+        query = query.range(from, to);
+
+        const { data, error: fetchError, count } = await query;
+        if (fetchError) throw fetchError;
+
+        if (active) {
+          setPlaces(data || []);
+          setTotalCount(count || 0);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (active) {
+          console.error('Error fetching places:', err);
+          setError(err?.message || 'Failed to load places');
+          setLoading(false);
+        }
+      }
+    };
+
+    run();
+    return () => {
+      active = false;
+    };
+  }, [search, cityFilter, categoryFilter, statusFilter, sortBy, page]);
 
   useEffect(() => {
-    fetchFilterOptions();
-  }, [fetchFilterOptions]);
+    let active = true;
+    const runOptions = async () => {
+      try {
+        const [citiesRes, catsRes] = await Promise.all([
+          supabase.from('places').select('city'),
+          supabase.from('places').select('category'),
+        ]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(0);
-  }, [search, cityFilter, categoryFilter, statusFilter, sortBy]);
+        if (active) {
+          if (citiesRes.data) {
+            const unique = [...new Set(citiesRes.data.map((p) => p.city).filter(Boolean))];
+            setCities(unique.sort());
+          }
+          if (catsRes.data) {
+            const unique = [...new Set(catsRes.data.map((p) => p.category).filter(Boolean))];
+            setCategories(unique.sort());
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch filter options:', err);
+      }
+    };
+
+    runOptions();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
@@ -243,13 +311,19 @@ export default function AdminPlaces() {
               className="admin-search-input"
               placeholder={ta('admin.searchPlaces')}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
             />
 
             <select
               className="admin-filter-select"
               value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
+              onChange={(e) => {
+                setCityFilter(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="">{ta('admin.allCities')}</option>
               {cities.map((c) => (
@@ -260,7 +334,10 @@ export default function AdminPlaces() {
             <select
               className="admin-filter-select"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="">{ta('admin.allCategories')}</option>
               {categories.map((c) => (
@@ -271,7 +348,10 @@ export default function AdminPlaces() {
             <select
               className="admin-filter-select"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="">{ta('admin.allStatuses')}</option>
               <option value="published">{ta('admin.published')}</option>
@@ -281,7 +361,10 @@ export default function AdminPlaces() {
             <select
               className="admin-filter-select"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
               style={{ minWidth: '140px' }}
             >
               <option value="date">{ta('admin.sortByDate')}</option>

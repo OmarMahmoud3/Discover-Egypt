@@ -44,52 +44,21 @@ export default function Footer() {
             </p>
             <div
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                marginTop: '20px',
+                marginTop: '18px',
+                padding: '6px 14px',
+                backgroundColor: 'rgba(212, 166, 74, 0.1)',
+                border: '1px solid var(--gold)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '13px',
+                color: 'var(--gold)',
+                fontWeight: 600,
               }}
             >
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  backgroundColor: '#12304A',
-                  border: '1px solid var(--gold)',
-                }}
-                title="#12304A Midnight Indigo"
-              />
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  backgroundColor: '#0F766E',
-                }}
-                title="#0F766E Turquoise Green"
-              />
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  backgroundColor: '#D4A64A',
-                }}
-                title="#D4A64A Gold"
-              />
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  backgroundColor: '#F3E9D2',
-                }}
-                title="#F3E9D2 Sandy Beige"
-              />
-              <span style={{ fontSize: '12px', color: 'var(--beige-dark)', marginInlineStart: '6px' }}>
-                {t('footer.paletteTitle')}
-              </span>
+              <span>☥</span>
+              <span>{t('brand.tagline') || 'تاريخ يُروى، وتجارب تُكتشف'}</span>
             </div>
           </div>
 
@@ -166,25 +135,25 @@ export default function Footer() {
                 <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--secondary-light)' }}>
                   explore
                 </span>
-                <span>{isArabic ? 'استكشاف أصيل (Explore Authentically)' : 'Explore Authentically'}</span>
+                <span>{isArabic ? 'استكشاف أصيل' : 'Explore Authentically'}</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#E2E8F0' }}>
                 <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--secondary-light)' }}>
                   change_history
                 </span>
-                <span>{isArabic ? 'تراث ضارب في التاريخ (Rooted in Heritage)' : 'Rooted in Heritage'}</span>
+                <span>{isArabic ? 'تراث ضارب في التاريخ' : 'Rooted in Heritage'}</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#E2E8F0' }}>
                 <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--secondary-light)' }}>
                   verified_user
                 </span>
-                <span>{isArabic ? 'إرشادات موثوقة (Trusted & Reliable)' : 'Trusted & Reliable'}</span>
+                <span>{isArabic ? 'إرشادات موثوقة' : 'Trusted & Reliable'}</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#E2E8F0' }}>
                 <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--secondary-light)' }}>
                   favorite
                 </span>
-                <span>{isArabic ? 'صُنع لعشاق مصر (Made for Egypt Lovers)' : 'Made for Egypt Lovers'}</span>
+                <span>{isArabic ? 'صُنع لعشاق مصر' : 'Made for Egypt Lovers'}</span>
               </li>
             </ul>
           </div>

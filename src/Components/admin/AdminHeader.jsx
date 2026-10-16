@@ -1,5 +1,5 @@
+import { Link } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
@@ -7,7 +7,6 @@ import { useLanguage } from '../../context/LanguageContext';
  */
 export default function AdminHeader({ title, breadcrumbs, onToggleSidebar }) {
   const { session, profile } = useAdminAuth();
-  const { ta } = useAdminTranslation();
   const { toggleLanguage, lang } = useLanguage();
 
   const displayName =
@@ -35,18 +34,21 @@ export default function AdminHeader({ title, breadcrumbs, onToggleSidebar }) {
           <h1 className="admin-header-title">{title}</h1>
           {breadcrumbs && breadcrumbs.length > 0 && (
             <div className="admin-breadcrumb">
-              {breadcrumbs.map((crumb, i) => (
-                <span key={i}>
-                  {crumb.to ? (
-                    <a href={crumb.to}>{crumb.label}</a>
-                  ) : (
-                    <span>{crumb.label}</span>
-                  )}
-                  {i < breadcrumbs.length - 1 && (
-                    <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>
-                  )}
-                </span>
-              ))}
+              {breadcrumbs.map((crumb, i) => {
+                const target = crumb.to || crumb.path;
+                return (
+                  <span key={i}>
+                    {target ? (
+                      <Link to={target}>{crumb.label}</Link>
+                    ) : (
+                      <span>{crumb.label}</span>
+                    )}
+                    {i < breadcrumbs.length - 1 && (
+                      <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>
+                    )}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>

@@ -41,7 +41,7 @@ export default function SearchModal({ isOpen, onClose }) {
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '80px 16px 20px',
+        padding: 'clamp(20px, 5vh, 80px) clamp(12px, 3vw, 20px) 20px',
       }}
       onClick={onClose}
     >
@@ -49,8 +49,11 @@ export default function SearchModal({ isOpen, onClose }) {
         style={{
           width: '100%',
           maxWidth: '560px',
+          maxHeight: 'calc(100vh - 40px)',
+          display: 'flex',
+          flexDirection: 'column',
           backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
+          borderRadius: 'var(--radius-card)',
           boxShadow: '0 20px 40px rgba(18, 48, 74, 0.25)',
           overflow: 'hidden',
           animation: 'fadeIn 0.2s ease-out forwards',
@@ -63,7 +66,7 @@ export default function SearchModal({ isOpen, onClose }) {
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            padding: '16px 20px',
+            padding: '14px 18px',
             borderBottom: '1px solid var(--border)',
           }}
         >
@@ -86,25 +89,29 @@ export default function SearchModal({ isOpen, onClose }) {
           />
           <button
             onClick={onClose}
+            aria-label={t('nav.closeModal')}
             style={{
-              width: '32px',
-              height: '32px',
+              width: '38px',
+              height: '38px',
+              minWidth: '38px',
+              minHeight: '38px',
               borderRadius: '8px',
               backgroundColor: 'var(--surface-low)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: 'var(--text-muted)',
+              cursor: 'pointer',
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
               close
             </span>
           </button>
         </div>
 
         {/* Results List */}
-        <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '12px' }}>
+        <div style={{ maxHeight: 'calc(80vh - 90px)', overflowY: 'auto', padding: '12px' }}>
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-muted)' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '40px', color: 'var(--gold)' }}>

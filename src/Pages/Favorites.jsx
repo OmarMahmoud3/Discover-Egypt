@@ -3,9 +3,21 @@ import { Link } from 'react-router-dom';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
 
+
+  const knownCityLabels = {
+          giza: { ar: 'الجيزة', en: 'Giza' },
+          luxor: { ar: 'الأقصر', en: 'Luxor' },
+          cairo: { ar: 'القاهرة', en: 'Cairo' },
+          aswan: { ar: 'أسوان', en: 'Aswan' },
+          alexandria: { ar: 'الإسكندرية', en: 'Alexandria' },
+          sinai: { ar: 'سيناء', en: 'Sinai' },
+          redsea: { ar: 'البحر الأحمر', en: 'Red Sea' },
+        };
+
+
 export default function Favorites() {
   const { favoritePlaces, removeFavorite, clearAllFavorites, showToast } = useFavorites();
-  const { t, isArabic, getPlaceName, getPlaceCity, getPlaceDescription } = useLanguage();
+  const { t, isArabic, getPlaceName, getPlaceCity, getPlaceDescription, getPlaceCategory } = useLanguage();
   const [activeCity, setActiveCity] = useState('all');
 
   // Cities count calculation
@@ -33,17 +45,21 @@ export default function Favorites() {
   const handleShareList = () => {
     if (navigator.share) {
       navigator.share({
-        title: isArabic ? 'أماكني المفضلة في مصر — اكتشف مصر' : 'My Favorite Places in Egypt — Discover Egypt',
+        title: isArabic ? 'دفتري الميداني لوجهات مصر — اكتشف مصر' : 'My Curated Egyptian Travel Journal — Discover Egypt',
         text: isArabic
-          ? `شاهد قائمة وجهاتي المفضلة في مصر (${favoritePlaces.length} أماكن محفوظة)!`
-          : `Check out my favorite travel places in Egypt (${favoritePlaces.length} saved destinations)!`,
-        url: window.location.href,
-      }).catch(() => {});
-    } else {
-      navigator.clipboard?.writeText(window.location.href);
+          ? `شاهد قائمة وجهاتي المحفوظة في مصر (${favoritePlaces.length} معالم موثقة)!`
+          : `Explore my saved heritage destinations in Egypt (${favoritePlaces.length} documented landmarks)!`,
+          url: window.location.href,
+        }).catch(() => {});
+      } else {
+        navigator.clipboard?.writeText(window.location.href);
       showToast(t('favorites.shareCopiedToast'));
     }
   };
+  
+
+
+
 
   // Clear action with prompt
   const handleClearAll = () => {
@@ -53,48 +69,41 @@ export default function Favorites() {
     }
     if (window.confirm(t('favorites.clearConfirm'))) {
       clearAllFavorites(t('favorites.clearSuccessToast'));
+
     }
   };
 
-  const cityTabs = [
-    { key: 'giza', label: isArabic ? 'الجيزة' : 'Giza' },
-    { key: 'luxor', label: isArabic ? 'الأقصر' : 'Luxor' },
-    { key: 'cairo', label: isArabic ? 'القاهرة' : 'Cairo' },
-  ];
+
+  const cityTabs = useMemo(() => {
+    const presentKeys = new Set();
+    const tabs = [];
+    favoritePlaces.forEach((p) => {
+      const key = p.cityKey || (p.cityEn || p.city || '').toLowerCase().trim();
+      if (key && !presentKeys.has(key)) {
+        presentKeys.add(key);
+        const label = isArabic
+          ? knownCityLabels[key]?.ar || p.city || key
+          : knownCityLabels[key]?.en || p.cityEn || p.city || key;
+        tabs.push({ key, label });
+      }
+    });
+    return tabs;
+  }, [favoritePlaces, isArabic]);
 
   return (
-    <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', padding: '24px 16px 100px' }}>
+    <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', padding: '36px 16px 90px' }}>
       <div className="container-narrow">
         {/* Header Section */}
-        <header style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
-          {/* Badge */}
-          <div style={{ alignSelf: 'flex-start' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 14px',
-                borderRadius: '9999px',
-                backgroundColor: 'var(--secondary-surface)',
-                color: 'var(--secondary)',
-                fontSize: '12px',
-                fontWeight: '700',
-              }}
-            >
-              <span className="material-symbols-outlined material-filled" style={{ fontSize: '15px' }}>
-                bookmark_heart
-              </span>
-              <span>{t('favorites.personalBadge')}</span>
-            </div>
+        <header style={{ marginBottom: '28px' }}>
+          <div className="editorial-tag" style={{ marginBottom: '8px' }}>
+            <span>{t('favorites.personalBadge')}</span>
           </div>
 
-          {/* Title & Live Counter */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
             <h1
               style={{
-                fontSize: '28px',
-                fontWeight: '800',
+                fontSize: 'clamp(26px, 4vw, 36px)',
+                fontWeight: 900,
                 color: 'var(--primary)',
                 letterSpacing: '-0.02em',
                 margin: 0,
@@ -105,12 +114,13 @@ export default function Favorites() {
 
             <span
               style={{
-                padding: '4px 14px',
-                borderRadius: '9999px',
-                backgroundColor: 'var(--surface-container)',
+                padding: '4px 12px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--surface-low)',
+                border: '1px solid var(--border)',
                 color: 'var(--primary)',
                 fontSize: '13px',
-                fontWeight: '700',
+                fontWeight: 700,
               }}
             >
               {favoritePlaces.length > 0
@@ -119,16 +129,16 @@ export default function Favorites() {
             </span>
           </div>
 
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.7, margin: '0 0 20px' }}>
             {t('favorites.desc')}
           </p>
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingTop: '8px' }}>
+          {/* Action Row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', paddingBottom: '16px', borderBottom: '1px solid var(--border)' }}>
             <button
               onClick={handleShareList}
               className="btn-primary"
-              style={{ height: '42px', padding: '0 18px', fontSize: '13px' }}
+              style={{ padding: '8px 18px', fontSize: '13px' }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                 share
@@ -136,249 +146,166 @@ export default function Favorites() {
               <span>{t('favorites.shareList')}</span>
             </button>
 
-            <button
-              onClick={handleClearAll}
+            {favoritePlaces.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--error)',
+                  backgroundColor: 'transparent',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--error-bg)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  delete_sweep
+                </span>
+                <span>{t('favorites.clearList')}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Architectural City Filter Tabs */}
+          {favoritePlaces.length > 0 && (
+            <div
+              className="no-scrollbar"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                height: '42px',
-                padding: '0 14px',
-                borderRadius: '12px',
-                color: 'var(--error)',
-                backgroundColor: 'transparent',
-                fontWeight: '700',
-                fontSize: '13px',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--error-bg)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                delete_sweep
-              </span>
-              <span>{t('favorites.clearList')}</span>
-            </button>
-          </div>
-
-          {/* City Filter Pills */}
-          <div
-            className="no-scrollbar"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              overflowX: 'auto',
-              paddingTop: '6px',
-              paddingBottom: '4px',
-            }}
-          >
-            <button
-              onClick={() => setActiveCity('all')}
-              style={{
-                flexShrink: 0,
-                padding: '7px 16px',
-                borderRadius: '9999px',
-                backgroundColor: activeCity === 'all' ? 'var(--secondary)' : 'var(--surface-container)',
-                color: activeCity === 'all' ? '#FFFFFF' : 'var(--text-muted)',
-                fontWeight: '700',
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
+                gap: '8px',
+                overflowX: 'auto',
+                paddingTop: '16px',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
-                grid_view
-              </span>
-              <span>{t('favorites.allCities', { count: cityCounts.all || 0 })}</span>
-            </button>
+              <button
+                onClick={() => setActiveCity('all')}
+                style={{
+                  flexShrink: 0,
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: activeCity === 'all' ? 'var(--primary)' : 'var(--surface)',
+                  color: activeCity === 'all' ? '#FFFFFF' : 'var(--primary)',
+                  border: activeCity === 'all' ? '1px solid var(--primary-dark)' : '1px solid var(--border)',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>{t('favorites.allCities', { count: cityCounts.all || 0 })}</span>
+              </button>
 
-            {cityTabs.map((tab) => {
-              const isSelected = activeCity === tab.key;
-              const count = cityCounts[tab.key] || 0;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveCity(tab.key)}
-                  style={{
-                    flexShrink: 0,
-                    padding: '7px 16px',
-                    borderRadius: '9999px',
-                    backgroundColor: isSelected ? 'var(--secondary)' : 'var(--surface-container)',
-                    color: isSelected ? '#FFFFFF' : 'var(--text-muted)',
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span>{tab.label} ({count})</span>
-                </button>
-              );
-            })}
-          </div>
+              {cityTabs.map((tab) => {
+                const isSelected = activeCity === tab.key;
+                const count = cityCounts[tab.key] || 0;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveCity(tab.key)}
+                    style={{
+                      flexShrink: 0,
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: isSelected ? 'var(--secondary)' : 'var(--surface)',
+                      color: isSelected ? '#FFFFFF' : 'var(--primary)',
+                      border: isSelected ? '1px solid var(--secondary-dark)' : '1px solid var(--border)',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{tab.label} ({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </header>
 
-        {/* Saved Places Cards Feed */}
+        {/* Curated Journal Entries Feed */}
         {displayedPlaces.length > 0 ? (
           <section style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {displayedPlaces.map((place) => {
               const placeName = getPlaceName(place);
               const cityName = getPlaceCity(place);
               const desc = getPlaceDescription(place);
-              const badge = isArabic ? place.badges?.[0] : (place.badgesEn?.[0] || place.badges?.[0]);
+              const category = getPlaceCategory(place);
               const duration = isArabic
                 ? place.quickInfo?.duration || 'ساعتان مقترحة'
                 : place.quickInfo?.durationEn || place.quickInfo?.duration || '2 hours suggested';
 
-              let featureTag = t('favorites.unescoRegistered');
-              if (place.cityKey === 'luxor') featureTag = t('favorites.sunriseVisit');
-              if (place.cityKey === 'cairo') featureTag = t('favorites.eveningVibe');
-
               return (
                 <article
                   key={place.id}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: '20px',
-                    overflow: 'hidden',
-                    boxShadow: 'var(--shadow-sm)',
-                    border: '1px solid var(--border)',
-                    transition: 'all 0.25s ease',
-                  }}
+                  className="journal-entry-card"
                 >
-                  {/* Card Top Image & Badges */}
-                  <div style={{ position: 'relative', width: '100%', height: '210px', overflow: 'hidden' }}>
+                  {/* Journal Photo */}
+                  <div style={{ position: 'relative', minHeight: '160px', aspectRatio: '16 / 10' }}>
                     <img
                       src={place.image}
                       alt={placeName}
+                      loading="lazy"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div
                       style={{
                         position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(to top, rgba(18, 48, 74, 0.85) 0%, rgba(18, 48, 74, 0.2) 60%, transparent 100%)',
-                      }}
-                    />
-
-                    {/* Badges on Top End */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        insetInlineEnd: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
+                        top: '10px',
+                        insetInlineStart: '10px',
                       }}
                     >
-                      {badge && (
-                        <span
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '9999px',
-                            backgroundColor: 'rgba(18, 48, 74, 0.85)',
-                            backdropFilter: 'blur(8px)',
-                            color: 'var(--gold)',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                          }}
-                        >
-                          {badge}
-                        </span>
-                      )}
-                      <span
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '9999px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.92)',
-                          backdropFilter: 'blur(8px)',
-                          color: 'var(--primary)',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                        }}
-                      >
+                      <span className="badge badge-unesco" style={{ fontSize: '11px', padding: '3px 8px' }}>
                         {cityName}
                       </span>
                     </div>
-
-                    {/* Remove Button on Top Start */}
-                    <button
-                      onClick={() => removeFavorite(place.id, placeName)}
-                      aria-label={isArabic ? `إزالة ${placeName} من المفضلة` : `Remove ${placeName} from favorites`}
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        insetInlineStart: '12px',
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '9999px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        backdropFilter: 'blur(8px)',
-                        color: 'var(--error)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'var(--shadow-sm)',
-                        transition: 'transform 0.15s',
-                      }}
-                      title={isArabic ? 'حذف من المفضلة' : 'Remove from favorites'}
-                    >
-                      <span className="material-symbols-outlined material-filled" style={{ fontSize: '20px' }}>
-                        delete
-                      </span>
-                    </button>
-
-                    {/* Rating & Suggested Time on Bottom */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        insetInlineEnd: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#FFFFFF',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--gold)' }}>
-                        <span className="material-symbols-outlined material-filled" style={{ fontSize: '15px' }}>
-                          star
-                        </span>
-                        <span>{place.rating}</span>
-                      </div>
-                      <span>•</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
-                          schedule
-                        </span>
-                        <span>{duration}</span>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Card Content */}
-                  <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Journal Details */}
+                  <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
-                      <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                        <div className="editorial-tag">
+                          <span>{category}</span>
+                        </div>
+                        <button
+                          onClick={() => removeFavorite(place.id, placeName)}
+                          aria-label={isArabic ? `إزالة ${placeName}` : `Remove ${placeName}`}
+                          style={{
+                            color: 'var(--text-light)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                          title={isArabic ? 'إزالة من الدفتر' : 'Remove from journal'}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                            bookmark_remove
+                          </span>
+                        </button>
+                      </div>
+
+                      <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--primary)', margin: '0 0 6px' }}>
                         {placeName}
                       </h2>
                       <p
                         style={{
                           fontSize: '13px',
                           color: 'var(--text-muted)',
-                          marginTop: '6px',
                           lineHeight: 1.6,
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical',
                           overflow: 'hidden',
+                          margin: 0,
                         }}
                       >
                         {desc}
@@ -390,54 +317,26 @@ export default function Favorites() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '10px',
-                        paddingTop: '8px',
-                        borderTop: '1px solid var(--surface-low)',
+                        marginTop: '16px',
+                        paddingTop: '10px',
+                        borderTop: '1px solid var(--border)',
                       }}
                     >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          color: 'var(--secondary)',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                        }}
-                      >
-                        <span className="material-symbols-outlined material-filled" style={{ fontSize: '16px' }}>
-                          verified
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--secondary)', fontWeight: 600 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                          schedule
                         </span>
-                        <span>{featureTag}</span>
+                        <span>{duration}</span>
                       </div>
 
                       <Link
                         to={`/places/${place.id}`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '8px 16px',
-                          borderRadius: '12px',
-                          backgroundColor: 'var(--surface-container)',
-                          color: 'var(--primary)',
-                          fontSize: '13px',
-                          fontWeight: '700',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--secondary)';
-                          e.currentTarget.style.color = '#FFFFFF';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--surface-container)';
-                          e.currentTarget.style.color = 'var(--primary)';
-                        }}
+                        className="btn-outline"
+                        style={{ padding: '6px 14px', fontSize: '12px' }}
                       >
                         <span>{t('favorites.viewDetailsBtn')}</span>
-                        <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '16px' }}>
-                          arrow_back
+                        <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '14px' }}>
+                          arrow_forward
                         </span>
                       </Link>
                     </div>
@@ -447,74 +346,47 @@ export default function Favorites() {
             })}
           </section>
         ) : (
-          /* Empty State View */
+          /* Editorial Empty State View */
           <section
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
               textAlign: 'center',
-              padding: '56px 20px',
-              borderRadius: '24px',
+              padding: '64px 20px',
+              borderRadius: 'var(--radius-card)',
               backgroundColor: '#FFFFFF',
-              boxShadow: 'var(--shadow-sm)',
               border: '1px solid var(--border)',
-              gap: '16px',
+              boxShadow: 'var(--shadow-sm)',
             }}
           >
             <div
               style={{
-                position: 'relative',
-                width: '88px',
-                height: '88px',
-                borderRadius: '9999px',
-                backgroundColor: 'var(--surface-container)',
+                width: '64px',
+                height: '64px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                margin: '0 auto 16px',
+                color: 'var(--gold-dark)',
               }}
             >
-              <div
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '9999px',
-                  backgroundColor: 'var(--gold-surface)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <span className="material-symbols-outlined material-filled" style={{ fontSize: '32px', color: 'var(--gold)' }}>
-                  favorite
-                </span>
-              </div>
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  insetInlineStart: '-2px',
-                  fontSize: '24px',
-                  color: 'var(--secondary)',
-                }}
-              >
-                explore
+              <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
+                bookmark_border
               </span>
             </div>
 
-            <div style={{ maxWidth: '340px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>
+            <div style={{ maxWidth: '420px', margin: '0 auto 20px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)', margin: '0 0 8px' }}>
                 {t('favorites.emptyTitle')}
               </h2>
-              <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.6 }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.65, margin: 0 }}>
                 {t('favorites.emptyDesc')}
               </p>
             </div>
 
-            <Link to="/explore" className="btn-primary" style={{ marginTop: '8px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+            <Link to="/explore" className="btn-primary">
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                 travel_explore
               </span>
               <span>{t('favorites.startExploring')}</span>
@@ -522,25 +394,26 @@ export default function Favorites() {
           </section>
         )}
 
-        {/* Itinerary Readiness Banner */}
+        {/* Itinerary Readiness Expedition Summary */}
         {favoritePlaces.length > 0 && (
           <section
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '16px',
-              padding: '18px 20px',
-              borderRadius: '20px',
-              backgroundColor: 'var(--surface-low)',
-              marginTop: '24px',
+              padding: '20px',
+              borderRadius: 'var(--radius-card)',
+              backgroundColor: '#FFFFFF',
+              marginTop: '28px',
               border: '1px solid var(--border)',
+              boxShadow: 'var(--shadow-sm)',
             }}
           >
             <div
               style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '14px',
+                width: '44px',
+                height: '44px',
+                borderRadius: 'var(--radius-sm)',
                 backgroundColor: 'var(--secondary-surface)',
                 color: 'var(--secondary)',
                 display: 'flex',
@@ -549,30 +422,30 @@ export default function Favorites() {
                 flexShrink: 0,
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '26px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>
                 map
               </span>
             </div>
 
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '16px', fontWeight: '800', color: 'var(--primary)' }}>
+                <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--primary)' }}>
                   {t('favorites.itineraryTitle')}
                 </span>
                 <span
                   style={{
-                    padding: '2px 10px',
-                    borderRadius: '9999px',
-                    backgroundColor: 'var(--secondary)',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--primary)',
                     color: '#FFFFFF',
                     fontSize: '11px',
-                    fontWeight: '700',
+                    fontWeight: 700,
                   }}
                 >
                   {t('favorites.provinces', { count: governorateCount })}
                 </span>
               </div>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5, margin: 0 }}>
                 {t('favorites.itineraryDesc')}
               </p>
             </div>

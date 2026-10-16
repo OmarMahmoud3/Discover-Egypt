@@ -11,7 +11,6 @@ export default function AdminSettings() {
   const { lang, setLanguage } = useLanguage();
   const { ta, isArabic } = useAdminTranslation();
 
-  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success') => {
@@ -38,7 +37,7 @@ export default function AdminSettings() {
       <AdminHeader
         title={ta('admin.settings')}
         breadcrumbs={[
-          { label: ta('admin.dashboard'), path: '/admin' },
+          { label: ta('admin.dashboard'), to: '/admin' },
           { label: ta('admin.settings') },
         ]}
         onToggleSidebar={onToggleSidebar}

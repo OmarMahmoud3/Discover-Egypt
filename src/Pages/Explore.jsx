@@ -68,7 +68,7 @@ export default function Explore() {
         { key: 'museums', label: 'Museums' },
       ];
 
-  // Combine local rich places with any dynamic supabase places (respecting name_en / city_en / etc.)
+  // Combine local rich places with any dynamic supabase places
   const allPlaces = useMemo(() => {
     const combined = [...PLACES_DATA];
     supabasePlaces.forEach((sp) => {
@@ -133,59 +133,54 @@ export default function Explore() {
   }, [allPlaces, query, selectedCity, selectedCategory, getPlaceName, getPlaceCity, getPlaceCategory]);
 
   return (
-    <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', padding: '32px 16px 100px' }}>
+    <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', padding: '36px 16px 90px' }}>
       <div className="container">
-        {/* Header */}
-        <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 36px' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 14px',
-              borderRadius: '9999px',
-              backgroundColor: 'var(--secondary-surface)',
-              color: 'var(--secondary)',
-              fontSize: '12px',
-              fontWeight: '700',
-              marginBottom: '12px',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-              explore
-            </span>
+        {/* Editorial Atlas Header */}
+        <div style={{ maxWidth: '780px', margin: '0 auto 36px', textAlign: 'center' }}>
+          <div className="editorial-tag" style={{ justifyContent: 'center', marginBottom: '8px' }}>
             <span>{t('explore.badge')}</span>
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: '900', color: 'var(--primary)', margin: '0 0 10px' }}>
+          <h1
+            style={{
+              fontSize: 'clamp(28px, 4.5vw, 40px)',
+              fontWeight: 900,
+              color: 'var(--primary)',
+              margin: '0 0 10px',
+              letterSpacing: '-0.02em',
+            }}
+          >
             {t('explore.title')}
           </h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.7, margin: 0 }}>
             {t('explore.desc')}
           </p>
         </div>
 
-        {/* Filter & Search Bar */}
+        {/* Architectural Filter & Search Console */}
         <div
           style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: '20px',
-            padding: '20px',
-            boxShadow: 'var(--shadow-sm)',
+            borderRadius: 'var(--radius-card)',
+            padding: 'clamp(14px, 3.5vw, 24px)',
             border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-sm)',
             marginBottom: '32px',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
           }}
         >
-          {/* Search Input */}
+          {/* Search Input Field */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: 'var(--surface-low)',
-              borderRadius: '14px',
+              backgroundColor: 'var(--surface)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border)',
               padding: '6px 14px',
+              minHeight: '44px',
+              transition: 'border-color 0.2s',
             }}
           >
             <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontSize: '22px' }}>
@@ -200,14 +195,26 @@ export default function Explore() {
                 flex: 1,
                 border: 'none',
                 background: 'transparent',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 fontSize: '15px',
-                fontWeight: '600',
+                fontWeight: 600,
                 color: 'var(--primary)',
               }}
             />
             {query && (
-              <button onClick={() => setQuery('')} style={{ color: 'var(--text-muted)' }}>
+              <button
+                onClick={() => setQuery('')}
+                style={{
+                  color: 'var(--text-light)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '36px',
+                  minHeight: '36px',
+                  cursor: 'pointer',
+                }}
+                aria-label="Clear search"
+              >
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                   close
                 </span>
@@ -215,60 +222,94 @@ export default function Explore() {
             )}
           </div>
 
-          {/* City Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }} className="no-scrollbar">
-            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', flexShrink: 0 }}>
+          {/* City Segmented Filters */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: '4px',
+            }}
+            className="no-scrollbar"
+          >
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               {t('explore.cityLabel')}
             </span>
-            {cities.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => setSelectedCity(c.key)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  backgroundColor: selectedCity === c.key ? 'var(--secondary)' : 'var(--surface-low)',
-                  color: selectedCity === c.key ? '#FFFFFF' : 'var(--text-muted)',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  flexShrink: 0,
-                  transition: 'all 0.2s',
-                }}
-              >
-                {c.label}
-              </button>
-            ))}
+            {cities.map((c) => {
+              const active = selectedCity === c.key;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setSelectedCity(c.key)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: active ? 'var(--primary)' : 'var(--surface)',
+                    color: active ? '#FFFFFF' : 'var(--primary)',
+                    border: active ? '1px solid var(--primary-dark)' : '1px solid var(--border)',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    minHeight: '38px',
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Category Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }} className="no-scrollbar">
-            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', flexShrink: 0 }}>
+          {/* Category Segmented Filters */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: '4px',
+            }}
+            className="no-scrollbar"
+          >
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               {t('explore.categoryLabel')}
             </span>
-            {categories.map((cat) => (
-              <button
-                key={cat.key}
-                onClick={() => setSelectedCategory(cat.key)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '9999px',
-                  backgroundColor: selectedCategory === cat.key ? 'var(--primary)' : 'var(--surface-low)',
-                  color: selectedCategory === cat.key ? '#FFFFFF' : 'var(--text-muted)',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  flexShrink: 0,
-                  transition: 'all 0.2s',
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
+            {categories.map((cat) => {
+              const active = selectedCategory === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.key)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: active ? 'var(--secondary)' : 'var(--surface)',
+                    color: active ? '#FFFFFF' : 'var(--primary)',
+                    border: active ? '1px solid var(--secondary-dark)' : '1px solid var(--border)',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    minHeight: '38px',
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Results Counter */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)' }}>
+        {/* Results Counter & Reset Action */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)' }}>
             {t('explore.foundCount', { count: filtered.length })}
           </span>
           {(query || selectedCity !== 'all' || selectedCategory !== 'all') && (
@@ -278,28 +319,39 @@ export default function Explore() {
                 setSelectedCity('all');
                 setSelectedCategory('all');
               }}
-              style={{ fontSize: '13px', color: 'var(--error)', fontWeight: '700' }}
+              style={{
+                fontSize: '13px',
+                color: 'var(--error)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
             >
-              {t('explore.resetFilters')}
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                restart_alt
+              </span>
+              <span>{t('explore.resetFilters')}</span>
             </button>
           )}
         </div>
 
-        {/* Places Grid */}
+        {/* Places Grid: Responsive multi-column layout */}
         {filtered.length === 0 ? (
           <div
             style={{
               textAlign: 'center',
-              padding: '60px 20px',
+              padding: '64px 20px',
               backgroundColor: '#FFFFFF',
-              borderRadius: '20px',
+              borderRadius: 'var(--radius-card)',
               border: '1px solid var(--border)',
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--gold)' }}>
               travel_explore
             </span>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--primary)', marginTop: '12px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--primary)', marginTop: '12px' }}>
               {t('explore.noResultsTitle')}
             </h3>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px' }}>
@@ -307,13 +359,7 @@ export default function Explore() {
             </p>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '24px',
-            }}
-          >
+          <div className="explore-grid">
             {filtered.map((place) => {
               const saved = isFavorite(place.id);
               const name = getPlaceName(place);
@@ -326,16 +372,16 @@ export default function Explore() {
                   key={place.id}
                   style={{
                     backgroundColor: '#FFFFFF',
-                    borderRadius: '20px',
+                    borderRadius: 'var(--radius-card)',
                     overflow: 'hidden',
-                    boxShadow: 'var(--shadow-sm)',
                     border: '1px solid var(--border)',
+                    boxShadow: 'var(--shadow-sm)',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.transform = 'translateY(-3px)';
                     e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                   }}
                   onMouseLeave={(e) => {
@@ -343,98 +389,74 @@ export default function Explore() {
                     e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
                   }}
                 >
-                  <div style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', aspectRatio: '16 / 10', overflow: 'hidden' }}>
                     <img
                       src={place.image}
                       alt={name}
+                      loading="lazy"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div
                       style={{
                         position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(to top, rgba(18, 48, 74, 0.8) 0%, transparent 60%)',
+                        top: '12px',
+                        insetInlineStart: '12px',
+                        display: 'flex',
+                        gap: '6px',
                       }}
-                    />
-
-                    {/* Top End Badges */}
-                    <div style={{ position: 'absolute', top: '12px', insetInlineEnd: '12px', display: 'flex', gap: '6px' }}>
-                      <span
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '9999px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.92)',
-                          color: 'var(--primary)',
-                          fontWeight: '800',
-                          fontSize: '11px',
-                        }}
-                      >
+                    >
+                      <span className="badge badge-unesco" style={{ fontSize: '11px' }}>
                         {city}
                       </span>
                     </div>
 
-                    {/* Favorite Button on Top Start */}
                     <button
+                      type="button"
                       onClick={() => toggleFavorite(place.id, name)}
                       aria-label={saved ? t('home.removeFavorite') : t('home.addFavorite')}
                       title={saved ? t('home.removeFavorite') : t('home.addFavorite')}
                       style={{
                         position: 'absolute',
                         top: '12px',
-                        insetInlineStart: '12px',
+                        insetInlineEnd: '12px',
                         width: '36px',
                         height: '36px',
-                        borderRadius: '9999px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: '#FFFFFF',
                         color: saved ? 'var(--error)' : 'var(--primary)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: 'var(--shadow-sm)',
+                        border: '1px solid var(--border)',
                       }}
                     >
-                      <span className={`material-symbols-outlined ${saved ? 'material-filled' : ''}`} style={{ fontSize: '18px' }}>
-                        {saved ? 'favorite' : 'favorite_border'}
+                      <span
+                        className={`material-symbols-outlined ${saved ? 'material-filled' : ''}`}
+                        style={{ fontSize: '18px' }}
+                      >
+                        {saved ? 'bookmark' : 'bookmark_border'}
                       </span>
                     </button>
-
-                    {/* Rating on Image */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: '10px',
-                        insetInlineEnd: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        color: '#FFFFFF',
-                        fontWeight: '700',
-                        fontSize: '12px',
-                      }}
-                    >
-                      <span className="material-symbols-outlined material-filled" style={{ fontSize: '15px', color: 'var(--gold)' }}>
-                        star
-                      </span>
-                      <span>{place.rating}</span>
-                      <span style={{ opacity: 0.8 }}>({place.reviewCount})</span>
-                    </div>
                   </div>
 
-                  <div style={{ padding: '18px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
-                      <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>
+                      <div className="editorial-tag" style={{ marginBottom: '4px' }}>
+                        <span>{category}</span>
+                      </div>
+                      <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--primary)', margin: '0 0 8px' }}>
                         {name}
                       </h2>
                       <p
                         style={{
                           fontSize: '13px',
                           color: 'var(--text-muted)',
-                          marginTop: '6px',
-                          lineHeight: 1.6,
+                          lineHeight: 1.65,
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical',
                           overflow: 'hidden',
+                          margin: 0,
                         }}
                       >
                         {desc}
@@ -446,23 +468,23 @@ export default function Explore() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        marginTop: '16px',
+                        marginTop: '18px',
                         paddingTop: '12px',
                         borderTop: '1px solid var(--border)',
                       }}
                     >
-                      <span style={{ fontSize: '12px', color: 'var(--secondary)', fontWeight: '700' }}>
-                        {category}
+                      <span style={{ fontSize: '12px', color: 'var(--text-light)', fontWeight: 600 }}>
+                        {place.coordinates || (place.quickInfo && (isArabic ? place.quickInfo.duration : place.quickInfo.durationEn))}
                       </span>
 
                       <Link
                         to={`/places/${place.id}`}
-                        className="btn-primary"
-                        style={{ padding: '7px 14px', fontSize: '12px', borderRadius: '10px' }}
+                        className="btn-outline"
+                        style={{ padding: '7px 14px', fontSize: '12px' }}
                       >
                         <span>{t('explore.viewDetailsBtn')}</span>
                         <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '15px' }}>
-                          arrow_back
+                          arrow_forward
                         </span>
                       </Link>
                     </div>

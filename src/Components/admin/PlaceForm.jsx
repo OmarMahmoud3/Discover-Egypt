@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 
@@ -80,21 +80,29 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
 
   // Debounced slug uniqueness check
   useEffect(() => {
+    if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
+
     if (!form.slug || form.slug.length < 2) {
-      setSlugStatus(null);
-      return;
+      slugCheckTimer.current = setTimeout(() => {
+        setSlugStatus(null);
+      }, 0);
+      return () => {
+        if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
+      };
     }
 
     // Skip check if editing and slug hasn't changed
     if (isEdit && form.slug === place?.slug) {
-      setSlugStatus('available');
-      return;
+      slugCheckTimer.current = setTimeout(() => {
+        setSlugStatus('available');
+      }, 0);
+      return () => {
+        if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
+      };
     }
 
-    setSlugStatus('checking');
-
-    if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
     slugCheckTimer.current = setTimeout(async () => {
+      setSlugStatus('checking');
       try {
         const { data, error } = await supabase
           .from('places')
@@ -115,7 +123,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
       } catch {
         setSlugStatus(null);
       }
-    }, 500);
+    }, 400);
 
     return () => {
       if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
@@ -443,7 +451,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
       {/* Publication Status */}
       <div className="admin-form-group">
         <label className="admin-form-label">{ta('admin.publicationStatus')}</label>
-        <div style={{ display: 'flex', gap: '12px', marginTop: '6px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
           <label
             style={{
               display: 'flex',
@@ -456,6 +464,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
               cursor: 'pointer',
               fontWeight: 600,
               fontSize: '13px',
+              flex: '1 1 180px',
               transition: 'all 0.2s',
             }}
           >
@@ -482,6 +491,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
               cursor: 'pointer',
               fontWeight: 600,
               fontSize: '13px',
+              flex: '1 1 180px',
               transition: 'all 0.2s',
             }}
           >
@@ -505,13 +515,20 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
           display: 'flex',
           gap: '10px',
           justifyContent: 'flex-end',
+          flexWrap: 'wrap',
           paddingTop: '20px',
           borderTop: '1px solid var(--border)',
           marginTop: '8px',
         }}
       >
         {onCancel && (
-          <button type="button" className="admin-btn admin-btn-outline" onClick={onCancel} disabled={saving}>
+          <button
+            type="button"
+            className="admin-btn admin-btn-outline"
+            onClick={onCancel}
+            disabled={saving}
+            style={{ minHeight: '44px' }}
+          >
             {ta('admin.cancel')}
           </button>
         )}
@@ -519,6 +536,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
           type="submit"
           className="admin-btn admin-btn-primary"
           disabled={saving || slugStatus === 'checking'}
+          style={{ minHeight: '44px' }}
         >
           {saving ? (
             <>

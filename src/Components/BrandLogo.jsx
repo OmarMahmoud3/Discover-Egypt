@@ -12,17 +12,20 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
 
   return (
     <div
+      className={`brand-logo-root ${size}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: '10px',
         flexDirection: layout === 'vertical' ? 'column' : 'row',
         textDecoration: 'none',
         userSelect: 'none',
+        minWidth: 0,
       }}
     >
       {/* Visual Identity Logo Mark */}
       <div
+        className="brand-logo-icon"
         style={{
           width: `${iconPx}px`,
           height: `${iconPx}px`,
@@ -35,11 +38,11 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
       >
         <svg
           viewBox="0 0 100 100"
-          width={iconPx}
-          height={iconPx}
+          width="100%"
+          height="100%"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          style={{ overflow: 'visible' }}
+          style={{ overflow: 'visible', display: 'block' }}
         >
           {/* Subtle Outer Glow / Disc */}
           <circle cx="50" cy="50" r="48" fill="#F3E9D2" opacity="0.4" />
@@ -68,12 +71,14 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
       {/* Brand Text */}
       {showText && (
         <div
+          className="brand-logo-text"
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: layout === 'vertical' ? 'center' : 'flex-start',
             textAlign: layout === 'vertical' ? 'center' : isArabic ? 'right' : 'left',
             lineHeight: 1.15,
+            minWidth: 0,
           }}
         >
           <div
@@ -87,6 +92,7 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              whiteSpace: 'nowrap',
             }}
           >
             <span>{isArabic ? 'اكتشف مصر' : 'Discover Egypt'}</span>
@@ -113,6 +119,7 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
               letterSpacing: isArabic ? '0.12em' : '0.04em',
               textTransform: 'uppercase',
               marginTop: '1px',
+              whiteSpace: 'nowrap',
             }}
           >
             {isArabic ? 'DISCOVER EGYPT' : 'اكتشف مصر'}

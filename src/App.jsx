@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from './lib/supabase';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
@@ -18,37 +17,42 @@ import NotFound from './Pages/NotFound';
 
 import AdminRoute from './Components/admin/AdminRoute';
 import AdminLayout from './Components/admin/AdminLayout';
-import AdminDashboard from './Pages/admin/AdminDashboard';
-import AdminPlaces from './Pages/admin/AdminPlaces';
-import AdminPlaceEdit from './Pages/admin/AdminPlaceEdit';
-import AdminUsers from './Pages/admin/AdminUsers';
-import AdminSettings from './Pages/admin/AdminSettings';
+
+// Lazy-loaded Admin pages to optimize initial bundle size
+const AdminDashboard = lazy(() => import('./Pages/admin/AdminDashboard'));
+const AdminPlaces = lazy(() => import('./Pages/admin/AdminPlaces'));
+const AdminPlaceEdit = lazy(() => import('./Pages/admin/AdminPlaceEdit'));
+const AdminUsers = lazy(() => import('./Pages/admin/AdminUsers'));
+const AdminSettings = lazy(() => import('./Pages/admin/AdminSettings'));
+
+function AdminSuspenseFallback() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '12px' }}>
+      <div
+        style={{
+          width: '36px',
+          height: '36px',
+          border: '3px solid var(--border)',
+          borderTopColor: 'var(--secondary)',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 function AppContent() {
-  const [session, setSession] = useState(null);
+  const { session, isAdmin, isReady } = useAdminAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { dir, lang } = useLanguage();
-  const { isAdmin, isReady } = useAdminAuth();
 
   // Only hide public chrome when authenticated and verified as admin
   const isAdminRoute = location.pathname.startsWith('/admin') && isReady && isAdmin;
-
-  // Track Supabase Session
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const isPlaceDetails = location.pathname.startsWith('/places/') || location.pathname.startsWith('/place/');
 
   return (
     <div
@@ -85,7 +89,7 @@ function AppContent() {
             }
           />
 
-          {/* Admin Dashboard Routes */}
+          {/* Admin Dashboard Routes with Code Splitting */}
           <Route
             path="/admin"
             element={
@@ -94,12 +98,12 @@ function AppContent() {
               </AdminRoute>
             }
           >
-            <Route index element={<AdminDashboard />} />
-            <Route path="places" element={<AdminPlaces />} />
-            <Route path="places/new" element={<AdminPlaceEdit />} />
-            <Route path="places/:id" element={<AdminPlaceEdit />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="settings" element={<AdminSettings />} />
+            <Route index element={<Suspense fallback={<AdminSuspenseFallback />}><AdminDashboard /></Suspense>} />
+            <Route path="places" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminPlaces /></Suspense>} />
+            <Route path="places/new" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminPlaceEdit /></Suspense>} />
+            <Route path="places/:id" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminPlaceEdit /></Suspense>} />
+            <Route path="users" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminUsers /></Suspense>} />
+            <Route path="settings" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminSettings /></Suspense>} />
           </Route>
 
           {/* Fallback route */}
@@ -110,8 +114,8 @@ function AppContent() {
       {/* Global Footer — hidden on admin routes */}
       {!isAdminRoute && <Footer />}
 
-      {/* Bottom Navigation for Mobile — hidden on admin routes */}
-      {!isAdminRoute && <MobileNav onOpenAuth={() => setAuthModalOpen(true)} />}
+      {/* Bottom Navigation for Mobile — hidden on admin & place details routes */}
+      {!isAdminRoute && !isPlaceDetails && <MobileNav onOpenAuth={() => setAuthModalOpen(true)} />}
 
       {/* Auth Modal Backdrop */}
       {authModalOpen && (
@@ -127,11 +131,12 @@ function AppContent() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px',
+            padding: 'clamp(12px, 3vw, 24px)',
+            overflowY: 'auto',
             animation: 'fadeIn 0.2s ease-out forwards',
           }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '460px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '460px', margin: 'auto' }}>
             <LogIn session={session} onClose={() => setAuthModalOpen(false)} />
           </div>
         </div>

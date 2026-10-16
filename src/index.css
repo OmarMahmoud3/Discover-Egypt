@@ -1,59 +1,65 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
-
 :root {
-  /* Discover Egypt Brand Identity Palette */
-  --primary: #12304A;          /* Midnight Indigo */
-  --primary-dark: #0A1C2C;
-  --primary-light: #1E466B;
-  --primary-surface: #F0F5FA;
-  
-  --secondary: #0F766E;        /* Turquoise Green */
+  --navbar-height: 72px;
+
+  /* ========================================================
+     DISCOVER EGYPT — EDITORIAL TRAVEL PUBLICATION PALETTE
+     Deep Navy: #12304A | Teal: #0F766E | Warm Sand: #F3E9D2
+     Gold: #D4A64A      | Warm Off-White: #F7F5EF
+     ======================================================== */
+  --primary: #12304A;          /* Deep Nile Navy */
+  --primary-dark: #0A1C2C;     /* Archival Ink */
+  --primary-light: #1E466B;    /* Lapis Blue */
+  --primary-surface: #EAF0F6;
+
+  --secondary: #0F766E;        /* Egyptian Faience Teal */
   --secondary-dark: #0A534E;
   --secondary-light: #14B8A6;
-  --secondary-surface: #E6F7F5;
-  
-  --gold: #D4A64A;             /* Gold */
+  --secondary-surface: #E6F3F1;
+
+  --gold: #D4A64A;             /* Pharaonic Gold */
   --gold-dark: #B8892D;
   --gold-light: #F0C46B;
   --gold-surface: #FDF8ED;
-  
-  --beige: #F3E9D2;            /* Sandy Beige */
-  --beige-dark: #DECFA9;
-  --beige-light: #FAF6ED;
-  
+
+  --beige: #F3E9D2;            /* Warm Desert Sand / Limestone */
+  --beige-dark: #DCCEAA;
+  --beige-light: #FAF5E9;
+
   --white: #FFFFFF;
-  --surface: #F8FAFD;
-  --surface-low: #EFF4F9;
-  --surface-container: #E4ECF4;
-  
-  --text-main: #12304A;
-  --text-muted: #536476;
-  --text-light: #8A99A8;
-  
-  --border: #E2E8F0;
+  --surface: #F7F5EF;          /* Warm Off-White Editorial Canvas */
+  --surface-low: #EFEADB;      /* Soft Sand Tinted Underlay */
+  --surface-container: #E8E2D1;/* Warm Parchment Fill */
+
+  --text-main: #12304A;        /* Deep Navy Ink */
+  --text-muted: #4B5E70;       /* Subdued Slate Navy */
+  --text-light: #7E8F9F;       /* Archival Caption */
+
+  --border: #E5DDCA;           /* Delicate Ruled Parchment Line */
   --border-focus: #0F766E;
-  --error: #DC2626;
+  --border-gold: #D4A64A;
+
+  --error: #B91C1C;
   --error-bg: #FEF2F2;
-  --success: #16A34A;
+  --success: #15803D;
   --success-bg: #F0FDF4;
 
   /* Typography */
-  --font-arabic: 'Cairo', system-ui, -apple-system, sans-serif;
-  --font-latin: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-arabic: 'Cairo', 'Times New Roman', serif, system-ui;
+  --font-latin: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(18, 48, 74, 0.06);
-  --shadow-md: 0 4px 14px rgba(18, 48, 74, 0.08);
-  --shadow-lg: 0 10px 30px rgba(18, 48, 74, 0.12);
-  --shadow-gold: 0 4px 20px rgba(212, 166, 74, 0.25);
-  --shadow-teal: 0 4px 20px rgba(15, 118, 110, 0.25);
+  /* Restrained Architectural Elevation (No AI Pill/Float Bloat) */
+  --shadow-sm: 0 1px 3px rgba(18, 48, 74, 0.05);
+  --shadow-md: 0 4px 16px rgba(18, 48, 74, 0.06);
+  --shadow-lg: 0 12px 32px rgba(18, 48, 74, 0.08);
+  --shadow-gold: 0 4px 20px rgba(212, 166, 74, 0.22);
+  --shadow-teal: 0 4px 20px rgba(15, 118, 110, 0.2);
 
-  /* Radius */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
-  --radius-full: 9999px;
+  /* Curated Editorial Geometry */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-card: 14px;
+  --radius-pill: 9999px;
 }
 
 * {
@@ -69,9 +75,9 @@ html, body {
   min-height: 100%;
   background-color: var(--surface);
   color: var(--text-main);
-  line-height: 1.6;
+  line-height: 1.65;
   scroll-behavior: smooth;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.2s ease;
 }
 
 body {
@@ -119,6 +125,7 @@ html[dir="ltr"] .icon-flip-ltr {
   word-wrap: normal;
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
 
@@ -146,50 +153,70 @@ input, textarea, select {
   max-width: 100%;
 }
 
-button, a {
-  -webkit-tap-highlight-color: transparent;
-}
-
 /* ========================================================
-   UTILITY CONTAINERS
+   UTILITY CONTAINERS & EDITORIAL RULES
    ======================================================== */
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding-inline: clamp(16px, 4vw, 32px);
+  padding-inline: clamp(12px, 3.5vw, 36px);
 }
 
 .container-narrow {
   width: 100%;
-  max-width: 860px;
+  max-width: 920px;
   margin: 0 auto;
-  padding-inline: clamp(14px, 3vw, 24px);
+  padding-inline: clamp(12px, 3vw, 28px);
+}
+
+:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+
+.editorial-rule {
+  height: 1px;
+  background-color: var(--border);
+  width: 100%;
+  margin-block: 24px;
+}
+
+.editorial-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary);
 }
 
 /* ========================================================
-   BRAND BUTTON STYLES
+   EDITORIAL BUTTON STYLES
    ======================================================== */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, var(--secondary) 0%, #0d615b 100%);
-  color: var(--white);
-  padding: 12px 24px;
+  background-color: var(--secondary);
+  color: #FFFFFF;
+  padding: 11px 22px;
   border-radius: var(--radius-md);
   font-weight: 700;
-  font-size: 15px;
-  box-shadow: var(--shadow-teal);
-  transition: all 0.25s ease;
+  font-size: 14px;
+  border: 1px solid var(--secondary-dark);
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.18);
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(15, 118, 110, 0.35);
-  background: linear-gradient(135deg, #138980 0%, #0d615b 100%);
+  background-color: #0c615a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
 }
 
 .btn-primary:active {
@@ -201,20 +228,22 @@ button, a {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, var(--gold) 0%, #be9037 100%);
-  color: #1a1505;
-  padding: 12px 24px;
+  background-color: var(--gold);
+  color: #12304A;
+  padding: 11px 22px;
   border-radius: var(--radius-md);
   font-weight: 700;
-  font-size: 15px;
-  box-shadow: var(--shadow-gold);
-  transition: all 0.25s ease;
+  font-size: 14px;
+  border: 1px solid var(--gold-dark);
+  box-shadow: 0 2px 8px rgba(212, 166, 74, 0.22);
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .btn-gold:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(212, 166, 74, 0.4);
+  background-color: #c49639;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(212, 166, 74, 0.32);
 }
 
 .btn-outline {
@@ -222,13 +251,13 @@ button, a {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--white);
+  background: #FFFFFF;
   color: var(--primary);
-  border: 1.5px solid var(--border);
-  padding: 11px 22px;
+  border: 1px solid var(--border);
+  padding: 10px 20px;
   border-radius: var(--radius-md);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
@@ -238,70 +267,72 @@ button, a {
   border-color: var(--primary);
 }
 
+.btn-editorial-navy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--primary);
+  color: #FFFFFF;
+  padding: 11px 22px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid var(--primary-dark);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-editorial-navy:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
 /* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
 }
 
 .badge-unesco {
-  background: rgba(255, 255, 255, 0.95);
+  background: #FFFFFF;
   color: var(--primary);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
 }
 
 .badge-wonder {
-  background: rgba(254, 243, 199, 0.95);
-  color: #92400E;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
+  background: var(--gold-surface);
+  color: #854D0E;
+  border: 1px solid var(--gold);
 }
 
 .badge-secondary {
   background: var(--secondary-surface);
   color: var(--secondary);
+  border: 1px solid rgba(15, 118, 110, 0.2);
 }
 
 .badge-primary {
   background: var(--primary-surface);
   color: var(--primary);
+  border: 1px solid rgba(18, 48, 74, 0.15);
 }
 
-/* Glassmorphism Classes */
-.glass-header {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(18, 48, 74, 0.08);
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-}
-
-/* Animations */
+/* Animations (subtle, non-distracting) */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
 .animate-fade {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.3s ease-out forwards;
 }
 
 /* Reduced motion */
@@ -318,8 +349,8 @@ button, a {
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -327,7 +358,7 @@ button, a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #D4CBBA;
   border-radius: 4px;
 }
 
@@ -335,7 +366,6 @@ button, a {
   background: var(--secondary);
 }
 
-/* Hide scrollbar for clean carousels */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -345,187 +375,242 @@ button, a {
 }
 
 /* ========================================================
-   RESPONSIVE DESIGN SYSTEM
+   EDITORIAL MAGAZINE LAYOUT SYSTEMS
    ======================================================== */
 
-/* 1. Brand Pillars Grid (Responsive 5 -> 3 -> 2 -> 1) */
-.pillars-grid {
+/* 1. Manifesto Pillars (Numbered Columns) */
+.manifesto-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 20px;
 }
 
-@media (max-width: 1100px) {
-  .pillars-grid {
+@media (max-width: 1024px) {
+  .manifesto-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
   }
 }
 
-@media (max-width: 600px) {
-  .pillars-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-}
-
-@media (max-width: 359px) {
-  .pillars-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-}
-
-/* Pillar card mobile adjustments */
-@media (max-width: 600px) {
-  .pillars-grid > div {
-    padding: 16px 12px !important;
-  }
-  .pillars-grid > div h3 {
-    font-size: 14px !important;
-  }
-  .pillars-grid > div p {
-    font-size: 12px !important;
-  }
-}
-
-/* 2. Places Cards Grid (Responsive 3 -> 2 -> 1) */
-.places-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-@media (max-width: 1024px) {
-  .places-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-  }
-}
-
 @media (max-width: 640px) {
-  .places-grid {
+  .manifesto-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* 2. Editorial Lead Story (Hero Feature Spread) */
+.editorial-lead-story {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 28px;
+}
+
+@media (max-width: 860px) {
+  .editorial-lead-story {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 3. Diptych Grid (2-column portrait cards) */
+.diptych-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 720px) {
+  .diptych-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 }
 
-/* 3. Hero Section Responsive Elements */
-.hero-title {
-  font-size: clamp(26px, 5.2vw, 50px);
-  font-weight: 900;
-  line-height: 1.25;
-  margin-bottom: 16px;
-  text-wrap: balance;
-  word-break: break-word;
+/* 4. Archival Ledger / List Grid (Triptych or Compact Ledger) */
+.archival-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
 
-.hero-subtitle {
-  font-size: clamp(13px, 2.2vw, 17px);
-  line-height: 1.7;
-  margin-bottom: 28px;
-  max-width: 680px;
-  margin-inline: auto;
+@media (max-width: 960px) {
+  .archival-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
 }
 
-/* Hero search form — default horizontal layout */
-.hero-search-form {
+@media (max-width: 580px) {
+  .archival-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* 5. Modern Editorial Responsive Grids */
+.places-grid,
+.explore-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 600px) {
+  .places-grid,
+  .explore-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .places-grid,
+  .explore-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Monograph 2-Column Desktop / 1-Column Mobile Layout */
+.monograph-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+@media (min-width: 860px) {
+  .monograph-grid {
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+    gap: 32px;
+    margin-top: 32px;
+  }
+}
+
+/* Journal Entry Card (Favorites) */
+.journal-entry-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  background-color: #FFFFFF;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (min-width: 600px) {
+  .journal-entry-card {
+    grid-template-columns: 180px 1fr;
+  }
+}
+
+/* Lead Story Architectural Metrics Grid */
+.lead-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 14px;
+  background-color: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+@media (max-width: 440px) {
+  .lead-metrics-grid {
+    padding: 10px 8px;
+    gap: 6px;
+  }
+  .lead-metrics-grid .metric-val {
+    font-size: 13px !important;
+  }
+  .lead-metrics-grid .metric-lbl {
+    font-size: 10px !important;
+  }
+}
+
+/* Nearby Places Grid */
+.nearby-places-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 520px) {
+  .nearby-places-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+}
+
+@media (min-width: 900px) {
+  .nearby-places-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+}
+
+/* 6. Editorial Masthead Search Bar */
+.editorial-search-bar {
   display: flex;
   align-items: center;
   background-color: #FFFFFF;
-  border-radius: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 6px 8px 6px 16px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
-  max-width: 620px;
-  margin: 0 auto 20px;
+  box-shadow: 0 4px 16px rgba(18, 48, 74, 0.08);
+  max-width: 680px;
   width: 100%;
-  gap: 8px;
-  transition: all 0.2s ease;
+  gap: 10px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* Hero search input wrap — always flex */
-.hero-search-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
+.editorial-search-bar:focus-within {
+  border-color: var(--secondary);
+  box-shadow: 0 4px 20px rgba(15, 118, 110, 0.15);
 }
 
-/* Mobile: stack search form vertically */
 @media (max-width: 600px) {
-  .hero-search-form {
+  .editorial-search-bar {
     flex-direction: column;
     align-items: stretch;
-    padding: 12px;
-    border-radius: 16px;
-    gap: 10px;
-    width: min(100%, 620px);
+    padding: 10px;
+    gap: 8px;
   }
-  .hero-search-input-wrap {
+  .editorial-search-bar input {
+    min-height: 42px;
+  }
+  .editorial-search-bar button {
     width: 100%;
-    min-height: 46px;
-    background: var(--surface);
-    border-radius: 12px;
-    padding-inline: 12px;
-  }
-  .hero-search-btn {
-    width: 100% !important;
-    min-height: 46px !important;
-    height: 46px !important;
-    border-radius: 12px !important;
+    min-height: 42px;
   }
 }
 
-@media (max-width: 420px) {
-  .hero-title {
-    font-size: clamp(22px, 7vw, 32px);
-  }
-  .hero-subtitle {
-    font-size: 13px;
-  }
-}
-
-/* Hero destination city pills */
-.hero-cities-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 13px;
-}
-
-@media (max-width: 480px) {
-  .hero-cities-wrap {
-    gap: 6px;
-    font-size: 12px;
-  }
-  .hero-city-pill {
-    padding: 5px 10px !important;
-    font-size: 11px !important;
-  }
-}
-
-/* 4. Journey Banner Responsive */
+/* 7. Journey Banner */
 .journey-banner {
-  padding: 36px 32px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, var(--primary) 0%, #0c2134 100%);
+  padding: 36px 36px;
+  border-radius: var(--radius-card);
+  background-color: var(--primary);
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 24px;
-  border: 2px solid var(--gold);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--gold);
+  box-shadow: var(--shadow-md);
 }
 
 @media (max-width: 768px) {
   .journey-banner {
     padding: 24px 20px;
-    border-radius: 20px;
     gap: 20px;
   }
   .journey-banner-actions {
@@ -541,30 +626,28 @@ button, a {
   }
 }
 
-/* 5. Mobile Bottom Nav & Floating Action Bar Content Protection */
-.place-details-bar {
-  bottom: 0;
+/* 8. Place Details Field Notes Sidebar */
+.field-notes-panel {
+  background-color: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
 }
 
 @media (max-width: 860px) {
   body {
-    padding-bottom: calc(68px + env(safe-area-inset-bottom)); /* Prevents mobile bottom nav from covering content */
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
   }
   .place-details-bar {
-    bottom: calc(62px + env(safe-area-inset-bottom)); /* Lifts floating action bar above Mobile Bottom Nav */
+    bottom: calc(62px + env(safe-area-inset-bottom));
   }
   .place-details-page {
-    padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important; /* Ensure content is never cut off */
+    padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important;
   }
 }
 
-/* ========================================================
-   NAVBAR RESPONSIVE SYSTEM
-   ======================================================== */
-
-/* Desktop nav & mobile menu button base states (controlled via inline style + media queries) */
-
-/* Tablet/Mobile: hide desktop nav, show hamburger */
+/* 9. Responsive Header & Masthead */
 @media (max-width: 1024px) {
   .desktop-nav {
     display: none !important;
@@ -577,8 +660,20 @@ button, a {
   }
 }
 
-/* Tablet: moderate adjustments */
 @media (max-width: 768px) {
+  .masthead-curation-note {
+    display: none !important;
+  }
+  .masthead-topbar-inner {
+    justify-content: center !important;
+  }
+  .masthead-tagline {
+    font-size: 11px !important;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .header-inner {
     gap: 8px !important;
     height: 64px !important;
@@ -587,12 +682,21 @@ button, a {
     min-width: 0 !important;
     flex: 1 1 auto !important;
   }
+  .brand-logo-icon {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .brand-logo-title {
+    font-size: 18px !important;
+  }
+  .brand-logo-subtitle {
+    font-size: 10px !important;
+  }
   .nav-controls {
     gap: 6px !important;
   }
 }
 
-/* Mobile (<= 640px): hide top account button to prevent header cramping; accessible via MobileNav and Drawer */
 @media (max-width: 640px) {
   .nav-account-btn {
     display: none !important;
@@ -601,7 +705,8 @@ button, a {
     display: none !important;
   }
   .nav-language-btn {
-    padding-inline: 8px !important;
+    padding: 0 !important;
+    width: 38px !important;
     min-width: 38px !important;
     height: 38px !important;
     min-height: 38px !important;
@@ -609,91 +714,186 @@ button, a {
   }
 }
 
-/* Small mobile (<= 480px): optimize logo sizing and icon margins */
 @media (max-width: 480px) {
+  .masthead-topbar {
+    padding: 4px 0 !important;
+  }
   .header-inner {
-    height: 58px !important;
-    padding-inline: 12px !important;
+    height: 56px !important;
+    padding-inline: 10px !important;
     gap: 6px !important;
   }
   .brand-shell {
-    gap: 8px !important;
+    gap: 6px !important;
+  }
+  .brand-logo-icon {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .brand-logo-title {
+    font-size: 15px !important;
+    white-space: nowrap !important;
+  }
+  .brand-logo-symbol {
+    font-size: 13px !important;
+  }
+  .brand-logo-subtitle {
+    display: none !important;
   }
   .mobile-menu-btn {
     width: 38px !important;
     height: 38px !important;
     min-width: 38px !important;
     min-height: 38px !important;
-    border-radius: 10px !important;
+    border-radius: var(--radius-md) !important;
   }
   .mobile-menu-btn span {
     font-size: 22px !important;
-  }
-  .brand-logo-title {
-    font-size: 16px !important;
-    gap: 4px !important;
-  }
-  .brand-logo-symbol {
-    font-size: 14px !important;
-  }
-  .brand-logo-subtitle {
-    font-size: 9px !important;
-    letter-spacing: 0.06em !important;
   }
   .nav-action-btn {
     width: 38px !important;
     height: 38px !important;
     min-width: 38px !important;
     min-height: 38px !important;
-    border-radius: 10px !important;
+    border-radius: var(--radius-md) !important;
   }
-}
-
-/* Ultra compact (<= 360px): hide language switcher from header, fully preserved in Drawer */
-@media (max-width: 360px) {
   .nav-language-btn {
-    display: none !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
   }
 }
 
-/* ========================================================
-   HERO SECTION MOBILE REFINEMENTS
-   ======================================================== */
-@media (max-width: 600px) {
-  .hero-section {
-    padding-block: 40px !important;
-    padding-inline: 20px !important;
-    min-height: auto !important;
+@media (max-width: 360px) {
+  .header-inner {
+    padding-inline: 8px !important;
+    gap: 4px !important;
+  }
+  .brand-shell {
+    gap: 4px !important;
+  }
+  .brand-logo-icon {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .brand-logo-title {
+    font-size: 13.5px !important;
+  }
+  .mobile-menu-btn,
+  .nav-action-btn,
+  .nav-language-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
   }
 }
 
-@media (max-width: 420px) {
-  .hero-section {
-    padding-block: 32px !important;
-    padding-inline: 16px !important;
-  }
-}
-
-/* ========================================================
-   PILLARS SECTION MOBILE SPACING
-   ======================================================== */
-@media (max-width: 600px) {
-  .pillars-section {
-    padding-block: 40px 24px !important;
-  }
-  .pillars-section .section-header {
-    margin-bottom: 24px !important;
-  }
-  .pillars-section .section-header h2 {
-    font-size: clamp(20px, 5vw, 28px) !important;
-  }
-}
-
-/* ========================================================
-   MOBILE BOTTOM NAV
-   ======================================================== */
 @media (max-width: 860px) {
   .mobile-bottom-nav {
     display: block !important;
   }
 }
+
+/* Prevent auto-zoom on iOS Safari when focusing inputs */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Drawer Slide-In Keyframes */
+@keyframes drawerSlideInRtl {
+  from {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawerSlideInLtr {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Place Details Page Mobile Enhancements */
+.place-details-subheader {
+  position: relative;
+  z-index: 80;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+}
+@media (min-width: 769px) {
+  .place-details-subheader {
+    position: sticky;
+    top: 50px;
+  }
+}
+
+.place-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 16px;
+  background-color: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+@media (max-width: 480px) {
+  .place-metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+}
+
+.field-briefing-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+@media (max-width: 640px) {
+  .field-briefing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+}
+
+.place-details-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 85;
+  background-color: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(18, 48, 74, 0.08);
+  padding: 10px 16px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+@media (min-width: 860px) {
+  .place-details-bar {
+    display: none !important;
+  }
+}
+

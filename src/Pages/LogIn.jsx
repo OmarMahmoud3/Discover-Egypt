@@ -21,7 +21,7 @@ export default function LogIn({ session, onClose }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: window.location.href,
         },
       });
       if (error) throw error;
@@ -99,11 +99,13 @@ export default function LogIn({ session, onClose }) {
       className="auth-modal-shell"
       style={{
         width: '100%',
-        maxWidth: '460px',
+        maxWidth: '440px',
+        maxHeight: 'calc(100vh - 32px)',
+        overflowY: 'auto',
         backgroundColor: '#FFFFFF',
-        borderRadius: '24px',
-        padding: 'clamp(20px, 5vw, 36px) clamp(16px, 4vw, 28px)',
-        boxShadow: '0 20px 48px rgba(18, 48, 74, 0.2)',
+        borderRadius: 'var(--radius-card)',
+        padding: 'clamp(20px, 4.5vw, 36px) clamp(16px, 3.5vw, 30px)',
+        boxShadow: 'var(--shadow-lg)',
         border: '1px solid var(--border)',
         margin: '0 auto',
         position: 'relative',
@@ -118,30 +120,34 @@ export default function LogIn({ session, onClose }) {
           title={t('nav.closeModal')}
           style={{
             position: 'absolute',
-            top: '18px',
-            insetInlineEnd: '18px',
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            backgroundColor: 'var(--surface-low)',
+            top: '14px',
+            insetInlineEnd: '14px',
+            width: '38px',
+            height: '38px',
+            minWidth: '38px',
+            minHeight: '38px',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'var(--surface)',
+            border: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--text-muted)',
+            color: 'var(--primary)',
+            cursor: 'pointer',
           }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
             close
           </span>
         </button>
       )}
 
       {/* Brand Header */}
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
           <BrandLogo size="medium" layout="vertical" />
         </div>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
           {t('auth.sub')}
         </p>
       </div>
@@ -151,47 +157,48 @@ export default function LogIn({ session, onClose }) {
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
-              width: '72px',
-              height: '72px',
-              borderRadius: '9999px',
+              width: '64px',
+              height: '64px',
+              borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--secondary-surface)',
               color: 'var(--secondary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 16px',
-              border: '2px solid var(--secondary)',
+              margin: '0 auto 14px',
+              border: '1px solid var(--secondary)',
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '36px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
               account_circle
             </span>
           </div>
 
-          <h3 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--primary)', margin: 0 }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>
             {t('auth.welcomeBack')}
           </h3>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {displayName}
           </p>
 
           <div
             style={{
-              marginTop: '20px',
+              marginTop: '18px',
               padding: '14px',
-              borderRadius: '14px',
-              backgroundColor: 'var(--surface-low)',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--surface)',
+              border: '1px solid var(--border)',
               fontSize: '13px',
               textAlign: isArabic ? 'right' : 'left',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ color: 'var(--text-muted)' }}>{t('auth.emailLabel')}</span>
-              <span style={{ fontWeight: '700', color: 'var(--primary)' }}>{session.user.email}</span>
+              <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{session.user.email}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-muted)' }}>{t('auth.accountStatus')}</span>
-              <span style={{ color: 'var(--success)', fontWeight: '700' }}>{t('auth.activeStatus')}</span>
+              <span style={{ color: 'var(--success)', fontWeight: 700 }}>{t('auth.activeStatus')}</span>
             </div>
           </div>
 
@@ -199,14 +206,15 @@ export default function LogIn({ session, onClose }) {
             onClick={handleLogout}
             style={{
               width: '100%',
-              marginTop: '20px',
-              padding: '12px',
-              borderRadius: '12px',
+              marginTop: '18px',
+              padding: '10px',
+              borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--error-bg)',
               color: 'var(--error)',
-              fontWeight: '700',
-              fontSize: '14px',
-              border: '1px solid rgba(220, 38, 38, 0.2)',
+              fontWeight: 700,
+              fontSize: '13px',
+              border: '1px solid rgba(185, 28, 28, 0.2)',
+              cursor: 'pointer',
             }}
           >
             {t('auth.logoutBtn')}
@@ -219,10 +227,11 @@ export default function LogIn({ session, onClose }) {
           <div
             style={{
               display: 'flex',
-              backgroundColor: 'var(--surface-low)',
-              borderRadius: '12px',
-              padding: '4px',
-              marginBottom: '20px',
+              backgroundColor: 'var(--surface)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border)',
+              padding: '3px',
+              marginBottom: '18px',
             }}
           >
             <button
@@ -233,14 +242,14 @@ export default function LogIn({ session, onClose }) {
               }}
               style={{
                 flex: 1,
-                padding: '9px',
-                borderRadius: '10px',
-                backgroundColor: mode === 'login' ? '#FFFFFF' : 'transparent',
-                color: mode === 'login' ? 'var(--primary)' : 'var(--text-muted)',
-                fontWeight: '700',
-                fontSize: '14px',
-                boxShadow: mode === 'login' ? 'var(--shadow-sm)' : 'none',
-                transition: 'all 0.2s',
+                padding: '8px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: mode === 'login' ? 'var(--primary)' : 'transparent',
+                color: mode === 'login' ? '#FFFFFF' : 'var(--text-muted)',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
               {t('auth.loginTab')}
@@ -253,14 +262,14 @@ export default function LogIn({ session, onClose }) {
               }}
               style={{
                 flex: 1,
-                padding: '9px',
-                borderRadius: '10px',
-                backgroundColor: mode === 'signup' ? '#FFFFFF' : 'transparent',
-                color: mode === 'signup' ? 'var(--primary)' : 'var(--text-muted)',
-                fontWeight: '700',
-                fontSize: '14px',
-                boxShadow: mode === 'signup' ? 'var(--shadow-sm)' : 'none',
-                transition: 'all 0.2s',
+                padding: '8px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: mode === 'signup' ? 'var(--primary)' : 'transparent',
+                color: mode === 'signup' ? '#FFFFFF' : 'var(--text-muted)',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
               {t('auth.signupTab')}
@@ -273,30 +282,31 @@ export default function LogIn({ session, onClose }) {
             onClick={handleGoogleLogin}
             style={{
               width: '100%',
-              minHeight: '48px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '10px',
-              padding: '11px',
-              borderRadius: '12px',
+              padding: '10px',
+              borderRadius: 'var(--radius-sm)',
               backgroundColor: '#FFFFFF',
-              border: '1.5px solid var(--border)',
+              border: '1px solid var(--border)',
               color: 'var(--primary)',
-              fontWeight: '700',
-              fontSize: '14px',
-              marginBottom: '16px',
+              fontWeight: 700,
+              fontSize: '13px',
+              marginBottom: '14px',
               boxShadow: 'var(--shadow-sm)',
+              cursor: 'pointer',
               transition: 'background-color 0.2s',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface-low)')}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--surface)')}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
           >
             <img
               src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
               alt="Google"
-              width="20"
-              height="20"
+              width="18"
+              height="18"
             />
             <span>{t('auth.googleBtn')}</span>
           </button>
@@ -305,15 +315,17 @@ export default function LogIn({ session, onClose }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              margin: '16px 0',
+              gap: '10px',
+              margin: '14px 0',
               color: 'var(--text-light)',
-              fontSize: '12px',
+              fontSize: '11px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
             }}
           >
-            <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
+            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
             <span>{t('auth.orWithEmail')}</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E8F0' }} />
+            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }} />
           </div>
 
           <form
@@ -328,7 +340,7 @@ export default function LogIn({ session, onClose }) {
           >
             {mode === 'signup' && (
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--primary)', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px' }}>
                   {t('auth.fullNameLabel')}
                 </label>
                 <input
@@ -339,19 +351,20 @@ export default function LogIn({ session, onClose }) {
                   required
                   style={{
                     width: '100%',
-                    maxWidth: '100%',
-                    minHeight: '48px',
-                    padding: '11px 14px',
-                    borderRadius: '12px',
-                    border: '1.5px solid var(--border)',
+                    minHeight: '42px',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--surface)',
                     fontSize: '14px',
+                    color: 'var(--primary)',
                   }}
                 />
               </div>
             )}
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--primary)', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px' }}>
                 {t('auth.emailLabel')}
               </label>
               <input
@@ -363,18 +376,19 @@ export default function LogIn({ session, onClose }) {
                 required
                 style={{
                   width: '100%',
-                  maxWidth: '100%',
-                  minHeight: '48px',
-                  padding: '11px 14px',
-                  borderRadius: '12px',
-                  border: '1.5px solid var(--border)',
+                  minHeight: '42px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'var(--surface)',
                   fontSize: '14px',
+                  color: 'var(--primary)',
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--primary)', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px' }}>
                 {t('auth.passwordLabel')}
               </label>
               <input
@@ -387,12 +401,13 @@ export default function LogIn({ session, onClose }) {
                 required
                 style={{
                   width: '100%',
-                  maxWidth: '100%',
-                  minHeight: '48px',
-                  padding: '11px 14px',
-                  borderRadius: '12px',
-                  border: '1.5px solid var(--border)',
+                  minHeight: '42px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'var(--surface)',
                   fontSize: '14px',
+                  color: 'var(--primary)',
                 }}
               />
             </div>
@@ -400,13 +415,12 @@ export default function LogIn({ session, onClose }) {
             {error && (
               <div
                 style={{
-                  padding: '10px 14px',
-                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
                   backgroundColor: 'var(--error-bg)',
                   color: 'var(--error)',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  marginTop: '4px',
+                  fontSize: '12px',
+                  fontWeight: 600,
                 }}
               >
                 ⚠️ {error}
@@ -416,13 +430,12 @@ export default function LogIn({ session, onClose }) {
             {message && (
               <div
                 style={{
-                  padding: '10px 14px',
-                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
                   backgroundColor: 'var(--success-bg)',
                   color: 'var(--success)',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  marginTop: '4px',
+                  fontSize: '12px',
+                  fontWeight: 600,
                 }}
               >
                 ✓ {message}
@@ -435,9 +448,9 @@ export default function LogIn({ session, onClose }) {
               className="btn-primary"
               style={{
                 width: '100%',
-                padding: '12px',
-                fontSize: '15px',
-                marginTop: '8px',
+                padding: '11px',
+                fontSize: '14px',
+                marginTop: '4px',
                 opacity: loading ? 0.7 : 1,
               }}
             >

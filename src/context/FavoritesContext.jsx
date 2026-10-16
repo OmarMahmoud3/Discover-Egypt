@@ -1,71 +1,195 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { PLACES_DATA } from '../data/placesData';
+import { supabase } from '../lib/supabase';
+import { useAdminAuth } from './AdminAuthContext';
 
 const FavoritesContext = createContext();
 
 const INITIAL_FAVORITE_IDS = ['giza-pyramids', 'karnak-temple', 'khan-el-khalili'];
 
-export function FavoritesProvider({ children }) {
-  const [favoriteIds, setFavoriteIds] = useState(() => {
-    try {
-      const stored = localStorage.getItem('discover_egypt_favorites');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.warn('Could not read favorites from localStorage', e);
-    }
-    return INITIAL_FAVORITE_IDS;
-  });
+function getStorageKey(userId) {
+  return userId ? `discover_egypt_favorites_${userId}` : 'discover_egypt_favorites_guest';
+}
 
+function readStoredFavorites(userId) {
+  try {
+    const key = getStorageKey(userId);
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    // Backward compatibility for existing guest favorites
+    if (!userId) {
+      const legacy = localStorage.getItem('discover_egypt_favorites');
+      if (legacy) return JSON.parse(legacy);
+    }
+  } catch (e) {
+    console.warn('Could not read favorites from localStorage', e);
+  }
+  return userId ? [] : INITIAL_FAVORITE_IDS;
+}
+
+export function FavoritesProvider({ children }) {
+  const { session } = useAdminAuth();
+  const userId = session?.user?.id || null;
+  const previousUserId = useRef(userId);
+
+  const [favoriteIds, setFavoriteIds] = useState(() => readStoredFavorites(userId));
   const [toastMessage, setToastMessage] = useState('');
 
+  // Synchronize on user login / logout / account switch
+  useEffect(() => {
+    if (previousUserId.current !== userId) {
+      previousUserId.current = userId;
+      const initialUserFavs = readStoredFavorites(userId);
+      setFavoriteIds(initialUserFavs);
+    }
+
+    if (!userId) return;
+
+    let isMounted = true;
+
+    // Fetch authenticated user favorites from Supabase cloud table if available
+    async function syncCloudFavorites() {
+      try {
+        const { data, error } = await supabase
+          .from('favorites')
+          .select('place_id')
+          .eq('user_id', userId);
+
+        if (!error && data && isMounted) {
+          const cloudIds = data.map((row) => row.place_id).filter(Boolean);
+          if (cloudIds.length > 0) {
+            setFavoriteIds((prev) => {
+              const merged = Array.from(new Set([...prev, ...cloudIds]));
+              try {
+                localStorage.setItem(getStorageKey(userId), JSON.stringify(merged));
+              } catch {
+                // Ignore storage quota warnings
+              }
+              return merged;
+            });
+          }
+        }
+      } catch (err) {
+        // Table or RLS not yet configured in remote project; local user isolation continues to work safely
+        console.info('[Favorites] Supabase sync deferred (using local user isolation):', err?.message || err);
+      }
+    }
+
+    syncCloudFavorites();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
+
+  // Persist to user-scoped storage whenever favoriteIds change
   useEffect(() => {
     try {
-      localStorage.setItem('discover_egypt_favorites', JSON.stringify(favoriteIds));
+      const key = getStorageKey(userId);
+      localStorage.setItem(key, JSON.stringify(favoriteIds));
+      if (!userId) {
+        localStorage.setItem('discover_egypt_favorites', JSON.stringify(favoriteIds));
+      }
     } catch (e) {
       console.warn('Could not write favorites to localStorage', e);
     }
-  }, [favoriteIds]);
+  }, [favoriteIds, userId]);
 
-  const showToast = (text) => {
+  const showToast = useCallback((text) => {
     setToastMessage(text);
     setTimeout(() => {
       setToastMessage('');
     }, 2800);
-  };
+  }, []);
 
-  const isFavorite = (id) => favoriteIds.includes(id);
+  const isFavorite = useCallback((id) => favoriteIds.includes(id), [favoriteIds]);
 
-  const toggleFavorite = (id, placeName = '', customMessage = '') => {
-    const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
-    setFavoriteIds((prev) => {
-      if (prev.includes(id)) {
-        const msg = customMessage || (isEn ? `${placeName || 'Place'} removed from favorites` : `تمت إزالة ${placeName || 'المكان'} من المفضلة`);
+  const toggleFavorite = useCallback(
+    (id, placeName = '', customMessage = '') => {
+      const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
+
+      setFavoriteIds((prev) => {
+        const willRemove = prev.includes(id);
+        const next = willRemove ? prev.filter((item) => item !== id) : [...prev, id];
+
+        const msg =
+          customMessage ||
+          (willRemove
+            ? isEn
+              ? `${placeName || 'Place'} removed from favorites`
+              : `تمت إزالة ${placeName || 'المكان'} من المفضلة`
+            : isEn
+            ? `${placeName || 'Place'} added to favorites ❤️`
+            : `تمت إضافة ${placeName || 'المكان'} إلى قائمة المفضلة ❤️`);
+
         showToast(msg);
-        return prev.filter((item) => item !== id);
-      } else {
-        const msg = customMessage || (isEn ? `${placeName || 'Place'} added to favorites ❤️` : `تمت إضافة ${placeName || 'المكان'} إلى قائمة المفضلة ❤️`);
-        showToast(msg);
-        return [...prev, id];
+
+        // Optimistically update cloud database if logged in
+        if (userId) {
+          if (willRemove) {
+            supabase
+              .from('favorites')
+              .delete()
+              .eq('user_id', userId)
+              .eq('place_id', id)
+              .catch(() => {});
+          } else {
+            supabase
+              .from('favorites')
+              .insert({ user_id: userId, place_id: id })
+              .catch(() => {});
+          }
+        }
+
+        return next;
+      });
+    },
+    [userId, showToast]
+  );
+
+  const removeFavorite = useCallback(
+    (id, placeName = '', customMessage = '') => {
+      const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
+      setFavoriteIds((prev) => prev.filter((item) => item !== id));
+      const msg =
+        customMessage ||
+        (isEn ? `${placeName || 'Place'} removed from favorites` : `تمت إزالة ${placeName || 'المكان'} من المفضلة`);
+      showToast(msg);
+
+      if (userId) {
+        supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('place_id', id)
+          .catch(() => {});
       }
-    });
-  };
+    },
+    [userId, showToast]
+  );
 
-  const removeFavorite = (id, placeName = '', customMessage = '') => {
-    const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
-    setFavoriteIds((prev) => prev.filter((item) => item !== id));
-    const msg = customMessage || (isEn ? `${placeName || 'Place'} removed from favorites` : `تمت إزالة ${placeName || 'المكان'} من المفضلة`);
-    showToast(msg);
-  };
+  const clearAllFavorites = useCallback(
+    (customMessage = '') => {
+      const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
+      setFavoriteIds([]);
+      const msg =
+        customMessage ||
+        (isEn ? 'Favorites list cleared successfully' : 'تم إفراغ قائمة المفضلة بنجاح');
+      showToast(msg);
 
-  const clearAllFavorites = (customMessage = '') => {
-    const isEn = localStorage.getItem('discover_egypt_lang') === 'en';
-    setFavoriteIds([]);
-    const msg = customMessage || (isEn ? 'Favorites list cleared successfully' : 'تم إفراغ قائمة المفضلة بنجاح');
-    showToast(msg);
-  };
+      if (userId) {
+        supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', userId)
+          .catch(() => {});
+      }
+    },
+    [userId, showToast]
+  );
 
   const favoritePlaces = PLACES_DATA.filter((place) => favoriteIds.includes(place.id));
 
@@ -124,3 +248,4 @@ export function useFavorites() {
   }
   return context;
 }
+
