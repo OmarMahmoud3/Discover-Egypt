@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BrandLogo from '../Components/BrandLogo';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function LogIn({ session, onClose }) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -15,13 +17,24 @@ export default function LogIn({ session, onClose }) {
 
   const { t, isArabic } = useLanguage();
 
+  // If user is already authenticated on /login route, automatically redirect to home
+  useEffect(() => {
+    if (session && window.location.pathname.toLowerCase().includes('/login')) {
+      const timer = setTimeout(() => {
+        if (onClose) onClose();
+        navigate('/');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [session, onClose, navigate]);
+
   // Google OAuth Login
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.href,
+          redirectTo: window.location.origin,
         },
       });
       if (error) throw error;
@@ -54,7 +67,8 @@ export default function LogIn({ session, onClose }) {
           setMessage(t('auth.successSignupLogged'));
           setTimeout(() => {
             if (onClose) onClose();
-          }, 1500);
+            navigate('/');
+          }, 800);
         } else {
           setMessage(t('auth.successSignupConfirm'));
         }
@@ -68,7 +82,8 @@ export default function LogIn({ session, onClose }) {
         setMessage(t('auth.successLogin'));
         setTimeout(() => {
           if (onClose) onClose();
-        }, 1200);
+          navigate('/');
+        }, 800);
       }
     } catch (err) {
       setError(err.message || (isArabic ? 'حدث خطأ أثناء المعالجة' : 'An error occurred during authentication'));
@@ -202,23 +217,52 @@ export default function LogIn({ session, onClose }) {
             </div>
           </div>
 
-          <button
-            onClick={handleLogout}
-            style={{
-              width: '100%',
-              marginTop: '18px',
-              padding: '10px',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'var(--error-bg)',
-              color: 'var(--error)',
-              fontWeight: 700,
-              fontSize: '13px',
-              border: '1px solid rgba(185, 28, 28, 0.2)',
-              cursor: 'pointer',
-            }}
-          >
-            {t('auth.logoutBtn')}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (onClose) onClose();
+                navigate('/');
+              }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--primary)',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                fontSize: '13px',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                travel_explore
+              </span>
+              <span>{isArabic ? 'الانتقال إلى الموقع' : 'Go to Website'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{
+                flex: 1,
+                padding: '10px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--error-bg)',
+                color: 'var(--error)',
+                fontWeight: 700,
+                fontSize: '13px',
+                border: '1px solid rgba(185, 28, 28, 0.2)',
+                cursor: 'pointer',
+              }}
+            >
+              {t('auth.logoutBtn')}
+            </button>
+          </div>
         </div>
       ) : (
         /* Auth Form (Login / Signup) */

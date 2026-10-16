@@ -192,8 +192,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
       if (isEdit) {
         result = await supabase
           .from('places')
-          .update(payload)
-          .eq('id', place.id)
+          .upsert({ ...payload, id: place.id })
           .select()
           .single();
       } else {

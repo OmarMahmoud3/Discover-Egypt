@@ -68,35 +68,43 @@ export default function Explore() {
         { key: 'museums', label: 'Museums' },
       ];
 
-  // Combine local rich places with any dynamic supabase places
+  // Combine local rich places with any dynamic supabase places (Supabase edits take priority)
   const allPlaces = useMemo(() => {
-    const combined = [...PLACES_DATA];
-    supabasePlaces.forEach((sp) => {
-      if (!combined.some((p) => p.id === sp.id || p.name === sp.name)) {
-        combined.push({
-          id: sp.id,
-          name: sp.name,
-          name_en: sp.name_en || sp.name,
-          nameEn: sp.name_en || sp.name,
-          city: sp.city || (isArabic ? 'مصر' : 'Egypt'),
-          city_en: sp.city_en || sp.city || 'Egypt',
-          cityEn: sp.city_en || sp.city || 'Egypt',
-          cityKey: (sp.city_en || sp.city || '').toLowerCase(),
-          category: sp.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
-          category_en: sp.category_en || sp.category || 'Attraction',
-          categoryEn: sp.category_en || sp.category || 'Attraction',
-          rating: 4.8,
-          reviewCount: '1,200',
-          image: sp.image_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg',
-          quickInfo: {
-            duration: 'ساعتان مقترحة',
-            durationEn: '2 hours suggested',
-          },
-          historicalText: sp.description || 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.',
-          historicalTextEn: sp.description_en || sp.description || 'A prominent historical and tourism landmark in Egypt.',
-        });
+    // 1. Map Supabase places
+    const dynamicList = supabasePlaces.map((sp) => {
+      const staticMatch = PLACES_DATA.find((p) => p.id === sp.id || p.id === sp.slug);
+      return {
+        id: sp.id,
+        name: sp.name,
+        name_en: sp.name_en || sp.name,
+        nameEn: sp.name_en || sp.name,
+        city: sp.city || staticMatch?.city || (isArabic ? 'مصر' : 'Egypt'),
+        city_en: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
+        cityEn: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
+        cityKey: (sp.city_en || sp.city || staticMatch?.cityKey || '').toLowerCase(),
+        category: sp.category || staticMatch?.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
+        category_en: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
+        categoryEn: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
+        rating: staticMatch?.rating || 4.8,
+        reviewCount: staticMatch?.reviewCount || '1,200',
+        image: sp.image_url || staticMatch?.image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg',
+        quickInfo: staticMatch?.quickInfo || {
+          duration: 'ساعتان مقترحة',
+          durationEn: '2 hours suggested',
+        },
+        historicalText: sp.description || staticMatch?.historicalText || 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.',
+        historicalTextEn: sp.description_en || sp.description || staticMatch?.historicalTextEn || 'A prominent historical and tourism landmark in Egypt.',
+      };
+    });
+
+    // 2. Add static places that haven't been edited or overridden in Supabase
+    const combined = [...dynamicList];
+    PLACES_DATA.forEach((staticP) => {
+      if (!combined.some((p) => p.id === staticP.id || p.id === staticP.slug)) {
+        combined.push(staticP);
       }
     });
+
     return combined;
   }, [supabasePlaces, isArabic]);
 

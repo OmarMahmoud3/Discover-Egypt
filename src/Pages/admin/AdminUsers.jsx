@@ -203,42 +203,90 @@ export default function AdminUsers() {
       onConfirm: async () => {
         setActionLoading(true);
         try {
-          if (edgeFunctionAvailable !== false) {
-            let updateRes = await supabase.functions.invoke('admin-list-users', {
-              body: {
-                action: 'update_user_role',
-                targetUserId: targetUser.id,
-                newRole,
-              },
+          let updatedSuccessfully = false;
+          let lastError = null;
+
+          // Strategy 1: Stored Procedure RPC (admin_update_user_role)
+          try {
+            const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_update_user_role', {
+              target_user_id: targetUser.id,
+              new_role: newRole,
             });
 
-            if (updateRes.error && updateRes.error?.context?.status === 404) {
-              updateRes = await supabase.functions.invoke('admin-users', {
+            if (!rpcErr && rpcData?.success) {
+              updatedSuccessfully = true;
+            } else if (rpcErr) {
+              lastError = rpcErr;
+            }
+          } catch (rpcCatchErr) {
+            lastError = rpcCatchErr;
+          }
+
+          // Strategy 2: Supabase Edge Functions (admin-list-users / admin-users)
+          if (!updatedSuccessfully && edgeFunctionAvailable !== false) {
+            try {
+              let updateRes = await supabase.functions.invoke('admin-list-users', {
                 body: {
                   action: 'update_user_role',
                   targetUserId: targetUser.id,
                   newRole,
                 },
               });
+
+              if (updateRes.error && updateRes.error?.context?.status === 404) {
+                updateRes = await supabase.functions.invoke('admin-users', {
+                  body: {
+                    action: 'update_user_role',
+                    targetUserId: targetUser.id,
+                    newRole,
+                  },
+                });
+              }
+
+              if (!updateRes.error && !updateRes.data?.error) {
+                updatedSuccessfully = true;
+              } else {
+                lastError = updateRes.error || new Error(updateRes.data?.error);
+              }
+            } catch (edgeCatchErr) {
+              lastError = edgeCatchErr;
             }
-
-            if (updateRes.error) throw updateRes.error;
-            if (updateRes.data?.error) throw new Error(updateRes.data.error);
-          } else {
-            const { error: dbErr } = await supabase
-              .from('profiles')
-              .update({ role: newRole })
-              .eq('id', targetUser.id);
-
-            if (dbErr) throw dbErr;
           }
 
-          // Optimistically update state
+          // Strategy 3: Direct database upsert into public.profiles
+          if (!updatedSuccessfully) {
+            const { data: upsertData, error: dbErr } = await supabase
+              .from('profiles')
+              .upsert(
+                {
+                  id: targetUser.id,
+                  role: newRole,
+                  display_name: targetUser.display_name || targetUser.email?.split('@')[0] || 'User',
+                },
+                { onConflict: 'id' }
+              )
+              .select();
+
+            if (!dbErr && upsertData && upsertData.length > 0) {
+              updatedSuccessfully = true;
+            } else {
+              lastError = dbErr || lastError || new Error(ta('admin.roleUpdateFailed'));
+            }
+          }
+
+          if (!updatedSuccessfully && lastError) {
+            throw lastError;
+          }
+
+          // Optimistically update local state immediately
           setUsers((prev) =>
             prev.map((u) => (u.id === targetUser.id ? { ...u, role: newRole, has_profile: true } : u))
           );
 
           showToast(ta('admin.roleUpdateSuccess'), 'success');
+
+          // Refresh from authoritative database
+          await fetchUsers(true);
 
           if (isSelf) {
             await refreshProfile();

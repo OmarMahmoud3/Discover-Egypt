@@ -163,25 +163,26 @@ export default function PlaceDetails() {
   const { isFavorite, toggleFavorite, showToast } = useFavorites();
   const { t, isArabic, getPlaceName, getPlaceLocation, getPlaceDescription, getPlaceGateInfo } = useLanguage();
 
-  // Find static place first
-  const staticPlace = PLACES_DATA.find((p) => p.id === placeId);
+  // Find static place as immediate fallback
+  const staticPlace = PLACES_DATA.find((p) => p.id === placeId || p.slug === placeId);
 
-  // If not static, attempt to fetch from Supabase
+  // Check Supabase database so administrative edits take precedence
   useEffect(() => {
-    if (staticPlace) {
-      return;
-    }
     let isMounted = true;
     supabase
       .from('places')
       .select('*')
-      .eq('id', placeId)
+      .or(`id.eq.${placeId},slug.eq.${placeId}`)
       .maybeSingle()
       .then(({ data, error }) => {
         if (!isMounted) return;
         setLoadingSupabase(false);
         setHasCheckedSupabase(true);
         if (!error && data) {
+          const galleryItems = Array.isArray(data.gallery) && data.gallery.length > 0
+            ? data.gallery.map((img) => typeof img === 'string' ? { url: img, title: data.name, alt: data.name } : img)
+            : [{ url: data.image_url || staticPlace?.image, title: data.name, alt: data.name }];
+
           setSupabasePlace({
             id: data.id,
             name: data.name,
@@ -194,25 +195,20 @@ export default function PlaceDetails() {
             category: data.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
             category_en: data.category_en || data.category || 'Attraction',
             categoryEn: data.category_en || data.category || 'Attraction',
-            rating: 4.9,
-            reviewCount: '1,450',
-            image: data.image_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg',
-            gallery: [
-              {
-                url: data.image_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg',
-                title: isArabic ? data.name : (data.name_en || data.name),
-                alt: data.name,
-              },
-            ],
-            historicalText: data.description || (isArabic ? 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.' : 'A distinguished tourism and heritage site in Egypt.'),
-            historicalTextEn: data.description_en || data.description || 'A distinguished tourism and heritage site in Egypt.',
-            location: isArabic ? `${data.city || 'مصر'}، جمهورية مصر العربية` : `${data.city_en || data.city || 'Egypt'}, Egypt`,
-            locationEn: `${data.city_en || data.city || 'Egypt'}, Egypt`,
-            gateInfo: isArabic ? 'يُنصح بالحجز عبر البوابة الرسمية' : 'Bookings advised through official gate',
-            gateInfoEn: 'Bookings advised through official gate',
-            mapsUrl: `https://maps.google.com/?q=${encodeURIComponent(data.name_en || data.name)}`,
-            badges: isArabic ? ['معلم موثق', 'تراث وطني'] : ['Documented Landmark', 'National Heritage'],
-            quickInfo: {
+            rating: staticPlace?.rating || 4.9,
+            reviewCount: staticPlace?.reviewCount || '1,450',
+            image: data.image_url || staticPlace?.image,
+            gallery: galleryItems,
+            historicalText: data.description || staticPlace?.historicalText || (isArabic ? 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.' : 'A distinguished tourism and heritage site in Egypt.'),
+            historicalTextEn: data.description_en || data.description || staticPlace?.historicalTextEn || 'A distinguished tourism and heritage site in Egypt.',
+            location: staticPlace?.location || (isArabic ? `${data.city || 'مصر'}، جمهورية مصر العربية` : `${data.city_en || data.city || 'Egypt'}, Egypt`),
+            locationEn: staticPlace?.locationEn || `${data.city_en || data.city || 'Egypt'}, Egypt`,
+            gateInfo: staticPlace?.gateInfo || (isArabic ? 'يُنصح بالحجز عبر البوابة الرسمية' : 'Bookings advised through official gate'),
+            gateInfoEn: staticPlace?.gateInfoEn || 'Bookings advised through official gate',
+            mapsUrl: data.latitude && data.longitude ? `https://maps.google.com/?q=${data.latitude},${data.longitude}` : (staticPlace?.mapsUrl || `https://maps.google.com/?q=${encodeURIComponent(data.name_en || data.name)}`),
+            badges: staticPlace?.badges || (isArabic ? ['معلم موثق', 'تراث وطني'] : ['Documented Landmark', 'National Heritage']),
+            badgesEn: staticPlace?.badgesEn || ['Documented Landmark', 'National Heritage'],
+            quickInfo: staticPlace?.quickInfo || {
               hours: '08:00 ص – 05:00 م',
               hoursEn: '08:00 AM – 05:00 PM',
               season: 'طوال العام',
@@ -222,7 +218,7 @@ export default function PlaceDetails() {
               payment: 'دفع إلكتروني بالبطاقات',
               paymentEn: 'Electronic card payment only',
             },
-            metrics: [
+            metrics: staticPlace?.metrics || [
               { label: isArabic ? 'التقييم' : 'Rating', value: '4.9 ★', sub: isArabic ? 'تقييم الزوار' : 'Visitor rating' },
               { label: isArabic ? 'المدينة' : 'City', value: isArabic ? (data.city || 'مصر') : (data.city_en || 'Egypt'), sub: isArabic ? 'الموقع' : 'Location' },
             ],
@@ -241,7 +237,8 @@ export default function PlaceDetails() {
     };
   }, [placeId, staticPlace, isArabic]);
 
-  const place = staticPlace || supabasePlace || PLACES_DATA[0];
+  // Prioritize Supabase admin edits over static placeholder
+  const place = supabasePlace || staticPlace || PLACES_DATA[0];
 
   // Loading state for dynamic lookup
   if (!staticPlace && loadingSupabase) {

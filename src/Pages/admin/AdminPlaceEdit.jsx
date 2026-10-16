@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { PLACES_DATA } from '../../data/placesData';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import PlaceForm from '../../Components/admin/PlaceForm';
@@ -29,14 +30,43 @@ export default function AdminPlaceEdit() {
       setLoading(true);
       setError('');
       try {
+        let loadedPlace = null;
+
+        // 1. Try fetching from Supabase database
         const { data, error: fetchErr } = await supabase
           .from('places')
           .select('*')
           .eq('id', id)
-          .single();
+          .maybeSingle();
 
-        if (fetchErr) throw fetchErr;
-        if (isMounted) setPlace(data);
+        if (!fetchErr && data) {
+          loadedPlace = data;
+        } else {
+          // 2. Fallback to default static PLACES_DATA
+          const staticMatch = PLACES_DATA.find((p) => p.id === id || p.slug === id);
+          if (staticMatch) {
+            loadedPlace = {
+              id: staticMatch.id,
+              name: staticMatch.name,
+              name_en: staticMatch.nameEn,
+              slug: staticMatch.id,
+              city: staticMatch.city,
+              category: staticMatch.category,
+              description: staticMatch.historicalText || staticMatch.historicalTextEn || staticMatch.description || '',
+              image_url: staticMatch.image,
+              gallery: (staticMatch.gallery || []).map((g) => g.url),
+              latitude: 29.9792,
+              longitude: 31.1342,
+              is_published: true,
+            };
+          }
+        }
+
+        if (loadedPlace && isMounted) {
+          setPlace(loadedPlace);
+        } else if (isMounted) {
+          setError(ta('admin.placeNotFound') || 'المعلم غير موجود / Place not found');
+        }
       } catch (err) {
         console.error('Error fetching place:', err);
         if (isMounted) setError(err.message || 'Failed to load place');

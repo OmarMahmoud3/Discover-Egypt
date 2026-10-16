@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { PLACES_DATA } from '../../data/placesData';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import ConfirmDialog from '../../Components/admin/ConfirmDialog';
@@ -46,155 +47,146 @@ export default function AdminPlaces() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Fetch places
+  // Default curated places from website
+  const DEFAULT_PLACES = useMemo(() => {
+    return PLACES_DATA.map((p) => ({
+      id: p.id,
+      name: p.name,
+      name_en: p.nameEn || p.name,
+      slug: p.id,
+      city: p.city,
+      category: p.category,
+      image_url: p.image,
+      is_published: true,
+      created_at: '2024-01-01T00:00:00.000Z',
+      is_default: true,
+    }));
+  }, []);
+
+  // Fetch places (merges Supabase data with website default places)
   const fetchPlaces = useCallback(async () => {
     setLoading(true);
     setError('');
 
     try {
-      let query = supabase
+      // 1. Fetch Supabase places
+      const { data: dbPlaces, error: fetchError } = await supabase
         .from('places')
-        .select('id, name, name_en, slug, city, category, image_url, is_published, created_at', { count: 'exact' });
+        .select('id, name, name_en, slug, city, category, image_url, is_published, created_at');
 
-      // Search
+      const supabaseList = Array.isArray(dbPlaces) ? dbPlaces : [];
+
+      // 2. Merge: Supabase records take priority over default static records
+      const merged = [...supabaseList];
+      DEFAULT_PLACES.forEach((def) => {
+        if (!merged.some((sp) => sp.id === def.id || sp.slug === def.slug)) {
+          merged.push(def);
+        }
+      });
+
+      // 3. Apply search & filters
+      let filtered = merged;
+
       if (search.trim()) {
-        const term = `%${search.trim()}%`;
-        query = query.or(`name.ilike.${term},name_en.ilike.${term},city.ilike.${term},slug.ilike.${term}`);
+        const term = search.trim().toLowerCase();
+        filtered = filtered.filter((p) =>
+          (p.name && p.name.toLowerCase().includes(term)) ||
+          (p.name_en && p.name_en.toLowerCase().includes(term)) ||
+          (p.city && p.city.toLowerCase().includes(term)) ||
+          (p.slug && p.slug.toLowerCase().includes(term))
+        );
       }
 
-      // Filters
-      if (cityFilter) query = query.eq('city', cityFilter);
-      if (categoryFilter) query = query.eq('category', categoryFilter);
-      if (statusFilter === 'published') query = query.eq('is_published', true);
-      if (statusFilter === 'draft') query = query.eq('is_published', false);
+      if (cityFilter) {
+        filtered = filtered.filter((p) => p.city === cityFilter);
+      }
 
-      // Sort
+      if (categoryFilter) {
+        filtered = filtered.filter((p) => p.category === categoryFilter);
+      }
+
+      if (statusFilter === 'published') {
+        filtered = filtered.filter((p) => p.is_published === true);
+      } else if (statusFilter === 'draft') {
+        filtered = filtered.filter((p) => p.is_published === false);
+      }
+
+      // 4. Sort
       if (sortBy === 'name') {
-        query = query.order('name', { ascending: true });
+        filtered.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
       } else {
-        query = query.order('created_at', { ascending: false });
+        filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       }
 
-      // Pagination
+      setTotalCount(filtered.length);
+
+      // 5. Paginate
       const from = page * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      query = query.range(from, to);
+      const paginated = filtered.slice(from, from + PAGE_SIZE);
+      setPlaces(paginated);
 
-      const { data, error: fetchError, count } = await query;
-
-      if (fetchError) throw fetchError;
-
-      setPlaces(data || []);
-      setTotalCount(count || 0);
+      // 6. Distinct cities & categories
+      const distinctCities = [...new Set(merged.map((p) => p.city).filter(Boolean))].sort();
+      const distinctCategories = [...new Set(merged.map((p) => p.category).filter(Boolean))].sort();
+      setCities(distinctCities);
+      setCategories(distinctCategories);
     } catch (err) {
       console.error('Error fetching places:', err);
       setError(err?.message || 'Failed to load places');
     } finally {
       setLoading(false);
     }
-  }, [search, cityFilter, categoryFilter, statusFilter, sortBy, page]);
+  }, [search, cityFilter, categoryFilter, statusFilter, sortBy, page, DEFAULT_PLACES]);
 
-  // Fetch filter options
-  const fetchFilterOptions = useCallback(async () => {
+  // One-click batch sync all default places into Supabase database
+  const handleSyncDefaults = async () => {
+    setActionLoading(true);
     try {
-      const [citiesRes, catsRes] = await Promise.all([
-        supabase.from('places').select('city'),
-        supabase.from('places').select('category'),
-      ]);
+      const rowsToUpsert = PLACES_DATA.map((p) => ({
+        id: p.id,
+        name: p.name,
+        name_en: p.nameEn || p.name,
+        slug: p.id,
+        city: p.city,
+        category: p.category,
+        description: p.historicalText || p.historicalTextEn || p.name,
+        image_url: p.image,
+        gallery: (p.gallery || []).map((g) => g.url),
+        latitude: 29.9792,
+        longitude: 31.1342,
+        is_published: true,
+      }));
 
-      if (citiesRes.data) {
-        const unique = [...new Set(citiesRes.data.map((p) => p.city).filter(Boolean))];
-        setCities(unique.sort());
-      }
-      if (catsRes.data) {
-        const unique = [...new Set(catsRes.data.map((p) => p.category).filter(Boolean))];
-        setCategories(unique.sort());
-      }
+      const { error } = await supabase.from('places').upsert(rowsToUpsert, { onConflict: 'id' });
+      if (error) throw error;
+
+      showToast(
+        isArabic
+          ? 'تمت مزامنة جميع المعالم الأساسية مع قاعدة البيانات بنجاح'
+          : 'All default website places synced to database successfully',
+        'success'
+      );
+      await fetchPlaces();
     } catch (err) {
-      console.warn('Failed to fetch filter options:', err);
+      console.error('Sync error:', err);
+      showToast(err?.message || 'Failed to sync places', 'error');
+    } finally {
+      setActionLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     let active = true;
     const run = async () => {
-      try {
-        let query = supabase
-          .from('places')
-          .select('id, name, name_en, slug, city, category, image_url, is_published, created_at', { count: 'exact' });
-
-        if (search.trim()) {
-          const term = `%${search.trim()}%`;
-          query = query.or(`name.ilike.${term},name_en.ilike.${term},city.ilike.${term},slug.ilike.${term}`);
-        }
-
-        if (cityFilter) query = query.eq('city', cityFilter);
-        if (categoryFilter) query = query.eq('category', categoryFilter);
-        if (statusFilter === 'published') query = query.eq('is_published', true);
-        if (statusFilter === 'draft') query = query.eq('is_published', false);
-
-        if (sortBy === 'name') {
-          query = query.order('name', { ascending: true });
-        } else {
-          query = query.order('created_at', { ascending: false });
-        }
-
-        const from = page * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
-        query = query.range(from, to);
-
-        const { data, error: fetchError, count } = await query;
-        if (fetchError) throw fetchError;
-
-        if (active) {
-          setPlaces(data || []);
-          setTotalCount(count || 0);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (active) {
-          console.error('Error fetching places:', err);
-          setError(err?.message || 'Failed to load places');
-          setLoading(false);
-        }
+      if (active) {
+        await fetchPlaces();
       }
     };
-
     run();
     return () => {
       active = false;
     };
-  }, [search, cityFilter, categoryFilter, statusFilter, sortBy, page]);
-
-  useEffect(() => {
-    let active = true;
-    const runOptions = async () => {
-      try {
-        const [citiesRes, catsRes] = await Promise.all([
-          supabase.from('places').select('city'),
-          supabase.from('places').select('category'),
-        ]);
-
-        if (active) {
-          if (citiesRes.data) {
-            const unique = [...new Set(citiesRes.data.map((p) => p.city).filter(Boolean))];
-            setCities(unique.sort());
-          }
-          if (catsRes.data) {
-            const unique = [...new Set(catsRes.data.map((p) => p.category).filter(Boolean))];
-            setCategories(unique.sort());
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to fetch filter options:', err);
-      }
-    };
-
-    runOptions();
-    return () => {
-      active = false;
-    };
-  }, []);
+  }, [fetchPlaces]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
@@ -382,7 +374,16 @@ export default function AdminPlaces() {
               <span className="material-symbols-outlined">refresh</span>
             </button>
 
-            <div style={{ flex: 1 }} />
+            <button
+              onClick={handleSyncDefaults}
+              className="admin-btn admin-btn-outline"
+              disabled={actionLoading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              title={isArabic ? 'رفع ومزامنة جميع المعالم الأساسية إلى قاعدة البيانات' : 'Sync All Default Places to Database'}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--gold-dark)' }}>cloud_sync</span>
+              <span>{isArabic ? 'مزامنة المعالم الأساسية' : 'Sync Default Places'}</span>
+            </button>
 
             <Link to="/admin/places/new" className="admin-btn admin-btn-primary">
               <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>add</span>
@@ -467,7 +468,24 @@ export default function AdminPlaces() {
                           )}
                         </td>
                         <td>
-                          <div style={{ fontWeight: 700 }}>{place.name}</div>
+                          <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{place.name}</span>
+                            {place.is_default && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: 'var(--gold-surface)',
+                                  color: 'var(--gold-dark)',
+                                  border: '1px solid rgba(212, 166, 74, 0.4)',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {isArabic ? 'معلم أساسي' : 'Default'}
+                              </span>
+                            )}
+                          </div>
                           {place.name_en && (
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }} dir="ltr">
                               {place.name_en}

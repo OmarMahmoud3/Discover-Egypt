@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
+import { PLACES_DATA } from '../../data/placesData';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import StatCard from '../../Components/admin/StatCard';
 
@@ -28,40 +29,50 @@ export default function AdminDashboard() {
     setError('');
 
     try {
-      // Fetch all counts in parallel using allSettled to ensure resilient loading
-      const results = await Promise.allSettled([
-        supabase.from('places').select('id', { count: 'exact', head: true }),
-        supabase.from('places').select('id', { count: 'exact', head: true }).eq('is_published', true),
-        supabase.from('places').select('id', { count: 'exact', head: true }).eq('is_published', false),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('favorites').select('user_id', { count: 'exact', head: true }),
+      // Fetch places and related stats
+      const [placesRes, usersRes, favsRes] = await Promise.all([
         supabase
           .from('places')
           .select('id, name, name_en, slug, city, category, image_url, is_published, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5),
+          .order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('favorites').select('user_id', { count: 'exact', head: true }),
       ]);
 
-      const placesRes = results[0].status === 'fulfilled' ? results[0].value : null;
-      const pubRes = results[1].status === 'fulfilled' ? results[1].value : null;
-      const draftRes = results[2].status === 'fulfilled' ? results[2].value : null;
-      const usersRes = results[3].status === 'fulfilled' ? results[3].value : null;
-      const favsRes = results[4].status === 'fulfilled' ? results[4].value : null;
-      const recentRes = results[5].status === 'fulfilled' ? results[5].value : null;
+      const dbPlaces = (placesRes.data && Array.isArray(placesRes.data)) ? placesRes.data : [];
+      const dbIds = new Set(dbPlaces.map((p) => p.id));
+
+      const defaultPlaces = PLACES_DATA.map((p) => ({
+        id: p.id,
+        name: p.name,
+        name_en: p.nameEn || p.name,
+        slug: p.id,
+        city: p.location,
+        category: p.category,
+        image_url: p.image,
+        is_published: true,
+        created_at: null,
+        isDefault: true,
+      }));
+
+      // Combine Supabase places with unsynced default places
+      const mergedPlaces = [
+        ...dbPlaces,
+        ...defaultPlaces.filter((p) => !dbIds.has(p.id)),
+      ];
+
+      const publishedCount = mergedPlaces.filter((p) => p.is_published !== false).length;
+      const draftCount = mergedPlaces.length - publishedCount;
 
       setStats({
-        totalPlaces: placesRes?.count ?? 0,
-        publishedPlaces: pubRes?.count ?? 0,
-        draftPlaces: draftRes?.count ?? 0,
+        totalPlaces: mergedPlaces.length,
+        publishedPlaces: publishedCount,
+        draftPlaces: draftCount,
         totalUsers: usersRes?.count ?? 0,
         totalFavorites: favsRes?.count ?? 0,
       });
 
-      if (recentRes && !recentRes.error && Array.isArray(recentRes.data)) {
-        setRecentPlaces(recentRes.data);
-      } else {
-        setRecentPlaces([]);
-      }
+      setRecentPlaces(mergedPlaces.slice(0, 5));
     } catch (err) {
       console.error('Error fetching admin stats:', err);
       setError(err?.message || 'Failed to load stats');
@@ -71,59 +82,8 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-    const run = async () => {
-      try {
-        const results = await Promise.allSettled([
-          supabase.from('places').select('id', { count: 'exact', head: true }),
-          supabase.from('places').select('id', { count: 'exact', head: true }).eq('is_published', true),
-          supabase.from('places').select('id', { count: 'exact', head: true }).eq('is_published', false),
-          supabase.from('profiles').select('id', { count: 'exact', head: true }),
-          supabase.from('favorites').select('user_id', { count: 'exact', head: true }),
-          supabase
-            .from('places')
-            .select('id, name, name_en, slug, city, category, image_url, is_published, created_at')
-            .order('created_at', { ascending: false })
-            .limit(5),
-        ]);
-
-        if (active) {
-          const placesRes = results[0].status === 'fulfilled' ? results[0].value : null;
-          const pubRes = results[1].status === 'fulfilled' ? results[1].value : null;
-          const draftRes = results[2].status === 'fulfilled' ? results[2].value : null;
-          const usersRes = results[3].status === 'fulfilled' ? results[3].value : null;
-          const favsRes = results[4].status === 'fulfilled' ? results[4].value : null;
-          const recentRes = results[5].status === 'fulfilled' ? results[5].value : null;
-
-          setStats({
-            totalPlaces: placesRes?.count ?? 0,
-            publishedPlaces: pubRes?.count ?? 0,
-            draftPlaces: draftRes?.count ?? 0,
-            totalUsers: usersRes?.count ?? 0,
-            totalFavorites: favsRes?.count ?? 0,
-          });
-
-          if (recentRes && !recentRes.error && Array.isArray(recentRes.data)) {
-            setRecentPlaces(recentRes.data);
-          } else {
-            setRecentPlaces([]);
-          }
-          setLoading(false);
-        }
-      } catch (err) {
-        if (active) {
-          console.error('Error fetching admin stats:', err);
-          setError(err?.message || 'Failed to load stats');
-          setLoading(false);
-        }
-      }
-    };
-
-    run();
-    return () => {
-      active = false;
-    };
-  }, []);
+    fetchStats();
+  }, [fetchStats]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';

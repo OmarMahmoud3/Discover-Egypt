@@ -77,7 +77,26 @@ CREATE POLICY "Users can update own profile non-role fields"
     role = (SELECT role FROM public.profiles WHERE id = auth.uid())
   );
 
--- Policy D: Service role has full access (used by Edge Functions)
+-- Policy D: Administrators can update and manage any profile (including role promotion/demotion)
+DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
+CREATE POLICY "Admins can update any profile"
+  ON public.profiles
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- Policy E: Service role has full access (used by Edge Functions)
 -- Note: In Supabase, service_role bypasses RLS automatically, but policy explicitly documented.
 
 -- 4. Atomic Role Update Function (Protected Invariants)
