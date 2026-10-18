@@ -103,7 +103,13 @@ export default function AdminUsers() {
       }
 
       if (search.trim()) {
-        query = query.or(`display_name.ilike.%${search.trim()}%,id.ilike.%${search.trim()}%`);
+        const term = search.trim();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term);
+        if (isUuid) {
+          query = query.or(`display_name.ilike.%${term}%,id.eq.${term}`);
+        } else {
+          query = query.ilike('display_name', `%${term}%`);
+        }
       }
 
       query = query

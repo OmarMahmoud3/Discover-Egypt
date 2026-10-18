@@ -56,6 +56,7 @@ export default function Navbar({ session, onOpenAuth }) {
   const navLinks = [
     { path: '/', label: t('nav.home'), icon: 'home' },
     { path: '/explore', label: t('nav.explore'), icon: 'explore' },
+    { path: '/map', label: t('nav.map'), icon: 'map' },
     { path: '/favorites', label: t('nav.favorites'), icon: 'bookmark', badge: Array.isArray(favoriteIds) ? favoriteIds.length : 0 },
   ];
 

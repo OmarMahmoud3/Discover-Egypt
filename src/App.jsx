@@ -13,6 +13,7 @@ import MobileNav from './Components/MobileNav';
 
 import Home from './Pages/Home';
 import Explore from './Pages/Explore';
+import MapPage from './Pages/MapPage';
 import PlaceDetails from './Pages/PlaceDetails';
 import Favorites from './Pages/Favorites';
 import LogIn from './Pages/LogIn';
@@ -124,6 +125,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/explore" element={<Explore />} />
+          <Route path="/map" element={<MapPage />} />
           <Route path="/places/:id" element={<PlaceDetails />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route

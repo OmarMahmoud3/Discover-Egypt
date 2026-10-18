@@ -1,7 +1,8 @@
+// @ts-nocheck
 // Supabase Edge Function: admin-users
-// Secure administrative user management for Discover Egypt
+// Secure administrative user management: retrieves authentic Supabase Auth users
+// joined with public.profiles without exposing service-role secrets to the client.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -10,7 +11,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-serve(async (req: Request) => {
+const handler = async (req: Request): Promise<Response> => {
   // 1. Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -39,30 +40,41 @@ serve(async (req: Request) => {
 
     const token = authHeader.replace('Bearer ', '').trim();
 
-    // Caller client to verify identity
-    const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-      auth: { persistSession: false },
-    });
-
-    const { data: { user: callerUser }, error: authError } = await callerClient.auth.getUser();
-    if (authError || !callerUser) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized: Invalid access token.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Admin client (service_role) to check caller role & perform admin operations
+    // Initialize privileged admin client with service_role key
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
+    // Authenticate caller identity using service-role verified JWT token
+    const { data: { user: callerUser }, error: authError } = await adminClient.auth.getUser(token);
+    if (authError || !callerUser) {
+      // Fallback: verify with anon client if provided
+      let fallbackUser = null;
+      if (supabaseAnonKey) {
+        const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+          auth: { persistSession: false },
+        });
+        const { data: fbData } = await callerClient.auth.getUser();
+        fallbackUser = fbData?.user || null;
+      }
+
+      if (!fallbackUser) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized: Invalid access token.' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const currentUserId = callerUser?.id;
+
+    // 3. Verify caller's authoritative role in public.profiles
     const { data: callerProfile, error: profileErr } = await adminClient
       .from('profiles')
       .select('role')
-      .eq('id', callerUser.id)
-      .single();
+      .eq('id', currentUserId)
+      .maybeSingle();
 
     if (profileErr || callerProfile?.role !== 'admin') {
       return new Response(
@@ -71,7 +83,7 @@ serve(async (req: Request) => {
       );
     }
 
-    // 3. Parse request payload
+    // 4. Parse request payload
     let payload: any = {};
     if (req.method === 'POST') {
       try {
@@ -83,14 +95,14 @@ serve(async (req: Request) => {
 
     const action = payload.action || 'list_users';
 
-    // 4. Handle Actions
+    // 5. Operation: list_users
     if (action === 'list_users') {
       const page = Math.max(1, parseInt(payload.page || '1', 10));
       const perPage = Math.min(100, Math.max(1, parseInt(payload.perPage || '10', 10)));
       const search = (payload.search || '').trim().toLowerCase();
       const roleFilter = payload.roleFilter || 'all';
 
-      // Retrieve all registered users using Supabase Auth Admin API
+      // Retrieve registered accounts directly from Supabase Auth
       const { data: authData, error: listAuthErr } = await adminClient.auth.admin.listUsers({
         page: 1,
         perPage: 1000,
@@ -98,14 +110,14 @@ serve(async (req: Request) => {
 
       if (listAuthErr) {
         return new Response(
-          JSON.stringify({ error: `Failed to retrieve users: ${listAuthErr.message}` }),
+          JSON.stringify({ error: `Failed to retrieve Auth users: ${listAuthErr.message}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const authUsers = authData?.users || [];
 
-      // Fetch all public profiles
+      // Retrieve all profiles from public.profiles
       const { data: profiles, error: listProfilesErr } = await adminClient
         .from('profiles')
         .select('id, display_name, avatar_url, preferred_language, role, created_at');
@@ -119,7 +131,7 @@ serve(async (req: Request) => {
 
       const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
 
-      // Merge auth user data with public.profiles data without inventing data
+      // Join Auth users with public.profiles strictly without inventing data
       let mergedUsers = authUsers.map((u: any) => {
         const p: any = profileMap.get(u.id);
         const isConfirmed = Boolean(u.email_confirmed_at || u.confirmed_at);
@@ -133,13 +145,13 @@ serve(async (req: Request) => {
           display_name: p?.display_name || null,
           avatar_url: p?.avatar_url || null,
           preferred_language: p?.preferred_language || null,
-          role: p?.role || null, // null if no profile row
+          role: p?.role || null, // null if no profile or role exists
           has_profile: Boolean(p),
           last_sign_in_at: u.last_sign_in_at || null,
         };
       });
 
-      // Role filtering
+      // Role filtering: 'all', 'admin', 'user', or 'unassigned' (missing role/profile)
       if (roleFilter === 'admin') {
         mergedUsers = mergedUsers.filter((u: any) => u.role === 'admin');
       } else if (roleFilter === 'user') {
@@ -158,7 +170,7 @@ serve(async (req: Request) => {
         });
       }
 
-      // Sort newest first
+      // Sort newest registration date first
       mergedUsers.sort((a: any, b: any) => {
         const dateA = new Date(a.created_at || 0).getTime();
         const dateB = new Date(b.created_at || 0).getTime();
@@ -183,6 +195,7 @@ serve(async (req: Request) => {
       );
     }
 
+    // 6. Operation: update_user_role
     if (action === 'update_user_role') {
       const { targetUserId, newRole } = payload;
 
@@ -200,15 +213,15 @@ serve(async (req: Request) => {
         );
       }
 
-      // Prevent self-demotion
-      if (targetUserId === callerUser.id && newRole !== 'admin') {
+      // Invariant 1: Prevent self-demotion
+      if (targetUserId === currentUserId && newRole !== 'admin') {
         return new Response(
-          JSON.stringify({ error: 'You cannot alter or demote your own active administrator account.' }),
+          JSON.stringify({ error: 'You cannot alter or revoke permissions for your active administrator account.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Check target's current role
+      // Invariant 2: Check target's current role
       const { data: targetProfile, error: targetErr } = await adminClient
         .from('profiles')
         .select('id, role')
@@ -222,7 +235,7 @@ serve(async (req: Request) => {
         );
       }
 
-      // Prevent demoting the last remaining administrator
+      // Invariant 3: Prevent demoting the last remaining administrator
       if (newRole === 'user' && targetProfile?.role === 'admin') {
         const { count: adminCount, error: countErr } = await adminClient
           .from('profiles')
@@ -231,7 +244,7 @@ serve(async (req: Request) => {
 
         if (countErr) {
           return new Response(
-            JSON.stringify({ error: `Failed to verify administrator count: ${countErr.message}` }),
+            JSON.stringify({ error: `Failed to check admin count: ${countErr.message}` }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -244,38 +257,37 @@ serve(async (req: Request) => {
         }
       }
 
-      // Perform update or insert
-      if (targetProfile) {
-        const { error: updateErr } = await adminClient
-          .from('profiles')
-          .update({ role: newRole })
-          .eq('id', targetUserId);
+      // Update or insert profile cleanly using upsert
+      const { data: authTarget } = await adminClient.auth.admin.getUserById(targetUserId);
+      const name = authTarget?.user?.user_metadata?.full_name || authTarget?.user?.user_metadata?.name || null;
 
-        if (updateErr) {
-          return new Response(
-            JSON.stringify({ error: `Failed to update user role: ${updateErr.message}` }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      } else {
-        const { data: authTarget } = await adminClient.auth.admin.getUserById(targetUserId);
-        const name = authTarget?.user?.user_metadata?.full_name || authTarget?.user?.user_metadata?.name || null;
-
-        const { error: insertErr } = await adminClient
-          .from('profiles')
-          .insert({
+      const { error: upsertErr } = await adminClient
+        .from('profiles')
+        .upsert(
+          {
             id: targetUserId,
-            display_name: name,
+            display_name: targetProfile?.display_name || name,
             role: newRole,
-            preferred_language: 'ar',
-          });
+            preferred_language: targetProfile?.preferred_language || 'ar',
+          },
+          { onConflict: 'id' }
+        );
 
-        if (insertErr) {
-          return new Response(
-            JSON.stringify({ error: `Failed to initialize and update profile: ${insertErr.message}` }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      if (upsertErr) {
+        return new Response(
+          JSON.stringify({ error: `Failed to update profile role: ${upsertErr.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Synchronize role into Auth user metadata
+      try {
+        await adminClient.auth.admin.updateUserById(targetUserId, {
+          app_metadata: { role: newRole },
+          user_metadata: { role: newRole },
+        });
+      } catch (authMetaErr: any) {
+        console.warn('Could not update Auth metadata:', authMetaErr?.message);
       }
 
       return new Response(
@@ -300,4 +312,12 @@ serve(async (req: Request) => {
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
-});
+};
+
+// Start server using native Deno.serve with backwards compatible fallback
+if (typeof Deno !== 'undefined' && typeof Deno.serve === 'function') {
+  Deno.serve(handler);
+} else {
+  const { serve } = await import('https://deno.land/std@0.168.0/http/server.ts');
+  serve(handler);
+}

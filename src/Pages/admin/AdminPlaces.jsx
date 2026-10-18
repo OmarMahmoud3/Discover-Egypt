@@ -74,6 +74,8 @@ export default function AdminPlaces() {
         .from('places')
         .select('id, name, name_en, slug, city, category, image_url, is_published, created_at');
 
+      if (fetchError) throw fetchError;
+
       const supabaseList = Array.isArray(dbPlaces) ? dbPlaces : [];
 
       // 2. Merge: Supabase records take priority over default static records
@@ -254,7 +256,6 @@ export default function AdminPlaces() {
 
           showToast(ta('admin.placeDeleted'));
           fetchPlaces();
-          fetchFilterOptions();
         } catch (err) {
           showToast(err.message || ta('admin.operationFailed'), 'error');
         } finally {

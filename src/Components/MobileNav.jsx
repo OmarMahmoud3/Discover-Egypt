@@ -10,6 +10,7 @@ export default function MobileNav({ onOpenAuth }) {
   const items = [
     { path: '/', label: t('mobile.home'), icon: 'home' },
     { path: '/explore', label: t('mobile.explore'), icon: 'explore' },
+    { path: '/map', label: t('mobile.map'), icon: 'map' },
     { path: '/favorites', label: t('mobile.favorites'), icon: 'favorite', hasBadge: favoriteIds.length > 0 },
     { action: onOpenAuth, label: t('mobile.profile'), icon: 'person' },
   ];

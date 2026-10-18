@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
-import BrandLogo from '../BrandLogo';
+import BrandLogo from '../BrandLogo.jsx';
 
 /**
  * AdminSidebar — Persistent navigation sidebar for the admin dashboard.
@@ -46,7 +46,7 @@ export default function AdminSidebar({ open, onClose }) {
         <div className="admin-sidebar-brand">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link to="/admin" onClick={onClose} style={{ textDecoration: 'none' }}>
-              <BrandLogo size="small" />
+              <BrandLogo size="small" variant="light" />
             </Link>
             {/* Mobile close button */}
             <button

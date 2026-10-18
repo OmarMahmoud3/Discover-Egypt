@@ -1,0 +1,489 @@
+/* ==========================================================================
+   PLACES MAP — Discover Egypt Interactive Architectural Atlas Styling
+   ========================================================================== */
+
+.places-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: var(--places-map-custom-height, clamp(380px, 60vh, 680px));
+  border-radius: var(--radius-card, 14px);
+  overflow: hidden;
+  background-color: var(--surface-low, #EFEADB);
+  border: 1px solid var(--border, #E5DDCA);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(18, 48, 74, 0.05));
+  isolation: isolate;
+  z-index: 1;
+}
+
+.places-map-container-relative {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.places-map,
+.places-map.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  flex: 1 1 100% !important;
+  background-color: #E8E2D1;
+  font-family: inherit;
+  z-index: 1 !important;
+}
+
+/* Ensure Leaflet internal controls and panes do not break stacking contexts */
+.places-map .leaflet-pane {
+  z-index: 10 !important;
+}
+
+.places-map .leaflet-top,
+.places-map .leaflet-bottom {
+  z-index: 20 !important;
+}
+
+/* Responsive Zoom Control Styling */
+.places-map .leaflet-control-zoom {
+  border: 1px solid var(--border, #E5DDCA) !important;
+  border-radius: var(--radius-sm, 4px) !important;
+  box-shadow: 0 4px 14px rgba(18, 48, 74, 0.12) !important;
+  overflow: hidden;
+  margin: 14px !important;
+}
+
+.places-map .leaflet-control-zoom a {
+  background-color: #FFFFFF !important;
+  color: var(--primary, #12304A) !important;
+  border-bottom: 1px solid var(--border, #E5DDCA) !important;
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  transition: all 0.15s ease;
+}
+
+.places-map .leaflet-control-zoom a:hover {
+  background-color: var(--surface, #F7F5EF) !important;
+  color: var(--secondary, #0F766E) !important;
+}
+
+/* Attribution Styling */
+.places-map .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(4px);
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  color: var(--text-muted, #4B5E70) !important;
+  border-top-left-radius: 4px;
+}
+
+.places-map .leaflet-control-attribution a {
+  color: var(--secondary, #0F766E) !important;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   CUSTOM PINS & USER LOCATION MARKER
+   ========================================================================== */
+
+.leaflet-custom-pin-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-map-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.custom-map-pin:hover {
+  transform: translateY(-4px) scale(1.1);
+}
+
+.custom-map-pin.pin-selected {
+  transform: translateY(-6px) scale(1.18);
+  filter: drop-shadow(0 4px 12px rgba(212, 166, 74, 0.5));
+}
+
+/* User Geolocation Pulsing Pin */
+.user-location-pin {
+  background: transparent;
+  border: none;
+}
+
+.user-pulse-outer {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-ring 2s infinite;
+}
+
+.user-pulse-core {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2563EB;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+  70% {
+    transform: scale(1.3);
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+/* User Location Popup */
+.places-map-user-popup {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--primary, #12304A);
+  text-align: center;
+}
+
+/* ==========================================================================
+   POPUP CARD STYLING
+   ========================================================================== */
+
+.places-map-popup-window .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: var(--radius-card, 14px) !important;
+  box-shadow: 0 12px 36px rgba(18, 48, 74, 0.18) !important;
+  border: 1px solid var(--border, #E5DDCA) !important;
+  overflow: hidden;
+  background-color: #FFFFFF !important;
+}
+
+.places-map-popup-window .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.5 !important;
+  width: 270px !important;
+}
+
+.places-map-popup-window .leaflet-popup-tip-container {
+  z-index: 21;
+}
+
+.places-map-popup-window .leaflet-popup-tip {
+  background: #FFFFFF !important;
+  box-shadow: 0 3px 10px rgba(18, 48, 74, 0.1) !important;
+}
+
+.places-map-popup-window .leaflet-popup-close-button {
+  top: 10px !important;
+  right: 10px !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  background-color: rgba(18, 48, 74, 0.6) !important;
+  color: #FFFFFF !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  z-index: 30 !important;
+  transition: background-color 0.15s ease;
+}
+
+[dir="rtl"] .places-map-popup-window .leaflet-popup-close-button {
+  right: auto !important;
+  left: 10px !important;
+}
+
+.places-map-popup-window .leaflet-popup-close-button:hover {
+  background-color: var(--primary, #12304A) !important;
+}
+
+.places-map-popup-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #FFFFFF;
+}
+
+.places-map-popup-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 125px;
+  overflow: hidden;
+  background-color: var(--primary-dark, #0A1C2C);
+}
+
+.places-map-popup-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.places-map-popup-badge {
+  position: absolute;
+  bottom: 8px;
+  inset-inline-start: 8px;
+  background: rgba(18, 48, 74, 0.85);
+  color: #FFFFFF;
+  backdrop-filter: blur(4px);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.places-map-popup-content {
+  padding: 12px 14px 14px;
+}
+
+.places-map-popup-tags {
+  margin-bottom: 4px;
+}
+
+.places-map-popup-cat {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--secondary, #0F766E);
+  background: var(--secondary-surface, #E6F3F1);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.places-map-popup-title {
+  margin: 4px 0 6px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary, #12304A);
+  line-height: 1.35;
+}
+
+.places-map-popup-desc {
+  font-size: 12px;
+  color: var(--text-muted, #4B5E70);
+  line-height: 1.5;
+  margin: 0 0 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.places-map-popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.places-map-popup-link {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: var(--radius-sm, 4px);
+  min-height: 32px;
+}
+
+.places-map-popup-directions {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--border, #E5DDCA);
+  background-color: var(--surface, #F7F5EF);
+  color: var(--primary, #12304A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.places-map-popup-directions:hover {
+  background-color: var(--gold-surface, #FDF8ED);
+  color: var(--gold-dark, #B8892D);
+  border-color: var(--gold, #D4A64A);
+}
+
+/* ==========================================================================
+   FLOATING ACTION BUTTONS
+   ========================================================================== */
+
+.places-map-floating-controls {
+  position: absolute;
+  bottom: 24px;
+  inset-inline-start: 14px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.places-map-control-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm, 4px);
+  background-color: #FFFFFF;
+  color: var(--primary, #12304A);
+  border: 1px solid var(--border, #E5DDCA);
+  box-shadow: 0 4px 14px rgba(18, 48, 74, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.places-map-control-btn:hover {
+  background-color: var(--surface, #F7F5EF);
+  color: var(--secondary, #0F766E);
+  transform: translateY(-2px);
+}
+
+.places-map-control-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Toast message inside map */
+.places-map-toast {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(18, 48, 74, 0.15);
+  animation: slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 90%;
+  pointer-events: none;
+}
+
+.places-map-toast-info {
+  background-color: var(--primary, #12304A);
+  color: #FFFFFF;
+}
+
+.places-map-toast-success {
+  background-color: var(--success, #15803D);
+  color: #FFFFFF;
+}
+
+.places-map-toast-error {
+  background-color: var(--error, #B91C1C);
+  color: #FFFFFF;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.places-map-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  min-height: 340px;
+}
+
+.places-map-empty h3 {
+  margin: 12px 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary, #12304A);
+}
+
+.places-map-empty p {
+  font-size: 13px;
+  color: var(--text-muted, #4B5E70);
+  margin: 0;
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS (320px - 768px)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .places-map-wrapper {
+    height: clamp(340px, 50vh, 460px) !important;
+  }
+
+  .places-map {
+    height: 100% !important;
+  }
+
+  .places-map-popup-window .leaflet-popup-content {
+    width: 230px !important;
+  }
+
+  .places-map-popup-img-wrap {
+    height: 105px;
+  }
+
+  .places-map-floating-controls {
+    bottom: 14px;
+    inset-inline-start: 10px;
+  }
+
+  .places-map-control-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .places-map-wrapper {
+    height: clamp(320px, 48vh, 400px) !important;
+  }
+
+  .places-map {
+    height: 100% !important;
+  }
+}

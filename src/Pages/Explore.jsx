@@ -4,15 +4,18 @@ import { PLACES_DATA } from '../data/placesData';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
+import PlacesMap from '../Components/PlacesMap';
 
 export default function Explore() {
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const initialCity = searchParams.get('city') || 'all';
+  const initialView = searchParams.get('view') === 'map' ? 'map' : 'grid';
 
   const [query, setQuery] = useState(initialQuery);
   const [selectedCity, setSelectedCity] = useState(initialCity);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [viewMode, setViewMode] = useState(initialView);
   const [supabasePlaces, setSupabasePlaces] = useState([]);
 
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -117,6 +120,9 @@ export default function Explore() {
         category: sp.category || staticMatch?.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
         category_en: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
         categoryEn: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
+        categoryKey: staticMatch?.categoryKey || 'historical',
+        latitude: sp.latitude !== undefined && sp.latitude !== null ? sp.latitude : staticMatch?.latitude,
+        longitude: sp.longitude !== undefined && sp.longitude !== null ? sp.longitude : staticMatch?.longitude,
         rating: staticMatch?.rating || 4.8,
         reviewCount: staticMatch?.reviewCount || '1,200',
         image: sp.image_url || staticMatch?.image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg',
@@ -357,38 +363,121 @@ export default function Explore() {
           </div>
         </div>
 
-        {/* Results Counter & Reset Action */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)' }}>
-            {t('explore.foundCount', { count: filtered.length })}
-          </span>
-          {(query || selectedCity !== 'all' || selectedCategory !== 'all') && (
+        {/* Results Counter & View Switcher Console */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '22px',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)' }}>
+              {t('explore.foundCount', { count: filtered.length })}
+            </span>
+
+            {(query || selectedCity !== 'all' || selectedCategory !== 'all') && (
+              <button
+                onClick={() => {
+                  setQuery('');
+                  setSelectedCity('all');
+                  setSelectedCategory('all');
+                }}
+                style={{
+                  fontSize: '13px',
+                  color: 'var(--error)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'none',
+                  border: 'none',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                  restart_alt
+                </span>
+                <span>{t('explore.resetFilters')}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Segmented View Mode Switcher: Grid vs Map */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: '#FFFFFF',
+              padding: '3px',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border)',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
             <button
-              onClick={() => {
-                setQuery('');
-                setSelectedCity('all');
-                setSelectedCategory('all');
-              }}
+              id="explore-view-grid-btn"
+              type="button"
+              onClick={() => setViewMode('grid')}
+              aria-label={t('map.viewList')}
               style={{
-                fontSize: '13px',
-                color: 'var(--error)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                backgroundColor: viewMode === 'grid' ? 'var(--primary)' : 'transparent',
+                color: viewMode === 'grid' ? '#FFFFFF' : 'var(--text-muted)',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-                restart_alt
+                grid_view
               </span>
-              <span>{t('explore.resetFilters')}</span>
+              <span>{t('map.viewList')}</span>
             </button>
-          )}
+
+            <button
+              id="explore-view-map-btn"
+              type="button"
+              onClick={() => setViewMode('map')}
+              aria-label={t('map.viewMap')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                backgroundColor: viewMode === 'map' ? 'var(--secondary)' : 'transparent',
+                color: viewMode === 'map' ? '#FFFFFF' : 'var(--text-muted)',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                map
+              </span>
+              <span>{t('map.viewMap')}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Places Grid: Responsive multi-column layout */}
-        {filtered.length === 0 ? (
+        {/* View Mode Switching: Interactive Map or Editorial Grid */}
+        {viewMode === 'map' ? (
+          <div id="explore-map-container" style={{ marginBottom: '20px' }}>
+            <PlacesMap places={filtered} />
+          </div>
+        ) : filtered.length === 0 ? (
           <div
             style={{
               textAlign: 'center',

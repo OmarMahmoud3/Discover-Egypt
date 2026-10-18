@@ -1,7 +1,8 @@
 import { useLanguage } from '../context/LanguageContext';
 
-export default function BrandLogo({ size = 'medium', showText = true, layout = 'horizontal' }) {
+export default function BrandLogo({ size = 'medium', showText = true, layout = 'horizontal', variant = 'default' }) {
   const { isArabic } = useLanguage();
+  const isLight = variant === 'light';
 
   const iconSizes = {
     small: 36,
@@ -12,7 +13,7 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
 
   return (
     <div
-      className={`brand-logo-root ${size}`}
+      className={`brand-logo-root ${size} ${variant}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -87,7 +88,7 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
               fontFamily: isArabic ? "'Cairo', sans-serif" : "'Inter', sans-serif",
               fontWeight: 800,
               fontSize: size === 'large' ? '28px' : size === 'small' ? '18px' : '22px',
-              color: 'var(--primary)',
+              color: isLight ? '#FFFFFF' : 'var(--primary)',
               letterSpacing: '-0.02em',
               display: 'flex',
               alignItems: 'center',
@@ -115,7 +116,7 @@ export default function BrandLogo({ size = 'medium', showText = true, layout = '
               fontFamily: isArabic ? "'Inter', sans-serif" : "'Cairo', sans-serif",
               fontWeight: 700,
               fontSize: size === 'large' ? '13px' : size === 'small' ? '10px' : '11px',
-              color: 'var(--secondary)',
+              color: isLight ? 'var(--gold)' : 'var(--secondary)',
               letterSpacing: isArabic ? '0.12em' : '0.04em',
               textTransform: 'uppercase',
               marginTop: '1px',

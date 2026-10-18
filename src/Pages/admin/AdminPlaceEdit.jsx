@@ -79,7 +79,7 @@ export default function AdminPlaceEdit() {
     return () => {
       isMounted = false;
     };
-  }, [id, isEdit]);
+  }, [id, isEdit, ta]);
 
   const handleSaved = () => {
     navigate('/admin/places');
