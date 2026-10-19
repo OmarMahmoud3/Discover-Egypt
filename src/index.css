@@ -615,7 +615,7 @@ input, textarea, select {
   .editorial-search-bar input {
     min-height: 42px;
   }
-  .editorial-search-bar button {
+  .editorial-search-bar > button.btn-primary {
     width: 100%;
     min-height: 42px;
   }

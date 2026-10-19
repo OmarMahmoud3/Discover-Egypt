@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PLACES_DATA, BRAND_PILLARS } from '../data/placesData';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
+import VoiceSearchButton from '../Components/VoiceSearchButton';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -161,6 +162,9 @@ export default function Home() {
                   background: 'transparent',
                   minWidth: 0,
                 }}
+              />
+              <VoiceSearchButton
+                onTranscript={(transcript) => setSearchQuery(transcript)}
               />
             </div>
             <button

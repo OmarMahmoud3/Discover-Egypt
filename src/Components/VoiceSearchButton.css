@@ -1,0 +1,281 @@
+/* ==========================================================================
+   VOICE SEARCH BUTTON & STATUS TOAST — Discover Egypt
+   ========================================================================== */
+
+.voice-search-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.voice-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--text-muted, #4B5E70);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.voice-search-btn:hover {
+  background-color: var(--surface-low, #EFEADB);
+  color: var(--primary, #12304A);
+  transform: scale(1.06);
+}
+
+.voice-search-btn:focus-visible {
+  outline: 2px solid var(--secondary, #0F766E);
+  outline-offset: 2px;
+}
+
+/* Listening State with Glowing Radar Ring */
+.voice-search-btn.is-listening {
+  background-color: #DC2626 !important;
+  color: #FFFFFF !important;
+  border-color: #B91C1C !important;
+  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
+  animation: voice-pulse 1.5s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+@keyframes voice-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+    transform: scale(1.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    transform: scale(1);
+  }
+}
+
+/* Processing State */
+.voice-search-btn.is-processing {
+  background-color: var(--gold-surface, #FDF9EE);
+  color: var(--gold, #B48A3C);
+  border-color: var(--gold, #B48A3C);
+}
+
+.voice-search-btn.is-processing .voice-icon-spin {
+  animation: voice-spin 1s linear infinite;
+}
+
+@keyframes voice-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Disabled or Unsupported State */
+.voice-search-btn.is-unsupported,
+.voice-search-btn.is-denied {
+  opacity: 0.7;
+  color: var(--text-light, #8C9BA8);
+}
+
+/* Live Floating Status Popover */
+.voice-search-status-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 99999;
+  min-width: 270px;
+  max-width: 350px;
+  background-color: var(--primary, #12304A);
+  color: #FFFFFF;
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(18, 48, 74, 0.28);
+  border: 1px solid rgba(212, 166, 74, 0.3);
+  font-size: 13px;
+  line-height: 1.45;
+  animation: voice-popover-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: auto;
+}
+
+@keyframes voice-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.voice-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.voice-status-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--gold, #E5C378);
+  font-size: 12px;
+}
+
+.voice-status-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.voice-status-close-btn:hover {
+  color: #FFFFFF;
+}
+
+.voice-status-body {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 4px;
+}
+
+.voice-status-interim {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-style: italic;
+  color: var(--gold-light, #F5E5C9);
+  word-break: break-word;
+}
+
+.voice-status-body.voice-status-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #FCA5A5;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+/* Retry Button */
+.voice-status-actions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.voice-status-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(229, 195, 120, 0.18);
+  border: 1px solid rgba(229, 195, 120, 0.4);
+  color: #FFFFFF;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.voice-status-retry-btn:hover {
+  background-color: var(--gold, #E5C378);
+  color: var(--primary, #12304A);
+}
+
+/* Quick Suggestion Chips */
+.voice-status-suggestions {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.voice-suggestions-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold, #E5C378);
+  margin-bottom: 6px;
+}
+
+.voice-suggestions-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.voice-chip-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+  border-radius: 9999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.voice-chip-btn:hover {
+  background: rgba(229, 195, 120, 0.25);
+  border-color: var(--gold, #E5C378);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .voice-search-btn.is-listening {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.6);
+  }
+  .voice-search-btn.is-processing .voice-icon-spin {
+    animation: none;
+  }
+  .voice-search-status-popover {
+    animation: none;
+  }
+}
+
+/* Responsive Touch Target Adjustment on Phones */
+@media (max-width: 480px) {
+  .voice-search-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .voice-search-status-popover {
+    min-width: 220px;
+    max-width: 280px;
+  }
+}

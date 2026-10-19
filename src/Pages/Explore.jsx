@@ -5,6 +5,8 @@ import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import PlacesMap from '../Components/PlacesMap';
+import VoiceSearchButton from '../Components/VoiceSearchButton';
+import { matchesDestination } from '../lib/searchUtils';
 
 export default function Explore() {
   const [searchParams] = useSearchParams();
@@ -155,6 +157,7 @@ export default function Explore() {
 
       const matchQuery =
         !q ||
+        matchesDestination(p, query) ||
         pName.includes(q) ||
         pCity.includes(q) ||
         pCategory.includes(q) ||
@@ -259,6 +262,7 @@ export default function Explore() {
             />
             {query && (
               <button
+                type="button"
                 onClick={() => setQuery('')}
                 style={{
                   color: 'var(--text-light)',
@@ -268,6 +272,8 @@ export default function Explore() {
                   minWidth: '36px',
                   minHeight: '36px',
                   cursor: 'pointer',
+                  background: 'transparent',
+                  border: 'none',
                 }}
                 aria-label="Clear search"
               >
@@ -276,6 +282,9 @@ export default function Explore() {
                 </span>
               </button>
             )}
+            <VoiceSearchButton
+              onTranscript={(transcript) => setQuery(transcript)}
+            />
           </div>
 
           {/* City Segmented Filters */}

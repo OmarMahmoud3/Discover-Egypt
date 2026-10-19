@@ -99,6 +99,10 @@ const criticalFiles = [
   'src/Pages/admin/AdminSettings.jsx',
   'src/styles/admin.css',
   'jsconfig.json',
+  'src/lib/searchUtils.js',
+  'src/hooks/useVoiceSearch.js',
+  'src/Components/VoiceSearchButton.jsx',
+  'src/Components/VoiceSearchButton.css',
 ];
 
 criticalFiles.forEach((relPath) => {
@@ -129,6 +133,44 @@ assert(arMapKeys.length > 5, `Arabic map translation contains ${arMapKeys.length
 assert(enMapKeys.length > 5, `English map translation contains ${enMapKeys.length} keys`);
 const missingMapEn = arMapKeys.filter(k => !enMapKeys.includes(k));
 assert(missingMapEn.length === 0, `English map keys match Arabic keys (missing: ${missingMapEn.join(', ') || 'none'})`);
+
+// --- 3C. Voice Search & Arabic/English Text Normalization Engine ---
+console.log('\n[TEST GROUP 3C] Voice Search & Text Normalization Engine');
+import { normalizeSearchText, matchesDestination } from '../src/lib/searchUtils.js';
+
+assert(normalizeSearchText('أهرامات') === 'اهرامات', 'Alef with Hamza above (أ) normalizes to bare Alef (ا)');
+assert(normalizeSearchText('إسكندرية') === 'اسكندريه', 'Alef with Hamza below (إ) & Taa Marbuta (ة) normalize correctly');
+assert(normalizeSearchText('آثار') === 'اثار', 'Alef with Madda (آ) normalizes to bare Alef (ا)');
+assert(normalizeSearchText('مُتْحَفٌ') === 'متحف', 'Arabic diacritics / tashkeel stripped cleanly');
+assert(normalizeSearchText('موسى') === 'موسي', 'Alef Maqsura (ى) normalizes to Yaa (ي)');
+assert(normalizeSearchText('  Giza   Pyramids  ') === 'giza pyramids', 'English casing folded and whitespace collapsed');
+
+// Matches Destination Verification
+const testPlace = {
+  id: 'giza-pyramids',
+  name: 'هضبة الجيزة والأهرامات',
+  nameEn: 'Giza Plateau & Pyramids',
+  city: 'الجيزة',
+  cityEn: 'Giza',
+  category: 'آثار وتاريخ',
+  categoryEn: 'Monuments & History',
+};
+
+assert(matchesDestination(testPlace, 'اهرامات') === true, 'Matches destination when voice transcript lacks hamza (اهرامات -> الأهرامات)');
+assert(matchesDestination(testPlace, 'جيزه') === true, 'Matches destination when voice transcript uses haa for taa marbuta (جيزه -> الجيزة)');
+assert(matchesDestination(testPlace, 'pyramids') === true, 'Matches destination by English keyword case-insensitively');
+assert(matchesDestination(testPlace, 'معبد الكرنك') === false, 'Rejects non-matching destination correctly');
+assert(matchesDestination(testPlace, '') === true, 'Empty query matches all destinations');
+
+// Verify translation parity for voiceSearch
+const arVoiceKeys = Object.keys(translations.ar.voiceSearch || {});
+const enVoiceKeys = Object.keys(translations.en.voiceSearch || {});
+assert(arVoiceKeys.length >= 10, `Arabic voiceSearch translation contains ${arVoiceKeys.length} keys`);
+assert(enVoiceKeys.length >= 10, `English voiceSearch translation contains ${enVoiceKeys.length} keys`);
+const missingVoiceEn = arVoiceKeys.filter(k => !enVoiceKeys.includes(k));
+assert(missingVoiceEn.length === 0, `English voiceSearch keys match Arabic keys (missing: ${missingVoiceEn.join(', ') || 'none'})`);
+const missingVoiceAr = enVoiceKeys.filter(k => !arVoiceKeys.includes(k));
+assert(missingVoiceAr.length === 0, `Arabic voiceSearch keys match English keys (missing: ${missingVoiceAr.join(', ') || 'none'})`);
 
 // --- 4. Supabase Client Verification ---
 console.log('\n[TEST GROUP 4] Supabase Client Health');

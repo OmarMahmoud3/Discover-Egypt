@@ -1,13 +1,74 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PLACES_DATA } from '../data/placesData';
 import { useLanguage } from '../context/LanguageContext';
+import { supabase } from '../lib/supabase';
+import VoiceSearchButton from './VoiceSearchButton';
+import { matchesDestination } from '../lib/searchUtils';
 
 export default function SearchModal({ isOpen, onClose }) {
   const [query, setQuery] = useState('');
+  const [supabasePlaces, setSupabasePlaces] = useState([]);
   const navigate = useNavigate();
   const { t, getPlaceName, getPlaceCity, getPlaceCategory, isArabic } = useLanguage();
   const inputRef = useRef(null);
+
+  // Fetch published places from Supabase when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function loadPlaces() {
+      try {
+        const { data, error } = await supabase
+          .from('places')
+          .select('*')
+          .eq('is_published', true);
+        if (!error && data && data.length > 0) {
+          setSupabasePlaces(data);
+        }
+      } catch (err) {
+        console.warn('Supabase fetch notice in SearchModal:', err);
+      }
+    }
+    loadPlaces();
+  }, [isOpen]);
+
+  // Combine Supabase places and curated static places
+  const allPlaces = useMemo(() => {
+    const dynamicList = supabasePlaces.map((sp) => {
+      const staticMatch = PLACES_DATA.find((p) => p.id === sp.id || p.id === sp.slug);
+      return {
+        id: sp.id,
+        name: sp.name,
+        name_en: sp.name_en || sp.name,
+        nameEn: sp.name_en || sp.name,
+        city: sp.city || staticMatch?.city || (isArabic ? 'مصر' : 'Egypt'),
+        city_en: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
+        cityEn: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
+        cityKey: (sp.city_en || sp.city || staticMatch?.cityKey || '').toLowerCase(),
+        category: sp.category || staticMatch?.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
+        category_en: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
+        categoryEn: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
+        categoryKey: staticMatch?.categoryKey || 'historical',
+        latitude: sp.latitude !== undefined && sp.latitude !== null ? sp.latitude : staticMatch?.latitude,
+        longitude: sp.longitude !== undefined && sp.longitude !== null ? sp.longitude : staticMatch?.longitude,
+        rating: staticMatch?.rating || 4.8,
+        reviewCount: staticMatch?.reviewCount || '1,200',
+        image: sp.image_url || staticMatch?.image || 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=400&q=80',
+        historicalText: sp.description || staticMatch?.historicalText || '',
+        historicalTextEn: sp.description_en || sp.description || staticMatch?.historicalTextEn || '',
+      };
+    });
+
+    const combined = [...dynamicList];
+    PLACES_DATA.forEach((staticP) => {
+      if (!combined.some((p) => p.id === staticP.id || p.id === staticP.slug)) {
+        combined.push(staticP);
+      }
+    });
+
+    return combined;
+  }, [supabasePlaces, isArabic]);
 
   // Close on Escape key & trap scroll
   useEffect(() => {
@@ -39,18 +100,19 @@ export default function SearchModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const filtered = query.trim()
-    ? PLACES_DATA.filter((p) => {
+    ? allPlaces.filter((p) => {
         const q = query.toLowerCase();
         return (
-          p.name.toLowerCase().includes(q) ||
+          matchesDestination(p, query) ||
+          p.name?.toLowerCase().includes(q) ||
           (p.nameEn && p.nameEn.toLowerCase().includes(q)) ||
-          p.city.toLowerCase().includes(q) ||
+          p.city?.toLowerCase().includes(q) ||
           (p.cityEn && p.cityEn.toLowerCase().includes(q)) ||
-          p.category.toLowerCase().includes(q) ||
+          p.category?.toLowerCase().includes(q) ||
           (p.categoryEn && p.categoryEn.toLowerCase().includes(q))
         );
       })
-    : PLACES_DATA;
+    : allPlaces;
 
   const handleSelect = (placeId) => {
     onClose();
@@ -59,6 +121,7 @@ export default function SearchModal({ isOpen, onClose }) {
 
   return (
     <div
+      id="global-search-modal"
       role="dialog"
       aria-modal="true"
       aria-label={t('nav.searchModalLabel')}
@@ -147,6 +210,10 @@ export default function SearchModal({ isOpen, onClose }) {
               </span>
             </button>
           )}
+          <VoiceSearchButton
+            onTranscript={(transcript) => setQuery(transcript)}
+            inputRef={inputRef}
+          />
           <button
             type="button"
             onClick={onClose}

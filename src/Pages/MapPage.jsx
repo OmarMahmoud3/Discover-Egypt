@@ -4,6 +4,8 @@ import PlacesMap from '../Components/PlacesMap';
 import { PLACES_DATA } from '../data/placesData';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
+import VoiceSearchButton from '../Components/VoiceSearchButton';
+import { matchesDestination } from '../lib/searchUtils';
 
 export default function MapPage() {
   const [searchParams] = useSearchParams();
@@ -172,6 +174,7 @@ export default function MapPage() {
 
       const matchQuery =
         !q ||
+        matchesDestination(p, query) ||
         pName.includes(q) ||
         pCity.includes(q) ||
         pCategory.includes(q) ||
@@ -292,6 +295,9 @@ export default function MapPage() {
                 </span>
               </button>
             )}
+            <VoiceSearchButton
+              onTranscript={(transcript) => setQuery(transcript)}
+            />
           </div>
 
           {/* City Segmented Filters */}
