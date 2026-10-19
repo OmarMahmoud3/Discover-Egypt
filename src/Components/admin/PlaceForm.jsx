@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
+import { isUuid } from '../../lib/uuidUtils';
 
 /**
  * PlaceForm — Add/Edit form for places.
@@ -92,7 +93,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
     }
 
     // Skip check if editing and slug hasn't changed
-    if (isEdit && form.slug === place?.slug) {
+    if (isEdit && (form.slug === place?.slug || form.slug === place?.id)) {
       slugCheckTimer.current = setTimeout(() => {
         setSlugStatus('available');
       }, 0);
@@ -106,7 +107,7 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
       try {
         const { data, error } = await supabase
           .from('places')
-          .select('id')
+          .select('id, slug')
           .eq('slug', form.slug)
           .maybeSingle();
 
@@ -115,7 +116,13 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
           return;
         }
 
-        if (data && (!isEdit || data.id !== place?.id)) {
+        const isSamePlace =
+          isEdit &&
+          (data?.id === place?.id ||
+           (place?.slug && data?.slug === place?.slug) ||
+           (place?.id && data?.slug === place?.id));
+
+        if (data && !isSamePlace) {
           setSlugStatus('taken');
         } else {
           setSlugStatus('available');
@@ -190,11 +197,41 @@ export default function PlaceForm({ place = null, onSave, onCancel }) {
 
       let result;
       if (isEdit) {
-        result = await supabase
-          .from('places')
-          .upsert({ ...payload, id: place.id })
-          .select()
-          .single();
+        if (isUuid(place?.id)) {
+          // 1. Existing database record with valid UUID primary key
+          result = await supabase
+            .from('places')
+            .update(payload)
+            .eq('id', place.id)
+            .select()
+            .single();
+        } else {
+          // 2. Default place from static data (id is a slug like "grand-egyptian-museum")
+          // Check if this place has already been saved into the database by slug
+          const lookupSlug = place?.slug || place?.id || form.slug;
+          const { data: existingRecord } = await supabase
+            .from('places')
+            .select('id')
+            .eq('slug', lookupSlug)
+            .maybeSingle();
+
+          if (existingRecord?.id) {
+            // Update existing row using its true database UUID
+            result = await supabase
+              .from('places')
+              .update(payload)
+              .eq('id', existingRecord.id)
+              .select()
+              .single();
+          } else {
+            // Insert new place in Supabase (PostgreSQL generates a fresh UUID)
+            result = await supabase
+              .from('places')
+              .insert(payload)
+              .select()
+              .single();
+          }
+        }
       } else {
         result = await supabase
           .from('places')

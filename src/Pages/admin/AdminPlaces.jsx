@@ -3,6 +3,7 @@ import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { PLACES_DATA } from '../../data/placesData';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
+import { isUuid } from '../../lib/uuidUtils';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import ConfirmDialog from '../../Components/admin/ConfirmDialog';
 
@@ -144,22 +145,37 @@ export default function AdminPlaces() {
   const handleSyncDefaults = async () => {
     setActionLoading(true);
     try {
-      const rowsToUpsert = PLACES_DATA.map((p) => ({
-        id: p.id,
-        name: p.name,
-        name_en: p.nameEn || p.name,
-        slug: p.slug || p.id,
-        city: p.city,
-        category: p.category,
-        description: p.description || p.historicalText || p.historicalTextEn || p.name,
-        image_url: p.image,
-        gallery: (p.gallery || []).map((g) => g.url || g),
-        latitude: p.latitude || 29.9792,
-        longitude: p.longitude || 31.1342,
-        is_published: true,
-      }));
+      const { data: existingRows, error: checkError } = await supabase
+        .from('places')
+        .select('id, slug');
 
-      const { error } = await supabase.from('places').upsert(rowsToUpsert, { onConflict: 'id' });
+      if (checkError) throw checkError;
+
+      const existingBySlug = new Map((existingRows || []).map((r) => [r.slug, r.id]));
+
+      const rowsToUpsert = PLACES_DATA.map((p) => {
+        const slug = p.slug || p.id;
+        const existingId = existingBySlug.get(slug);
+        const row = {
+          name: p.name,
+          name_en: p.nameEn || p.name,
+          slug,
+          city: p.city,
+          category: p.category,
+          description: p.description || p.historicalText || p.historicalTextEn || p.name,
+          image_url: p.image,
+          gallery: (p.gallery || []).map((g) => g.url || g),
+          latitude: p.latitude || 29.9792,
+          longitude: p.longitude || 31.1342,
+          is_published: true,
+        };
+        if (existingId) {
+          row.id = existingId;
+        }
+        return row;
+      });
+
+      const { error } = await supabase.from('places').upsert(rowsToUpsert);
       if (error) throw error;
 
       showToast(
@@ -218,12 +234,43 @@ export default function AdminPlaces() {
       onConfirm: async () => {
         setActionLoading(true);
         try {
-          const { error } = await supabase
-            .from('places')
-            .update({ is_published: willPublish })
-            .eq('id', place.id);
+          let targetId = isUuid(place?.id) ? place.id : null;
 
-          if (error) throw error;
+          if (!targetId) {
+            const lookupSlug = place.slug || place.id;
+            const { data: dbRecord } = await supabase
+              .from('places')
+              .select('id')
+              .eq('slug', lookupSlug)
+              .maybeSingle();
+            if (dbRecord?.id) {
+              targetId = dbRecord.id;
+            }
+          }
+
+          if (targetId) {
+            const { error } = await supabase
+              .from('places')
+              .update({ is_published: willPublish })
+              .eq('id', targetId);
+
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .from('places')
+              .insert({
+                name: place.name,
+                name_en: place.name_en || null,
+                slug: place.slug || place.id,
+                city: place.city,
+                category: place.category,
+                description: place.description || place.name,
+                image_url: place.image_url || null,
+                is_published: willPublish,
+              });
+
+            if (error) throw error;
+          }
 
           showToast(willPublish ? ta('admin.placePublished') : ta('admin.placeUnpublished'));
           fetchPlaces();
@@ -247,12 +294,28 @@ export default function AdminPlaces() {
       onConfirm: async () => {
         setActionLoading(true);
         try {
-          const { error } = await supabase
-            .from('places')
-            .delete()
-            .eq('id', place.id);
+          let targetId = isUuid(place?.id) ? place.id : null;
 
-          if (error) throw error;
+          if (!targetId) {
+            const lookupSlug = place.slug || place.id;
+            const { data: dbRecord } = await supabase
+              .from('places')
+              .select('id')
+              .eq('slug', lookupSlug)
+              .maybeSingle();
+            if (dbRecord?.id) {
+              targetId = dbRecord.id;
+            }
+          }
+
+          if (targetId) {
+            const { error } = await supabase
+              .from('places')
+              .delete()
+              .eq('id', targetId);
+
+            if (error) throw error;
+          }
 
           showToast(ta('admin.placeDeleted'));
           fetchPlaces();

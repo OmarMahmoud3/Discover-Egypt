@@ -4,6 +4,7 @@ import { PLACES_DATA } from '../data/placesData';
 import { supabase } from '../lib/supabase';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
+import { isUuid } from '../lib/uuidUtils';
 
 function GalleryViewer({ place, placeName }) {
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
@@ -169,10 +170,14 @@ export default function PlaceDetails() {
   // Check Supabase database so administrative edits take precedence
   useEffect(() => {
     let isMounted = true;
-    supabase
-      .from('places')
-      .select('*')
-      .or(`id.eq.${placeId},slug.eq.${placeId}`)
+    let query = supabase.from('places').select('*');
+    if (isUuid(placeId)) {
+      query = query.or(`id.eq.${placeId},slug.eq.${placeId}`);
+    } else {
+      query = query.eq('slug', placeId);
+    }
+
+    query
       .maybeSingle()
       .then(({ data, error }) => {
         if (!isMounted) return;

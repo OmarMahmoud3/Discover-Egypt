@@ -3,6 +3,7 @@ import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { PLACES_DATA } from '../../data/placesData';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
+import { isUuid } from '../../lib/uuidUtils';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import PlaceForm from '../../Components/admin/PlaceForm';
 
@@ -33,11 +34,14 @@ export default function AdminPlaceEdit() {
         let loadedPlace = null;
 
         // 1. Try fetching from Supabase database
-        const { data, error: fetchErr } = await supabase
-          .from('places')
-          .select('*')
-          .or(`id.eq.${id},slug.eq.${id}`)
-          .maybeSingle();
+        let query = supabase.from('places').select('*');
+        if (isUuid(id)) {
+          query = query.or(`id.eq.${id},slug.eq.${id}`);
+        } else {
+          query = query.eq('slug', id);
+        }
+
+        const { data, error: fetchErr } = await query.maybeSingle();
 
         if (!fetchErr && data) {
           loadedPlace = data;
