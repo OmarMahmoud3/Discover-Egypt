@@ -1,8 +1,75 @@
--- Discover Egypt: Seed 94 Tourist Destinations into public.places
--- Run this script in your Supabase SQL Editor if you wish to populate the database directly.
+-- Discover Egypt: Complete Seed for 94 Places into Supabase
+-- Run this script in your Supabase SQL Editor to populate public.places
 
+-- 1. Ensure public.places table exists with UUID primary key
+CREATE TABLE IF NOT EXISTS public.places (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  name_en text,
+  slug text UNIQUE NOT NULL,
+  city text NOT NULL,
+  category text NOT NULL,
+  description text NOT NULL,
+  image_url text,
+  gallery text[],
+  latitude double precision,
+  longitude double precision,
+  is_published boolean DEFAULT true,
+  created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ensure unique constraint on slug
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'places_slug_key'
+  ) THEN
+    ALTER TABLE public.places ADD CONSTRAINT places_slug_key UNIQUE (slug);
+  END IF;
+EXCEPTION
+  WHEN others THEN NULL;
+END $$;
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.places ENABLE ROW LEVEL SECURITY;
+
+-- Permissions
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.places TO anon, authenticated, service_role;
+
+-- Policy: Everyone can view published places
+DROP POLICY IF EXISTS "Public read published places" ON public.places;
+CREATE POLICY "Public read published places" ON public.places
+  FOR SELECT
+  TO anon, authenticated
+  USING (
+    is_published = true OR
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- Policy: Administrators have full CRUD on places
+DROP POLICY IF EXISTS "Admins manage places" ON public.places;
+CREATE POLICY "Admins manage places" ON public.places
+  FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- 2. Insert or update all 94 destination places
 INSERT INTO public.places (
-  id,
   name,
   name_en,
   slug,
@@ -13,237 +80,205 @@ INSERT INTO public.places (
   gallery,
   latitude,
   longitude,
-  is_published,
-  created_at
+  is_published
 )
 VALUES
 (
-  'giza-plateau',
   'هضبة الجيزة والأهرامات',
   'Giza Plateau',
   'giza-plateau',
   'الجيزة',
   'آثار وتاريخ',
   'تضم هضبة الجيزة أهرامات خوفو وخفرع ومنكاورع وأبو الهول ومقابر ومعابد جنائزية مرتبطة بها. وهي من أشهر المواقع الأثرية في العالم وشاهد بارز على تطور العمارة المصرية القديمة.',
-  'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg',
+  ARRAY['https://lh3.googleusercontent.com/aida-public/AB6AXuCLeJC8xYEENQkqcRtSKJpLQCbh_2i_CxLLKHqlT_DOdGIsAdf3qVvT4zXZyp6GmiY117UELL4Hs4nMuf4_lDcDuLw0irbrz6e8bVsZvQPyzNl1ZNcMLToDBHCd8mxr9cDEJFb-LAiOMUFh_eTA7XPJvxZgs0DIbpSigJPfMK6-DT-n1TxCZMcVeg2MS3wMYexs2cYT1VsMFJgzUuTZG9aYAjCLRDOWWwmxu-gXVidyaKtxIxD0KWLUSA', 'https://lh3.googleusercontent.com/aida-public/AB6AXuA-JEDCXXp4rcFKjuHv9yU8rToLUfsBQTmLw9Ijksb2jmJjyqYcwQ06AcfOZts2cQH8i_7tGrdS-pj4QG79lnuC4nsdES7UXt1kukPgtqWYiwcWG1OU4jJyYN60vMdaTmOdLLkoMdJZaf9O8qLkLO9D_MxuohpTkg9WAPgLWJCp6liD2ayp4D-GZ8zOWBPyB872UZFBDrwlkUl7OOUQx9qQFw5gjd7Uxfv8dLr2O9WmUjmPCRpjYs53EA', 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9drHxmx8bRzk3zmlT0j1kYyc146dhqMSaP-snw14QXhzYOfgMy5d67MmBO0qtcWFbkBv0J8yPEY2tPEZdRGsWhWq7tJdEq8YAIuXTbHV0i0I1QZH5Dmz-LqD-cnfSNrWPsL1FbKV3KborwqGf1NEs3SOA9kupHmyYX2sOlTzHFp0BEkJWDmCHvco644tQgAcIkenEoAI3m0N2n4eFLMPM7AHk70_GOTF-W_9_IknrdXbhofsbX9lQog']::text[],
   29.9792,
   31.1342,
-  true,
-  NOW()
+  true
 ),
 (
-  'great-pyramid-of-khufu',
   'الهرم الأكبر خوفو',
   'Great Pyramid of Khufu',
   'great-pyramid-of-khufu',
   'الجيزة',
   'آثار وتاريخ',
   'شُيّد الهرم الأكبر في عهد الملك خوفو خلال الأسرة الرابعة، وكان أكبر مبنى حجري في العالم لآلاف السنين. يمكن مشاهدة الهرم من الخارج، وتخضع زيارة الحجرات الداخلية لقواعد وتذاكر خاصة.',
-  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuCLeJC8xYEENQkqcRtSKJpLQCbh_2i_CxLLKHqlT_DOdGIsAdf3qVvT4zXZyp6GmiY117UELL4Hs4nMuf4_lDcDuLw0irbrz6e8bVsZvQPyzNl1ZNcMLToDBHCd8mxr9cDEJFb-LAiOMUFh_eTA7XPJvxZgs0DIbpSigJPfMK6-DT-n1TxCZMcVeg2MS3wMYexs2cYT1VsMFJgzUuTZG9aYAjCLRDOWWwmxu-gXVidyaKtxIxD0KWLUSA',
+  ARRAY['https://lh3.googleusercontent.com/aida-public/AB6AXuCLeJC8xYEENQkqcRtSKJpLQCbh_2i_CxLLKHqlT_DOdGIsAdf3qVvT4zXZyp6GmiY117UELL4Hs4nMuf4_lDcDuLw0irbrz6e8bVsZvQPyzNl1ZNcMLToDBHCd8mxr9cDEJFb-LAiOMUFh_eTA7XPJvxZgs0DIbpSigJPfMK6-DT-n1TxCZMcVeg2MS3wMYexs2cYT1VsMFJgzUuTZG9aYAjCLRDOWWwmxu-gXVidyaKtxIxD0KWLUSA']::text[],
   29.9792,
   31.1344,
-  true,
-  NOW()
+  true
 ),
 (
-  'great-sphinx-of-giza',
   'أبو الهول',
   'Great Sphinx of Giza',
   'great-sphinx-of-giza',
   'الجيزة',
   'آثار وتاريخ',
   'تمثال ضخم بجسم أسد ورأس إنسان يقع بجوار معابد هضبة الجيزة. يرتبط غالبًا بالملك خفرع، ويُعد من أبرز رموز الحضارة المصرية القديمة.',
-  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuD9drHxmx8bRzk3zmlT0j1kYyc146dhqMSaP-snw14QXhzYOfgMy5d67MmBO0qtcWFbkBv0J8yPEY2tPEZdRGsWhWq7tJdEq8YAIuXTbHV0i0I1QZH5Dmz-LqD-cnfSNrWPsL1FbKV3KborwqGf1NEs3SOA9kupHmyYX2sOlTzHFp0BEkJWDmCHvco644tQgAcIkenEoAI3m0N2n4eFLMPM7AHk70_GOTF-W_9_IknrdXbhofsbX9lQog',
+  ARRAY['https://lh3.googleusercontent.com/aida-public/AB6AXuD9drHxmx8bRzk3zmlT0j1kYyc146dhqMSaP-snw14QXhzYOfgMy5d67MmBO0qtcWFbkBv0J8yPEY2tPEZdRGsWhWq7tJdEq8YAIuXTbHV0i0I1QZH5Dmz-LqD-cnfSNrWPsL1FbKV3KborwqGf1NEs3SOA9kupHmyYX2sOlTzHFp0BEkJWDmCHvco644tQgAcIkenEoAI3m0N2n4eFLMPM7AHk70_GOTF-W_9_IknrdXbhofsbX9lQog']::text[],
   29.9753,
   31.1376,
-  true,
-  NOW()
+  true
 ),
 (
-  'grand-egyptian-museum',
   'المتحف المصري الكبير',
   'Grand Egyptian Museum',
   'grand-egyptian-museum',
   'الجيزة',
   'متاحف',
   'متحف حديث بالقرب من هضبة الجيزة صُمم لعرض مجموعات واسعة من آثار مصر القديمة في بيئة متحفية معاصرة. تحقّق من مواعيد الزيارة والمعارض المتاحة قبل التخطيط للزيارة.',
-  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80']::text[],
   29.9934,
   31.1186,
-  true,
-  NOW()
+  true
 ),
 (
-  'step-pyramid-of-djoser',
   'هرم زوسر المدرج بسقارة',
   'Step Pyramid of Djoser',
   'step-pyramid-of-djoser',
   'الجيزة',
   'آثار وتاريخ',
   'يُعد هرم زوسر المدرج من أقدم المنشآت الحجرية الملكية الكبرى المعروفة، وقد شُيّد في عهد الملك زوسر وصممه إمحوتب. يضم محيطه مجمعًا جنائزيًا واسعًا ومقابر من عصور مختلفة.',
-  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
   29.8713,
   31.2165,
-  true,
-  NOW()
+  true
 ),
 (
-  'serapeum-of-saqqara',
   'السيرابيوم بسقارة',
   'Serapeum of Saqqara',
   'serapeum-of-saqqara',
   'الجيزة',
   'آثار وتاريخ',
   'ممرات ومقابر تحت الأرض ارتبطت بعبادة العجل أبيس في العصرين المتأخر والبطلمي. يشتهر بالممرات الحجرية والتوابيت الجرانيتية الضخمة، وتختلف إمكانية زيارة أجزائه وفق ترتيبات الموقع.',
-  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   29.8725,
   31.2125,
-  true,
-  NOW()
+  true
 ),
 (
-  'red-pyramid-dahshur',
   'الهرم الأحمر بدهشور',
   'Red Pyramid of Dahshur',
   'red-pyramid-dahshur',
   'الجيزة',
   'آثار وتاريخ',
   'هرم بناه الملك سنفرو، ويُعد من أقدم الأهرامات ذات الجوانب الملساء التي نجحت في تحقيق شكل الهرم الكامل. يوضح تطور الخبرة الهندسية التي مهدت لبناء أهرامات الجيزة.',
-  'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
   29.8083,
   31.206,
-  true,
-  NOW()
+  true
 ),
 (
-  'bent-pyramid-dahshur',
   'الهرم المنحني بدهشور',
   'Bent Pyramid of Dahshur',
   'bent-pyramid-dahshur',
   'الجيزة',
   'آثار وتاريخ',
   'هرم مميز يتغير ميل جوانبه في الجزء العلوي، ويُظهر مرحلة مهمة من تجارب بناء الأهرامات في عهد سنفرو. يقع ضمن حقل أهرامات دهشور جنوب الجيزة.',
-  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
   29.7908,
   31.2097,
-  true,
-  NOW()
+  true
 ),
 (
-  'memphis-open-air-museum',
   'متحف ميت رهينة وممفيس القديمة',
   'Memphis Open-Air Museum',
   'memphis-open-air-museum',
   'الجيزة',
   'متاحف',
   'يقع المتحف في منطقة ممفيس، العاصمة القديمة لمصر في فترات مهمة من تاريخها. يضم تمثالًا ضخمًا لرمسيس الثاني وقطعًا أثرية توضح مكانة المدينة في الحضارة المصرية.',
-  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   29.8493,
   31.2548,
-  true,
-  NOW()
+  true
 ),
 (
-  'egyptian-museum-tahrir',
   'المتحف المصري بالتحرير',
   'The Egyptian Museum in Tahrir',
   'egyptian-museum-tahrir',
   'القاهرة',
   'متاحف',
   'يضم المتحف المصري في ميدان التحرير مجموعات كبيرة من الآثار المصرية القديمة، تشمل التماثيل والتوابيت والبرديات والقطع الملكية. وهو من أبرز المتاحف التاريخية في وسط القاهرة.',
-  'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0478,
   31.2336,
-  true,
-  NOW()
+  true
 ),
 (
-  'nmec-cairo',
   'المتحف القومي للحضارة المصرية',
   'National Museum of Egyptian Civilization',
   'nmec-cairo',
   'القاهرة',
   'متاحف',
   'يعرض المتحف تاريخ الحضارة المصرية عبر عصور متعددة، من عصور ما قبل التاريخ حتى العصر الحديث. ويشتهر بقاعة المومياوات الملكية التي تقدم سياقًا تاريخيًا وأثريًا للمجموعات المعروضة.',
-  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80']::text[],
   30.006,
   31.2489,
-  true,
-  NOW()
+  true
 ),
 (
-  'museum-of-islamic-art-cairo',
   'متحف الفن الإسلامي',
   'Museum of Islamic Art Cairo',
   'museum-of-islamic-art-cairo',
   'القاهرة',
   'متاحف',
   'يضم المتحف مجموعات من الفنون الإسلامية تشمل الخزف والزجاج والمعادن والخشب والمنسوجات والمخطوطات. تساعد معروضاته على استكشاف تنوع الفنون والحرف في عصور إسلامية مختلفة.',
-  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0444,
   31.2559,
-  true,
-  NOW()
+  true
 ),
 (
-  'coptic-museum-cairo',
   'المتحف القبطي',
   'Coptic Museum',
   'coptic-museum-cairo',
   'القاهرة',
   'متاحف',
   'يعرض المتحف التراث القبطي من خلال مخطوطات وأيقونات ومنسوجات وأعمال خشبية وحجرية. يقع في منطقة مصر القديمة بالقرب من عدد من المواقع الدينية والتاريخية المهمة.',
-  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0067,
   31.2303,
-  true,
-  NOW()
+  true
 ),
 (
-  'citadel-of-saladin',
   'قلعة صلاح الدين الأيوبي',
   'Citadel of Saladin',
   'citadel-of-saladin',
   'القاهرة',
   'آثار وتاريخ',
   'قلعة تاريخية على مرتفع في القاهرة أسسها صلاح الدين الأيوبي في القرن الثاني عشر لتكون جزءًا من منظومة الدفاع عن المدينة. تضم معالم معمارية بارزة وتوفر إطلالات واسعة على القاهرة.',
-  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0299,
   31.2618,
-  true,
-  NOW()
+  true
 ),
 (
-  'mosque-of-muhammad-ali',
   'مسجد محمد علي',
   'Mosque of Muhammad Ali',
   'mosque-of-muhammad-ali',
   'القاهرة',
   'معالم دينية',
   'مسجد بارز داخل قلعة صلاح الدين، شُيّد في القرن التاسع عشر ويتميز بقبابه ومآذنه وطرازه العثماني. يُعد من العلامات المعمارية المعروفة في أفق القاهرة.',
-  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0289,
   31.2599,
-  true,
-  NOW()
+  true
 ),
 (
-  'al-muizz-street',
   'شارع المعز لدين الله الفاطمي',
   'Al-Muizz Street',
   'al-muizz-street',
@@ -254,11 +289,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0507,
   31.2617,
-  true,
-  NOW()
+  true
 ),
 (
-  'khan-el-khalili',
   'خان الخليلي',
   'Khan el-Khalili Bazaar',
   'khan-el-khalili',
@@ -269,116 +302,100 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0478,
   31.2622,
-  true,
-  NOW()
+  true
 ),
 (
-  'sultan-hassan-mosque',
   'مسجد ومدرسة السلطان حسن',
   'Mosque-Madrasa of Sultan Hassan',
   'sultan-hassan-mosque',
   'القاهرة',
   'معالم دينية',
   'من أبرز مباني العمارة المملوكية بالقاهرة، شُيّد في القرن الرابع عشر ويتميز بضخامته وتنظيمه المعماري وفنائه الواسع. يقع قرب مسجد الرفاعي في ميدان القلعة.',
-  'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0281,
   31.2565,
-  true,
-  NOW()
+  true
 ),
 (
-  'al-rifai-mosque',
   'مسجد الرفاعي',
   'Al-Rifa''i Mosque',
   'al-rifai-mosque',
   'القاهرة',
   'معالم دينية',
   'مسجد تاريخي قريب من مسجد السلطان حسن، اكتمل بناؤه في القرن العشرين ويضم مدافن ملكية وشخصيات تاريخية. يجمع تصميمه بين عناصر من العمارة الإسلامية التقليدية وتفاصيل من مرحلة بنائه الحديثة.',
-  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
   30.029,
   31.256,
-  true,
-  NOW()
+  true
 ),
 (
-  'mosque-of-ibn-tulun',
   'مسجد أحمد بن طولون',
   'Mosque of Ibn Tulun',
   'mosque-of-ibn-tulun',
   'القاهرة',
   'معالم دينية',
   'من أقدم مساجد القاهرة الباقية، ويتميز بفنائه الواسع ومئذنته ذات السلم الخارجي وطرازه العباسي. يمثل محطة مهمة لفهم تاريخ العمارة الإسلامية في مصر.',
-  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0286,
   31.2597,
-  true,
-  NOW()
+  true
 ),
 (
-  'hanging-church-cairo',
   'الكنيسة المعلقة',
   'The Hanging Church',
   'hanging-church-cairo',
   'القاهرة',
   'معالم دينية',
   'كنيسة تاريخية تقع في منطقة مصر القديمة، وسُميت بالمعلقة لارتباط بنائها ببوابة حصن بابليون. تضم عناصر معمارية وأيقونات ذات قيمة في تاريخ التراث القبطي المصري.',
-  'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0058,
   31.2307,
-  true,
-  NOW()
+  true
 ),
 (
-  'ben-ezra-synagogue',
   'كنيس بن عزرا',
   'Ben Ezra Synagogue',
   'ben-ezra-synagogue',
   'القاهرة',
   'تراث وأسواق',
   'كنيس تاريخي في منطقة الفسطاط ارتبط اسمه بمجموعة مهمة من الوثائق المعروفة باسم جنيزة القاهرة. يبرز الموقع التنوع الديني والثقافي الذي عرفته المدينة عبر قرون.',
-  'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0064,
   31.2306,
-  true,
-  NOW()
+  true
 ),
 (
-  'baron-empain-palace',
   'قصر البارون إمبان',
   'Baron Empain Palace',
   'baron-empain-palace',
   'القاهرة',
   'تراث وأسواق',
   'قصر مميز في مصر الجديدة شُيّد في مطلع القرن العشرين بتصميم مستلهم من عمارة جنوب شرق آسيا. يشتهر بتفاصيله الزخرفية وموقعه المرتبط بتاريخ نشأة حي مصر الجديدة.',
-  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0873,
   31.3308,
-  true,
-  NOW()
+  true
 ),
 (
-  'manial-palace',
   'قصر الأمير محمد علي بالمنيل',
   'Manial Palace',
   'manial-palace',
   'القاهرة',
   'متاحف',
   'مجمع قصري تاريخي يجمع بين حدائق ومبانٍ ذات تأثيرات معمارية إسلامية وعثمانية وفارسية وأوروبية. تعرض أجزاؤه أسلوب حياة أحد أفراد الأسرة العلوية ومقتنياته الفنية.',
-  'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1566836644047-97598835848c?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1566836644047-97598835848c?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0255,
   31.2312,
-  true,
-  NOW()
+  true
 ),
 (
-  'cairo-tower',
   'برج القاهرة',
   'Cairo Tower',
   'cairo-tower',
@@ -389,26 +406,22 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0459,
   31.2243,
-  true,
-  NOW()
+  true
 ),
 (
-  'abdeen-palace',
   'قصر عابدين',
   'Abdeen Palace',
   'abdeen-palace',
   'القاهرة',
   'متاحف',
   'قصر تاريخي بُني في القرن التاسع عشر وأصبح مركزًا مهمًا للحكم خلال عهد الأسرة العلوية. يضم القصر متاحف ومقتنيات تاريخية، ويجب التحقق من مناطق الزيارة المتاحة للجمهور.',
-  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   30.0439,
   31.2487,
-  true,
-  NOW()
+  true
 ),
 (
-  'bibliotheca-alexandrina',
   'مكتبة الإسكندرية',
   'Bibliotheca Alexandrina',
   'bibliotheca-alexandrina',
@@ -419,71 +432,61 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80']::text[],
   31.2089,
   29.9092,
-  true,
-  NOW()
+  true
 ),
 (
-  'citadel-of-qaitbay',
   'قلعة قايتباي',
   'Citadel of Qaitbay',
   'citadel-of-qaitbay',
   'الإسكندرية',
   'آثار وتاريخ',
   'قلعة دفاعية شُيّدت في القرن الخامس عشر على ساحل الإسكندرية قرب موقع فنار الإسكندرية القديم. تطل على البحر المتوسط وتقدم مشاهد ساحلية إلى جانب قيمتها في تاريخ تحصينات المدينة.',
-  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuDOhSstqQQpcxDt_yyuWijEct_47y3YUwMMtcpHL_MqiJ-drsm20HSaTtjFb7E3B7QrcF-HZRpBmhE15EgUB2R8uZVJo8_LBzE2cdd3cfQo3h7f6MD5w6kF4eGWfI2UfsgXy58pQYN1O9qVQ35XGrg7VJ_o05KdCmbNlG85TFP0qM80Z8GCMBNTiPSTNnuqGCBfrczspgLSDFhWu8QOHAgYqxFcq8GrAVG7bAgfLWVPUYaBc14gHuHuZQ',
+  ARRAY['https://lh3.googleusercontent.com/aida-public/AB6AXuDOhSstqQQpcxDt_yyuWijEct_47y3YUwMMtcpHL_MqiJ-drsm20HSaTtjFb7E3B7QrcF-HZRpBmhE15EgUB2R8uZVJo8_LBzE2cdd3cfQo3h7f6MD5w6kF4eGWfI2UfsgXy58pQYN1O9qVQ35XGrg7VJ_o05KdCmbNlG85TFP0qM80Z8GCMBNTiPSTNnuqGCBfrczspgLSDFhWu8QOHAgYqxFcq8GrAVG7bAgfLWVPUYaBc14gHuHuZQ']::text[],
   31.2139,
   29.8856,
-  true,
-  NOW()
+  true
 ),
 (
-  'catacombs-kom-el-shoqafa',
   'مقابر كوم الشقافة',
   'Catacombs of Kom el Shoqafa',
   'catacombs-kom-el-shoqafa',
   'الإسكندرية',
   'آثار وتاريخ',
   'مجمع مقابر تحت الأرض يعكس تداخل عناصر فنية مصرية ويونانية ورومانية. تتميز المقابر بطرزها المعمارية ونقوشها، وتوضح التنوع الثقافي الذي عرفته الإسكندرية في العصر الروماني.',
-  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   31.1789,
   29.8925,
-  true,
-  NOW()
+  true
 ),
 (
-  'pompeys-pillar',
   'عمود السواري',
   'Pompey''s Pillar',
   'pompeys-pillar',
   'الإسكندرية',
   'آثار وتاريخ',
   'عمود جرانيت ضخم من العصر الروماني يقف ضمن منطقة أثرية تضم بقايا منشآت قديمة. يُعد من أشهر المعالم الباقية التي تروي جانبًا من تاريخ الإسكندرية في العصر الروماني.',
-  'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
   31.1824,
   29.8961,
-  true,
-  NOW()
+  true
 ),
 (
-  'roman-theatre-kom-el-dikka',
   'المسرح الروماني بكوم الدكة',
   'Roman Theatre of Kom el-Dikka',
   'roman-theatre-kom-el-dikka',
   'الإسكندرية',
   'آثار وتاريخ',
   'موقع أثري يضم بقايا مسرح روماني ومبانٍ مرتبطة بالحياة العامة في الإسكندرية القديمة. يكشف عن جانب من تخطيط المدينة وأنشطتها الثقافية خلال العصور الرومانية.',
-  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
   31.1977,
   29.9047,
-  true,
-  NOW()
+  true
 ),
 (
-  'montaza-gardens',
   'حدائق المنتزه',
   'Montaza Gardens',
   'montaza-gardens',
@@ -494,11 +497,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80']::text[],
   31.2894,
   30.0124,
-  true,
-  NOW()
+  true
 ),
 (
-  'royal-jewelry-museum',
   'متحف المجوهرات الملكية',
   'Royal Jewelry Museum',
   'royal-jewelry-museum',
@@ -509,11 +510,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   31.249,
   29.9668,
-  true,
-  NOW()
+  true
 ),
 (
-  'alexandria-national-museum',
   'متحف الإسكندرية القومي',
   'Alexandria National Museum',
   'alexandria-national-museum',
@@ -524,56 +523,48 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80']::text[],
   31.2006,
   29.9098,
-  true,
-  NOW()
+  true
 ),
 (
-  'stanley-bridge',
   'كوبري ستانلي',
   'Stanley Bridge',
   'stanley-bridge',
   'الإسكندرية',
   'معالم بارزة',
   'جسر ساحلي معروف في الإسكندرية يتميز بأبراجه وإطلالته على البحر المتوسط والكورنيش. يعد نقطة شهيرة للتصوير والتنزه في المنطقة، مع مراعاة حركة المرور وعدم الوقوف في أماكن غير آمنة.',
-  'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80']::text[],
   31.238,
   29.966,
-  true,
-  NOW()
+  true
 ),
 (
-  'abu-al-abbas-al-mursi-mosque',
   'مسجد أبي العباس المرسي',
   'Abu al-Abbas al-Mursi Mosque',
   'abu-al-abbas-al-mursi-mosque',
   'الإسكندرية',
   'معالم دينية',
   'مسجد بارز في حي بحري بالقرب من الميناء الشرقي، ويشتهر بقبابه ومآذنه وتفاصيله المعمارية. يرتبط بتاريخ ديني واجتماعي مهم في الإسكندرية الحديثة.',
-  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
   31.2008,
   29.8856,
-  true,
-  NOW()
+  true
 ),
 (
-  'karnak-temple-complex',
   'مجمع معابد الكرنك',
   'Karnak Temple Complex',
   'karnak-temple-complex',
   'الأقصر',
   'آثار وتاريخ',
   'مجمع ديني ضخم توسع عبر عصور وملوك متعددين، ويضم صروحًا وقاعات أعمدة ومسلات وبحيرات مقدسة. تشتهر قاعة الأعمدة الكبرى بأعمدتها الضخمة ونقوشها التي تسجل طقوسًا وانتصارات ملكية.',
-  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuBjHswjKZ4w5llNhT_LQ8FKm-EV9H1gPGDvsni1CYHUbKCu3AZVikHOewUdI7oNv3qWz0EYF2xUj3JuLFlakMaEo956vcvnv81u9QyPgZyjv0JqJQ4cjSakSVrpgP5GJzYDLzgathnMeFmZqlIpLE1hnd0XaSYRLnh1QFeWPFVAGFS9V4NBwwyhwIWYI6BmYJaqPXCrzXrLCVADDKHXAItcV6W664gCVrUTjPJMx8q805x4LMKjVT0PZg',
+  ARRAY['https://lh3.googleusercontent.com/aida-public/AB6AXuBjHswjKZ4w5llNhT_LQ8FKm-EV9H1gPGDvsni1CYHUbKCu3AZVikHOewUdI7oNv3qWz0EYF2xUj3JuLFlakMaEo956vcvnv81u9QyPgZyjv0JqJQ4cjSakSVrpgP5GJzYDLzgathnMeFmZqlIpLE1hnd0XaSYRLnh1QFeWPFVAGFS9V4NBwwyhwIWYI6BmYJaqPXCrzXrLCVADDKHXAItcV6W664gCVrUTjPJMx8q805x4LMKjVT0PZg']::text[],
   25.7188,
   32.6573,
-  true,
-  NOW()
+  true
 ),
 (
-  'luxor-temple',
   'معبد الأقصر',
   'Luxor Temple',
   'luxor-temple',
@@ -584,236 +575,204 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
   25.6995,
   32.6391,
-  true,
-  NOW()
+  true
 ),
 (
-  'valley-of-the-kings',
   'وادي الملوك',
   'Valley of the Kings',
   'valley-of-the-kings',
   'الأقصر',
   'آثار وتاريخ',
   'مقبرة ملكية في الضفة الغربية للأقصر دُفن فيها عدد من ملوك الدولة الحديثة، ومنهم توت عنخ آمون. تشتهر المقابر بنقوشها الملونة ومشاهدها الدينية، وتختلف المقابر المفتوحة للزيارة بمرور الوقت.',
-  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   25.7402,
   32.6014,
-  true,
-  NOW()
+  true
 ),
 (
-  'temple-of-hatshepsut',
   'معبد حتشبسوت بالدير البحري',
   'Mortuary Temple of Hatshepsut',
   'temple-of-hatshepsut',
   'الأقصر',
   'آثار وتاريخ',
   'معبد جنائزي مميز بواجهاته المدرجة وشرفاته المتناغمة مع المنحدرات الصخرية بالدير البحري. شُيّد في عهد الملكة حتشبسوت ويعرض نقوشًا توثق جوانب من حكمها ورحلاتها التجارية.',
-  'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
   25.7382,
   32.6068,
-  true,
-  NOW()
+  true
 ),
 (
-  'colossi-of-memnon',
   'تمثالا ممنون',
   'Colossi of Memnon',
   'colossi-of-memnon',
   'الأقصر',
   'آثار وتاريخ',
   'تمثالان حجريان ضخمان للملك أمنحتب الثالث، كانا جزءًا من مجمع معبدي كبير على الضفة الغربية للأقصر. يقفان في سهل طيبة ويُعدان من المعالم الشهيرة على طريق زيارة المواقع الغربية.',
-  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
   25.7204,
   32.6102,
-  true,
-  NOW()
+  true
 ),
 (
-  'medinet-habu-temple',
   'معبد مدينة هابو',
   'Medinet Habu Temple',
   'medinet-habu-temple',
   'الأقصر',
   'آثار وتاريخ',
   'مجمع معبدي شُيّد أساسًا في عهد رمسيس الثالث ويشتهر بجدرانه ونقوشه التي تسجل مشاهد دينية وعسكرية. يضم صروحًا وساحات ومناطق تحتفظ بتفاصيل معمارية ونقوش مهمة.',
-  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   25.7195,
   32.6003,
-  true,
-  NOW()
+  true
 ),
 (
-  'ramesseum',
   'الرامسيوم',
   'Ramesseum',
   'ramesseum',
   'الأقصر',
   'آثار وتاريخ',
   'المعبد الجنائزي للملك رمسيس الثاني على الضفة الغربية للأقصر. تضم آثاره بقايا صروح وأعمدة وتماثيل ضخمة، وتساعد نقوشه على فهم تخليد الملك لصورته وإنجازاته.',
-  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80']::text[],
   25.727,
   32.61,
-  true,
-  NOW()
+  true
 ),
 (
-  'deir-el-medina',
   'دير المدينة',
   'Deir el-Medina',
   'deir-el-medina',
   'الأقصر',
   'آثار وتاريخ',
   'قرية أثرية كانت تسكنها مجموعات من العمال والحرفيين الذين عملوا في مقابر الملوك. تكشف بقايا المنازل والمقابر عن تفاصيل الحياة اليومية والأسرة والعمل في مصر القديمة.',
-  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80']::text[],
   25.7277,
   32.6017,
-  true,
-  NOW()
+  true
 ),
 (
-  'luxor-museum',
   'متحف الأقصر',
   'Luxor Museum',
   'luxor-museum',
   'الأقصر',
   'متاحف',
   'متحف يضم مجموعة مختارة من آثار منطقة طيبة، بما في ذلك تماثيل وقطع ملكية وأثرية ذات جودة فنية عالية. يتيح عرض القطع في قاعات منظمة فهمًا واضحًا لسياقها التاريخي.',
-  'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   25.7026,
   32.6394,
-  true,
-  NOW()
+  true
 ),
 (
-  'dendera-temple-complex',
   'معبد دندرة',
   'Dendera Temple Complex',
   'dendera-temple-complex',
   'قنا',
   'آثار وتاريخ',
   'مجمع معابد قريب من قنا، ويُعد معبد حتحور أبرز مبانيه. يشتهر بنقوشه وألوانه المحفوظة نسبيًا وسقوفه المزينة بمشاهد فلكية ودينية من العصرين البطلمي والروماني.',
-  'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
   26.1417,
   32.6708,
-  true,
-  NOW()
+  true
 ),
 (
-  'temple-seti-i-abydos',
   'معبد سيتي الأول بأبيدوس',
   'Temple of Seti I at Abydos',
   'temple-seti-i-abydos',
   'سوهاج',
   'آثار وتاريخ',
   'معبد جنائزي مكرس لسيتي الأول ويضم نقوشًا دقيقة وقائمة ملوك شهيرة. كانت أبيدوس مركزًا دينيًا مهمًا مرتبطًا بعبادة أوزيريس، ويقدم الموقع لمحة عن الفن الملكي في الدولة الحديثة.',
-  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   26.1858,
   31.9195,
-  true,
-  NOW()
+  true
 ),
 (
-  'temple-of-edfu',
   'معبد إدفو',
   'Temple of Edfu',
   'temple-of-edfu',
   'أسوان',
   'آثار وتاريخ',
   'معبد مخصص للإله حورس ويُعد من أفضل المعابد المصرية القديمة حفظًا. شُيّد في العصر البطلمي، وتوضح نقوشه طقوس العبادة والأساطير المرتبطة بحورس وست.',
-  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
   24.978,
   32.873,
-  true,
-  NOW()
+  true
 ),
 (
-  'temple-of-kom-ombo',
   'معبد كوم أمبو',
   'Temple of Kom Ombo',
   'temple-of-kom-ombo',
   'أسوان',
   'آثار وتاريخ',
   'معبد مزدوج مخصص لعبادة سوبيك وحورس الأكبر، ويقع على مرتفع قرب النيل. يتميز بتخطيط متناظر ونقوش تتناول الطقوس وبعض المعارف الطبية القديمة.',
-  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
   24.4521,
   32.9287,
-  true,
-  NOW()
+  true
 ),
 (
-  'temple-of-esna',
   'معبد إسنا',
   'Temple of Khnum at Esna',
   'temple-of-esna',
   'الأقصر',
   'آثار وتاريخ',
   'معبد مخصص للإله خنوم، ويشتهر بقاعة الأعمدة المزينة بنقوش وسقوف فلكية. يقع جزء كبير من بقايا المعبد في مستوى منخفض عن المدينة الحديثة، وتختلف ترتيبات الزيارة حسب التشغيل.',
-  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   25.2938,
   32.554,
-  true,
-  NOW()
+  true
 ),
 (
-  'philae-temple-complex',
   'معبد فيلة',
   'Philae Temple Complex',
   'philae-temple-complex',
   'أسوان',
   'آثار وتاريخ',
   'مجمع معابد تتركز أهم منشآته حول معبد إيزيس، ويعود كثير من مبانيه إلى العصر البطلمي. نُقلت آثاره إلى جزيرة أجيليكا ضمن عملية إنقاذ آثار النوبة بعد إنشاء السد العالي.',
-  'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuBjHswjKZ4w5llNhT_LQ8FKm-EV9H1gPGDvsni1CYHUbKCu3AZVikHOewUdI7oNv3qWz0EYF2xUj3JuLFlakMaEo956vcvnv81u9QyPgZyjv0JqJQ4cjSakSVrpgP5GJzYDLzgathnMeFmZqlIpLE1hnd0XaSYRLnh1QFeWPFVAGFS9V4NBwwyhwIWYI6BmYJaqPXCrzXrLCVADDKHXAItcV6W664gCVrUTjPJMx8q805x4LMKjVT0PZg',
+  ARRAY['https://lh3.googleusercontent.com/aida-public/AB6AXuBjHswjKZ4w5llNhT_LQ8FKm-EV9H1gPGDvsni1CYHUbKCu3AZVikHOewUdI7oNv3qWz0EYF2xUj3JuLFlakMaEo956vcvnv81u9QyPgZyjv0JqJQ4cjSakSVrpgP5GJzYDLzgathnMeFmZqlIpLE1hnd0XaSYRLnh1QFeWPFVAGFS9V4NBwwyhwIWYI6BmYJaqPXCrzXrLCVADDKHXAItcV6W664gCVrUTjPJMx8q805x4LMKjVT0PZg']::text[],
   24.0258,
   32.8849,
-  true,
-  NOW()
+  true
 ),
 (
-  'unfinished-obelisk',
   'المسلة الناقصة',
   'Unfinished Obelisk',
   'unfinished-obelisk',
   'أسوان',
   'آثار وتاريخ',
   'مسلة ضخمة بقيت في محجر الجرانيت بعد ظهور شقوق حالت دون استكمالها. يتيح الموقع فهم تقنيات قطع الأحجار ونقلها التي استخدمها المصريون القدماء في صناعة المسلات والتماثيل.',
-  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   24.0777,
   32.8933,
-  true,
-  NOW()
+  true
 ),
 (
-  'nubian-museum',
   'متحف النوبة',
   'Nubian Museum',
   'nubian-museum',
   'أسوان',
   'متاحف',
   'يعرض المتحف تاريخ النوبة وثقافتها وآثارها، ويقدم سردًا يمتد من عصور ما قبل التاريخ إلى الفترات الإسلامية والحديثة. يسلط الضوء على التراث النوبي والآثار التي جرى إنقاذها قبل ارتفاع مياه بحيرة ناصر.',
-  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80']::text[],
   24.0751,
   32.8876,
-  true,
-  NOW()
+  true
 ),
 (
-  'abu-simbel-temples',
   'معبدا أبو سمبل',
   'Abu Simbel Temples',
   'abu-simbel-temples',
@@ -824,56 +783,48 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   22.3372,
   31.6258,
-  true,
-  NOW()
+  true
 ),
 (
-  'elephantine-island',
   'جزيرة إلفنتين',
   'Elephantine Island',
   'elephantine-island',
   'أسوان',
   'تراث وأسواق',
   'جزيرة في النيل تضم بقايا أثرية وقرى نوبية ومتاحف صغيرة، وكانت ذات أهمية استراتيجية وتجارية في تاريخ مصر القديم. توفر إطلالات على النهر وفرصة للتعرف على جانب من الثقافة النوبية.',
-  'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
   24.0906,
   32.8888,
-  true,
-  NOW()
+  true
 ),
 (
-  'gharb-soheil-nubian-village',
   'القرية النوبية بغرب سهيل',
   'Gharb Soheil Nubian Village',
   'gharb-soheil-nubian-village',
   'أسوان',
   'تراث وأسواق',
   'قرية نوبية تشتهر ببيوتها الملونة والحرف المحلية والضيافة النوبية والإطلالات على النيل. تمنح الزائر فرصة للتعرف على العمارة والعادات والأطعمة المحلية مع احترام خصوصية السكان وثقافتهم.',
-  'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80']::text[],
   24.0888,
   32.8735,
-  true,
-  NOW()
+  true
 ),
 (
-  'aga-khan-mausoleum',
   'ضريح أغا خان',
   'Mausoleum of Aga Khan',
   'aga-khan-mausoleum',
   'أسوان',
   'تراث وأسواق',
   'ضريح يقع على مرتفع صخري غربي النيل ويتميز بعمارة مستوحاة من الطراز الفاطمي. يشرف على النهر والمناظر المحيطة، ويجب التحقق من إمكانية الدخول إلى الضريح نفسه عند الزيارة.',
-  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
   24.0809,
   32.8815,
-  true,
-  NOW()
+  true
 ),
 (
-  'aswan-high-dam',
   'السد العالي بأسوان',
   'Aswan High Dam',
   'aswan-high-dam',
@@ -884,11 +835,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?auto=format&fit=crop&w=1200&q=80']::text[],
   23.97,
   32.877,
-  true,
-  NOW()
+  true
 ),
 (
-  'kalabsha-temple',
   'معبد كلابشة',
   'Kalabsha Temple',
   'kalabsha-temple',
@@ -899,41 +848,35 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
   23.964,
   32.875,
-  true,
-  NOW()
+  true
 ),
 (
-  'saint-catherine-monastery',
   'دير سانت كاترين',
   'Saint Catherine''s Monastery',
   'saint-catherine-monastery',
   'جنوب سيناء',
   'معالم دينية',
   'دير تاريخي عند سفح جبل سيناء ويضم كنيسة ومكتبة ومجموعات فنية ومخطوطات ذات أهمية دينية وثقافية. يقع ضمن منطقة جبلية ذات قيمة تاريخية وطبيعية، وتخضع الزيارة لمواعيد وترتيبات محددة.',
-  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   28.556,
   33.976,
-  true,
-  NOW()
+  true
 ),
 (
-  'mount-sinai',
   'جبل موسى',
   'Mount Sinai',
   'mount-sinai',
   'جنوب سيناء',
   'محميات وطبيعة',
   'جبل يرتبط بتقاليد دينية يهودية ومسيحية وإسلامية، ويقصده الزوار في مسارات صعود جبلية لمشاهدة الشروق أو المناظر الصحراوية. يحتاج الصعود إلى استعداد مناسب ومراعاة الطقس والإرشادات المحلية.',
-  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
   28.5394,
   33.975,
-  true,
-  NOW()
+  true
 ),
 (
-  'ras-mohammed-national-park',
   'محمية رأس محمد',
   'Ras Mohammed National Park',
   'ras-mohammed-national-park',
@@ -944,11 +887,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80']::text[],
   27.73,
   34.25,
-  true,
-  NOW()
+  true
 ),
 (
-  'naama-bay',
   'خليج نعمة',
   'Naama Bay',
   'naama-bay',
@@ -959,11 +900,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1510414842594-a61782153f5b?auto=format&fit=crop&w=1200&q=80']::text[],
   27.9138,
   34.3299,
-  true,
-  NOW()
+  true
 ),
 (
-  'sharm-el-sheikh-old-market',
   'السوق القديم بشرم الشيخ',
   'Sharm El Sheikh Old Market',
   'sharm-el-sheikh-old-market',
@@ -974,26 +913,22 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80']::text[],
   27.862,
   34.3,
-  true,
-  NOW()
+  true
 ),
 (
-  'blue-hole-dahab',
   'الثقب الأزرق بدهب',
   'Blue Hole Dahab',
   'blue-hole-dahab',
   'جنوب سيناء',
   'محميات وطبيعة',
   'موقع بحري مشهور شمال دهب، يضم شعابًا مرجانية ومياهًا صافية ويقصده هواة الغوص والغطس. بعض مناطق الغوص عميقة وخطيرة، لذا يجب الالتزام بتعليمات السلامة والاستعانة بمرشدين مؤهلين.',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80']::text[],
   28.5713,
   34.5362,
-  true,
-  NOW()
+  true
 ),
 (
-  'abu-galum-protectorate',
   'محمية أبو جالوم',
   'Abu Galum Protectorate',
   'abu-galum-protectorate',
@@ -1004,26 +939,22 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   28.64,
   34.55,
-  true,
-  NOW()
+  true
 ),
 (
-  'colored-canyon',
   'الوادي الملون بنويبع',
   'Colored Canyon',
   'colored-canyon',
   'جنوب سيناء',
   'محميات وطبيعة',
   'تشكيلات صخرية صحراوية تتدرج ألوانها نتيجة طبقات الصخور والرواسب. تناسب الرحلات الطبيعية والتصوير، ويُفضّل الذهاب مع دليل محلي والتأكد من حالة الطريق والطقس.',
-  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   29.18,
   34.66,
-  true,
-  NOW()
+  true
 ),
 (
-  'giftun-islands',
   'جزر الجفتون',
   'Giftun Islands',
   'giftun-islands',
@@ -1034,11 +965,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80']::text[],
   27.21,
   33.95,
-  true,
-  NOW()
+  true
 ),
 (
-  'hurghada-marina',
   'ممشى مارينا الغردقة',
   'Hurghada Marina',
   'hurghada-marina',
@@ -1049,56 +978,48 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80']::text[],
   27.22,
   33.84,
-  true,
-  NOW()
+  true
 ),
 (
-  'el-gouna',
   'الجونة',
   'El Gouna',
   'el-gouna',
   'البحر الأحمر',
   'شواطئ ومنتجعات',
   'مدينة سياحية على ساحل البحر الأحمر تضم مراسي وقنوات مائية وشواطئ ومطاعم وأنشطة ترفيهية ورياضية. تناسب الإقامة والاسترخاء والأنشطة البحرية، مع مراعاة أن بعض الشواطئ والمرافق خاصة.',
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1510414842594-a61782153f5b?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1510414842594-a61782153f5b?auto=format&fit=crop&w=1200&q=80']::text[],
   27.3948,
   33.678,
-  true,
-  NOW()
+  true
 ),
 (
-  'wadi-el-gemal-national-park',
   'محمية وادي الجمال',
   'Wadi El Gemal National Park',
   'wadi-el-gemal-national-park',
   'البحر الأحمر',
   'محميات وطبيعة',
   'محمية واسعة تضم بيئات صحراوية وجبلية وساحلية وشعابًا مرجانية، إضافة إلى آثار مرتبطة بالتعدين والتجارة القديمة. تستحق الزيارة مع مرشد يعرف المنطقة وبما يحافظ على الحياة البرية.',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   24.67,
   35.14,
-  true,
-  NOW()
+  true
 ),
 (
-  'monastery-of-saint-anthony',
   'دير الأنبا أنطونيوس',
   'Monastery of Saint Anthony',
   'monastery-of-saint-anthony',
   'البحر الأحمر',
   'معالم دينية',
   'دير قبطي تاريخي في الصحراء الشرقية يرتبط بتقاليد الرهبنة المسيحية المبكرة. يضم كنائس ومبانٍ تاريخية ومخطوطات ولوحات، وتتم الزيارة وفق قواعد الدير ومواعيده.',
-  'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
   28.92,
   32.35,
-  true,
-  NOW()
+  true
 ),
 (
-  'monastery-of-saint-paul',
   'دير الأنبا بولا',
   'Monastery of Saint Paul',
   'monastery-of-saint-paul',
@@ -1109,11 +1030,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   28.86,
   32.55,
-  true,
-  NOW()
+  true
 ),
 (
-  'wadi-al-hitan',
   'وادي الحيتان',
   'Wadi Al-Hitan (Whale Valley)',
   'wadi-al-hitan',
@@ -1124,56 +1043,48 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   29.33,
   30.18,
-  true,
-  NOW()
+  true
 ),
 (
-  'wadi-el-rayan',
   'وادي الريان',
   'Wadi El Rayan Protected Area',
   'wadi-el-rayan',
   'الفيوم',
   'محميات وطبيعة',
   'منطقة طبيعية تضم بحيرتين وشلالات ومساحات صحراوية، وتستقطب الزوار للتنزه ومشاهدة المناظر الطبيعية. تختلف الأنشطة المسموح بها حسب تعليمات المحمية، لذا ينبغي احترام المناطق المحددة للزيارة.',
-  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
   29.19,
   30.36,
-  true,
-  NOW()
+  true
 ),
 (
-  'qasr-qarun-temple',
   'معبد قصر قارون',
   'Qasr Qarun Temple',
   'qasr-qarun-temple',
   'الفيوم',
   'آثار وتاريخ',
   'معبد أثري في غرب الفيوم يُربط غالبًا بمدينة ديونيسياس القديمة. يتميز بكتلته الحجرية وبقايا عناصره المعمارية، ويوفر نافذة على النشاط الديني والإداري في المنطقة خلال العصرين البطلمي والروماني.',
-  'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
   29.42,
   30.62,
-  true,
-  NOW()
+  true
 ),
 (
-  'tunis-village-fayoum',
   'قرية تونس بالفيوم',
   'Tunis Village',
   'tunis-village-fayoum',
   'الفيوم',
   'تراث وأسواق',
   'قرية معروفة بالفخار والحرف اليدوية والمنازل ذات الطابع المحلي والإطلالة على بحيرة قارون. تناسب زيارة ورش الحرفيين والمقاهي والإقامة الهادئة في الريف، مع احترام خصوصية السكان.',
-  'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80']::text[],
   29.4,
   30.5,
-  true,
-  NOW()
+  true
 ),
 (
-  'lake-qarun',
   'بحيرة قارون',
   'Lake Qarun',
   'lake-qarun',
@@ -1184,11 +1095,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
   29.47,
   30.67,
-  true,
-  NOW()
+  true
 ),
 (
-  'magic-lake-fayoum',
   'البحيرة المسحورة',
   'Magic Lake Fayoum',
   'magic-lake-fayoum',
@@ -1199,116 +1108,100 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   29.39,
   30.32,
-  true,
-  NOW()
+  true
 ),
 (
-  'shali-fortress',
   'قلعة شالي بسيوة',
   'Shali Fortress',
   'shali-fortress',
   'مطروح',
   'تراث وأسواق',
   'بقايا مدينة شالي القديمة المبنية تقليديًا بمواد محلية من الملح والطين، وتقع في قلب واحة سيوة. تقدم إطلالة على الواحة وتروي جانبًا من تاريخ الاستقرار والعمران السيوي.',
-  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   29.2038,
   25.5195,
-  true,
-  NOW()
+  true
 ),
 (
-  'oracle-temple-amun-siwa',
   'معبد الوحي بواحة سيوة',
   'Oracle Temple of Amun',
   'oracle-temple-amun-siwa',
   'مطروح',
   'آثار وتاريخ',
   'معبد قديم في سيوة اشتهر بارتباطه بعبادة آمون وزيارة الإسكندر الأكبر وفق الروايات التاريخية. يقع على مرتفع صخري ويتيح التعرف على دور الواحات في التواصل بين مصر والعالم القديم.',
-  'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
   29.2045,
   25.5418,
-  true,
-  NOW()
+  true
 ),
 (
-  'cleopatras-spring-siwa',
   'عين كليوباترا بسيوة',
   'Cleopatra''s Spring',
   'cleopatras-spring-siwa',
   'مطروح',
   'محميات وطبيعة',
   'نبع مياه طبيعي في واحة سيوة تحيط به منطقة للجلوس والاستراحة. يرتبط اسمه بروايات محلية عن كليوباترا، لكن الأهم للزائر هو طابعه الطبيعي وموقعه وسط الواحة.',
-  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80']::text[],
   29.208,
   25.525,
-  true,
-  NOW()
+  true
 ),
 (
-  'white-desert-national-park',
   'الصحراء البيضاء',
   'White Desert National Park',
   'white-desert-national-park',
   'الوادي الجديد',
   'محميات وطبيعة',
   'منطقة صحراوية تشتهر بتكوينات طباشيرية بيضاء نحتتها الرياح على أشكال متنوعة. تعد وجهة للتخييم والتصوير الفلكي والرحلات الصحراوية المنظمة، ويجب الالتزام بتصاريح وإرشادات حماية المنطقة.',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   27.27,
   28.15,
-  true,
-  NOW()
+  true
 ),
 (
-  'black-desert',
   'الصحراء السوداء',
   'Black Desert',
   'black-desert',
   'الجيزة',
   'محميات وطبيعة',
   'منطقة صحراوية تنتشر فيها تلال داكنة غنية بالمواد البركانية فوق الرمال الفاتحة. تشتهر بالمناظر الجيولوجية والتصوير، وتحتاج زيارتها إلى سيارة مناسبة ودليل محلي في كثير من المسارات.',
-  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80']::text[],
   28.3,
   28.95,
-  true,
-  NOW()
+  true
 ),
 (
-  'crystal-mountain-egypt',
   'جبل الكريستال',
   'Crystal Mountain',
   'crystal-mountain-egypt',
   'بين الواحات البحرية والفرافرة',
   'محميات وطبيعة',
   'تكوين جيولوجي معروف ببلوراته وعروقه المعدنية وسط الصحراء الغربية. يتوقف الوصول عليه على مسار الرحلة، ومن المهم عدم كسر أو أخذ أجزاء من التكوينات الطبيعية.',
-  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   27.75,
   28.5,
-  true,
-  NOW()
+  true
 ),
 (
-  'temple-of-hibis',
   'معبد هيبس',
   'Temple of Hibis',
   'temple-of-hibis',
   'الوادي الجديد',
   'آثار وتاريخ',
   'من أهم المعابد الباقية في واحة الخارجة، وتضم جدرانه نقوشًا من فترات فارسية وبطلمية ورومانية. يعكس الموقع دور الواحات الغربية في الدين والإدارة والاتصال عبر الصحراء.',
-  'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
   25.45,
   30.55,
-  true,
-  NOW()
+  true
 ),
 (
-  'al-qasr-islamic-village',
   'قرية القصر الإسلامية',
   'Al-Qasr Islamic Village',
   'al-qasr-islamic-village',
@@ -1319,26 +1212,22 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80']::text[],
   25.7,
   28.88,
-  true,
-  NOW()
+  true
 ),
 (
-  'historic-rashid-rosetta',
   'مدينة رشيد التاريخية',
   'Historic Rashid (Rosetta)',
   'historic-rashid-rosetta',
   'البحيرة',
   'تراث وأسواق',
   'مدينة تاريخية عند فرع رشيد من النيل تشتهر ببيوت عثمانية محفوظة نسبيًا وآثار إسلامية ومواقع مرتبطة بتاريخ التجارة والدفاع الساحلي. ارتبط اسم رشيد باكتشاف حجر رشيد قربها في أواخر القرن الثامن عشر.',
-  'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80']::text[],
   31.4044,
   30.4164,
-  true,
-  NOW()
+  true
 ),
 (
-  'tanis-archaeological-site',
   'تل تانيس الأثري',
   'Tanis Archaeological Site',
   'tanis-archaeological-site',
@@ -1349,11 +1238,9 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80']::text[],
   30.97,
   31.88,
-  true,
-  NOW()
+  true
 ),
 (
-  'monasteries-wadi-el-natrun',
   'أديرة وادي النطرون',
   'Monasteries of Wadi El Natrun',
   'monasteries-wadi-el-natrun',
@@ -1364,41 +1251,35 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80']::text[],
   30.4,
   30.35,
-  true,
-  NOW()
+  true
 ),
 (
-  'monastery-saint-bishoy',
   'دير الأنبا بيشوي',
   'Monastery of Saint Bishoy',
   'monastery-saint-bishoy',
   'البحيرة',
   'معالم دينية',
   'أحد الأديرة القبطية التاريخية في وادي النطرون، ويضم كنائس ومباني رهبانية ومناطق ذات قيمة دينية. يجب الالتزام بالملابس والسلوك المناسبين وتعليمات الدير أثناء الزيارة.',
-  'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
   30.35,
   30.35,
-  true,
-  NOW()
+  true
 ),
 (
-  'qaitbay-citadel-rosetta',
   'قلعة قايتباي برشيد',
   'Qaitbay Citadel of Rosetta',
   'qaitbay-citadel-rosetta',
   'البحيرة',
   'آثار وتاريخ',
   'قلعة دفاعية عند منطقة رشيد ارتبطت بمراقبة الساحل وفرع النيل. اكتسبت شهرة تاريخية لارتباطها بالعثور على حجر رشيد في محيط المنطقة عام 1799، وتُعد محطة مهمة في تاريخ المدينة.',
-  'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80']::text[],
   31.46,
   30.39,
-  true,
-  NOW()
+  true
 ),
 (
-  'zaranik-protectorate',
   'محمية الزرانيق',
   'Zaranik Protectorate',
   'zaranik-protectorate',
@@ -1409,28 +1290,24 @@ VALUES
   ARRAY['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80']::text[],
   31.1,
   33.3,
-  true,
-  NOW()
+  true
 ),
 (
-  'nabq-protected-area',
   'محمية نبق',
   'Nabq Protected Area',
   'nabq-protected-area',
   'جنوب سيناء',
   'محميات وطبيعة',
   'محمية تجمع بين الشعاب المرجانية وأشجار المانجروف والبيئات الصحراوية والساحلية. تمثل مساحة مهمة للتنوع البيئي بالقرب من شرم الشيخ، وتُمارس الزيارة وفق قواعد حماية الموائل الطبيعية.',
-  'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80',
-  ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80']::text[],
+  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
+  ARRAY['https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80']::text[],
   27.85,
   34.42,
-  true,
-  NOW()
+  true
 )
-ON CONFLICT (id) DO UPDATE SET
+ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   name_en = EXCLUDED.name_en,
-  slug = EXCLUDED.slug,
   city = EXCLUDED.city,
   category = EXCLUDED.category,
   description = EXCLUDED.description,

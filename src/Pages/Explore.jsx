@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { PLACES_DATA } from '../data/placesData';
+import { usePlaces } from '../context/PlacesContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
-import { supabase } from '../lib/supabase';
 import PlacesMap from '../Components/PlacesMap';
 import VoiceSearchButton from '../Components/VoiceSearchButton';
 import { matchesDestination } from '../lib/searchUtils';
@@ -18,28 +17,10 @@ export default function Explore() {
   const [selectedCity, setSelectedCity] = useState(initialCity);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState(initialView);
-  const [supabasePlaces, setSupabasePlaces] = useState([]);
 
+  const { places: allPlaces, loading } = usePlaces();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { t, isArabic, getPlaceName, getPlaceCity, getPlaceCategory, getPlaceDescription } = useLanguage();
-
-  // Load any published places from user's Supabase database
-  useEffect(() => {
-    async function loadPlaces() {
-      try {
-        const { data, error } = await supabase
-          .from('places')
-          .select('*')
-          .eq('is_published', true);
-        if (!error && data && data.length > 0) {
-          setSupabasePlaces(data);
-        }
-      } catch (err) {
-        console.warn('Supabase fetch notice:', err);
-      }
-    }
-    loadPlaces();
-  }, []);
 
   const cities = isArabic
     ? [
@@ -105,48 +86,7 @@ export default function Explore() {
         { key: 'engineering', label: 'Engineering Marvels' },
       ];
 
-  // Combine local rich places with any dynamic supabase places (Supabase edits take priority)
-  const allPlaces = useMemo(() => {
-    // 1. Map Supabase places
-    const dynamicList = supabasePlaces.map((sp) => {
-      const staticMatch = PLACES_DATA.find((p) => p.id === sp.id || p.id === sp.slug);
-      return {
-        id: sp.id,
-        name: sp.name,
-        name_en: sp.name_en || sp.name,
-        nameEn: sp.name_en || sp.name,
-        city: sp.city || staticMatch?.city || (isArabic ? 'مصر' : 'Egypt'),
-        city_en: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
-        cityEn: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
-        cityKey: (sp.city_en || sp.city || staticMatch?.cityKey || '').toLowerCase(),
-        category: sp.category || staticMatch?.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
-        category_en: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
-        categoryEn: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
-        categoryKey: staticMatch?.categoryKey || 'historical',
-        latitude: sp.latitude !== undefined && sp.latitude !== null ? sp.latitude : staticMatch?.latitude,
-        longitude: sp.longitude !== undefined && sp.longitude !== null ? sp.longitude : staticMatch?.longitude,
-        rating: staticMatch?.rating || 4.8,
-        reviewCount: staticMatch?.reviewCount || '1,200',
-        image: sp.image_url || staticMatch?.image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg',
-        quickInfo: staticMatch?.quickInfo || {
-          duration: 'ساعتان مقترحة',
-          durationEn: '2 hours suggested',
-        },
-        historicalText: sp.description || staticMatch?.historicalText || 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.',
-        historicalTextEn: sp.description_en || sp.description || staticMatch?.historicalTextEn || 'A prominent historical and tourism landmark in Egypt.',
-      };
-    });
 
-    // 2. Add static places that haven't been edited or overridden in Supabase
-    const combined = [...dynamicList];
-    PLACES_DATA.forEach((staticP) => {
-      if (!combined.some((p) => p.id === staticP.id || p.id === staticP.slug)) {
-        combined.push(staticP);
-      }
-    });
-
-    return combined;
-  }, [supabasePlaces, isArabic]);
 
   const filtered = useMemo(() => {
     return allPlaces.filter((p) => {
@@ -626,7 +566,7 @@ export default function Explore() {
                       </span>
 
                       <Link
-                        to={`/places/${place.id}`}
+                        to={`/places/${place.slug || place.id}`}
                         className="btn-outline"
                         style={{ padding: '7px 14px', fontSize: '12px' }}
                       >

@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { PLACES_DATA } from '../data/placesData';
+import { usePlaces } from './PlacesContext';
 import { supabase } from '../lib/supabase';
 import { useAdminAuth } from './AdminAuthContext';
 
@@ -36,6 +36,7 @@ function readStoredFavorites(userId) {
 
 export function FavoritesProvider({ children }) {
   const { session } = useAdminAuth();
+  const { places } = usePlaces();
   const userId = session?.user?.id || null;
   const previousUserId = useRef(userId);
 
@@ -215,8 +216,10 @@ export function FavoritesProvider({ children }) {
     [userId, showToast, clearCloudFavorites]
   );
 
-  const favoritePlaces = PLACES_DATA.filter(
-    (place) => Array.isArray(favoriteIds) && favoriteIds.includes(place.id)
+  const favoritePlaces = places.filter(
+    (place) =>
+      Array.isArray(favoriteIds) &&
+      (favoriteIds.includes(place.id) || favoriteIds.includes(place.slug))
   );
 
   return (

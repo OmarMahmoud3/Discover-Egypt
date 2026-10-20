@@ -70,6 +70,16 @@ export default class ErrorBoundary extends Component {
             <p style={{ fontSize: '14px', color: '#4B5E70', marginBottom: '20px', lineHeight: 1.6 }}>
               نعتذر عن هذا الخطأ المؤقت. تم تسجيل المشكلة ويمكنك إعادة تحميل الصفحة للمتابعة.
             </p>
+            {this.state.error && (
+              <div style={{ textAlign: 'left', background: '#FEF2F2', border: '1px solid #F87171', borderRadius: '8px', padding: '12px', margin: '16px 0', fontSize: '13px', color: '#991B1B', wordBreak: 'break-word', whiteSpace: 'pre-wrap', direction: 'ltr' }}>
+                <strong>Error: </strong>{this.state.error.message || String(this.state.error)}
+                {this.state.error.stack && (
+                  <pre style={{ marginTop: '8px', fontSize: '11px', maxHeight: '180px', overflowY: 'auto' }}>
+                    {this.state.error.stack}
+                  </pre>
+                )}
+              </div>
+            )}
             <button
               onClick={this.handleReload}
               style={{

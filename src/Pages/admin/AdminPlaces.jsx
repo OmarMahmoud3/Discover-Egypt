@@ -48,23 +48,7 @@ export default function AdminPlaces() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Default curated places from website
-  const DEFAULT_PLACES = useMemo(() => {
-    return PLACES_DATA.map((p) => ({
-      id: p.id,
-      name: p.name,
-      name_en: p.nameEn || p.name,
-      slug: p.id,
-      city: p.city,
-      category: p.category,
-      image_url: p.image,
-      is_published: true,
-      created_at: '2024-01-01T00:00:00.000Z',
-      is_default: true,
-    }));
-  }, []);
-
-  // Fetch places (merges Supabase data with website default places)
+  // Fetch places exclusively from Supabase
   const fetchPlaces = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -77,15 +61,7 @@ export default function AdminPlaces() {
 
       if (fetchError) throw fetchError;
 
-      const supabaseList = Array.isArray(dbPlaces) ? dbPlaces : [];
-
-      // 2. Merge: Supabase records take priority over default static records
-      const merged = [...supabaseList];
-      DEFAULT_PLACES.forEach((def) => {
-        if (!merged.some((sp) => sp.id === def.id || sp.slug === def.slug)) {
-          merged.push(def);
-        }
-      });
+      const merged = Array.isArray(dbPlaces) ? dbPlaces : [];
 
       // 3. Apply search & filters
       let filtered = merged;
@@ -139,7 +115,7 @@ export default function AdminPlaces() {
     } finally {
       setLoading(false);
     }
-  }, [search, cityFilter, categoryFilter, statusFilter, sortBy, page, DEFAULT_PLACES]);
+  }, [search, cityFilter, categoryFilter, statusFilter, sortBy, page]);
 
   // One-click batch sync all default places into Supabase database
   const handleSyncDefaults = async () => {
@@ -153,7 +129,10 @@ export default function AdminPlaces() {
 
       const existingBySlug = new Map((existingRows || []).map((r) => [r.slug, r.id]));
 
-      const rowsToUpsert = PLACES_DATA.map((p) => {
+      const toUpdate = [];
+      const toInsert = [];
+
+      PLACES_DATA.forEach((p) => {
         const slug = p.slug || p.id;
         const existingId = existingBySlug.get(slug);
         const row = {
@@ -162,21 +141,29 @@ export default function AdminPlaces() {
           slug,
           city: p.city,
           category: p.category,
-          description: p.description || p.historicalText || p.historicalTextEn || p.name,
+          description: p.historicalText || p.historicalTextEn || p.description || p.name,
           image_url: p.image,
           gallery: (p.gallery || []).map((g) => g.url || g),
-          latitude: p.latitude || 29.9792,
-          longitude: p.longitude || 31.1342,
+          latitude: (typeof p.latitude === 'number' && !isNaN(p.latitude)) ? p.latitude : null,
+          longitude: (typeof p.longitude === 'number' && !isNaN(p.longitude)) ? p.longitude : null,
           is_published: true,
         };
         if (existingId) {
-          row.id = existingId;
+          toUpdate.push({ ...row, id: existingId });
+        } else {
+          toInsert.push(row);
         }
-        return row;
       });
 
-      const { error } = await supabase.from('places').upsert(rowsToUpsert);
-      if (error) throw error;
+      if (toInsert.length > 0) {
+        const { error: insertErr } = await supabase.from('places').insert(toInsert);
+        if (insertErr) throw insertErr;
+      }
+
+      if (toUpdate.length > 0) {
+        const { error: updateErr } = await supabase.from('places').upsert(toUpdate);
+        if (updateErr) throw updateErr;
+      }
 
       showToast(
         isArabic

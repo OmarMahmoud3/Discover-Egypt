@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { PLACES_DATA } from '../../data/placesData';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import { isUuid } from '../../lib/uuidUtils';
 import AdminHeader from '../../Components/admin/AdminHeader';
@@ -33,7 +32,7 @@ export default function AdminPlaceEdit() {
       try {
         let loadedPlace = null;
 
-        // 1. Try fetching from Supabase database
+        // Fetch place exclusively from Supabase database
         let query = supabase.from('places').select('*');
         if (isUuid(id)) {
           query = query.or(`id.eq.${id},slug.eq.${id}`);
@@ -45,25 +44,6 @@ export default function AdminPlaceEdit() {
 
         if (!fetchErr && data) {
           loadedPlace = data;
-        } else {
-          // 2. Fallback to default static PLACES_DATA
-          const staticMatch = PLACES_DATA.find((p) => p.id === id || p.slug === id || p.alias === id);
-          if (staticMatch) {
-            loadedPlace = {
-              id: staticMatch.id,
-              name: staticMatch.name,
-              name_en: staticMatch.nameEn,
-              slug: staticMatch.slug || staticMatch.id,
-              city: staticMatch.city,
-              category: staticMatch.category,
-              description: staticMatch.historicalText || staticMatch.historicalTextEn || staticMatch.description || '',
-              image_url: staticMatch.image,
-              gallery: (staticMatch.gallery || []).map((g) => g.url || g),
-              latitude: staticMatch.latitude || 29.9792,
-              longitude: staticMatch.longitude || 31.1342,
-              is_published: true,
-            };
-          }
         }
 
         if (loadedPlace && isMounted) {

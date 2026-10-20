@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PlacesMap from '../Components/PlacesMap';
-import { PLACES_DATA } from '../data/placesData';
-import { supabase } from '../lib/supabase';
+import { usePlaces } from '../context/PlacesContext';
 import { useLanguage } from '../context/LanguageContext';
 import VoiceSearchButton from '../Components/VoiceSearchButton';
 import { matchesDestination } from '../lib/searchUtils';
@@ -16,94 +15,9 @@ export default function MapPage() {
   const [selectedCity, setSelectedCity] = useState(initialCity);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
-  const [supabasePlaces, setSupabasePlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
 
+  const { places: allPlaces, loading, error: fetchError, refreshPlaces: handleRetry } = usePlaces();
   const { t, isArabic, getPlaceName, getPlaceCity, getPlaceCategory } = useLanguage();
-
-  const handleRetry = () => {
-    setLoading(true);
-    setFetchError(null);
-    supabase
-      .from('places')
-      .select('id, name, name_en, slug, city, category, description, image_url, latitude, longitude, is_published')
-      .eq('is_published', true)
-      .then(({ data, error }) => {
-        if (error) {
-          setFetchError(error.message);
-        } else if (data && data.length > 0) {
-          setSupabasePlaces(data);
-        }
-      })
-      .catch((err) => {
-        setFetchError(err.message || 'Failed to load places');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
-
-  useEffect(() => {
-    let isMounted = true;
-    supabase
-      .from('places')
-      .select('id, name, name_en, slug, city, category, description, image_url, latitude, longitude, is_published')
-      .eq('is_published', true)
-      .then(({ data, error }) => {
-        if (!isMounted) return;
-        if (error) {
-          setFetchError(error.message);
-        } else if (data && data.length > 0) {
-          setSupabasePlaces(data);
-        }
-      })
-      .catch((err) => {
-        if (isMounted) setFetchError(err.message || 'Failed to load places');
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // Merge Supabase places with curated PLACES_DATA
-  const allPlaces = useMemo(() => {
-    const dynamicList = supabasePlaces.map((sp) => {
-      const staticMatch = PLACES_DATA.find((p) => p.id === sp.id || p.slug === sp.slug || p.id === sp.slug);
-      return {
-        id: sp.id,
-        slug: sp.slug || sp.id,
-        name: sp.name,
-        name_en: sp.name_en || sp.name,
-        nameEn: sp.name_en || sp.name,
-        city: sp.city || staticMatch?.city || (isArabic ? 'مصر' : 'Egypt'),
-        city_en: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
-        cityEn: sp.city_en || sp.city || staticMatch?.cityEn || 'Egypt',
-        cityKey: (sp.city_en || sp.city || staticMatch?.cityKey || '').toLowerCase(),
-        category: sp.category || staticMatch?.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
-        category_en: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
-        categoryEn: sp.category_en || sp.category || staticMatch?.categoryEn || 'Attraction',
-        categoryKey: staticMatch?.categoryKey || 'historical',
-        latitude: sp.latitude !== undefined && sp.latitude !== null ? sp.latitude : staticMatch?.latitude,
-        longitude: sp.longitude !== undefined && sp.longitude !== null ? sp.longitude : staticMatch?.longitude,
-        image: sp.image_url || staticMatch?.image,
-        description: sp.description || staticMatch?.description || staticMatch?.historicalText,
-      };
-    });
-
-    const combined = [...dynamicList];
-    PLACES_DATA.forEach((staticP) => {
-      if (!combined.some((p) => p.id === staticP.id || p.slug === staticP.slug)) {
-        combined.push(staticP);
-      }
-    });
-
-    return combined;
-  }, [supabasePlaces, isArabic]);
 
   // Cities List for Filter
   const cities = isArabic

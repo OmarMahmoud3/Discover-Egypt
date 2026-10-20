@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { PlacesProvider } from './context/PlacesContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
@@ -201,9 +202,11 @@ export default function App() {
     <ErrorBoundary>
       <LanguageProvider>
         <AdminAuthProvider>
-          <FavoritesProvider>
-            <AppContent />
-          </FavoritesProvider>
+          <PlacesProvider>
+            <FavoritesProvider>
+              <AppContent />
+            </FavoritesProvider>
+          </PlacesProvider>
         </AdminAuthProvider>
       </LanguageProvider>
     </ErrorBoundary>

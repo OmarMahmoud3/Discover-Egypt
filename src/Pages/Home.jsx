@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PLACES_DATA, BRAND_PILLARS } from '../data/placesData';
+import { BRAND_PILLARS } from '../data/brandPillars';
+import { usePlaces } from '../context/PlacesContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
 import VoiceSearchButton from '../Components/VoiceSearchButton';
@@ -8,6 +9,7 @@ import VoiceSearchButton from '../Components/VoiceSearchButton';
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { places } = usePlaces();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { t, isArabic, getPlaceName, getPlaceCity, getPlaceDescription, getPlaceCategory } = useLanguage();
 
@@ -36,10 +38,10 @@ export default function Home() {
         { label: 'Alexandria', query: 'Alexandria' },
       ];
 
-  // Distribute places into varied editorial compositions
-  const leadPlace = PLACES_DATA[0]; // Giza Pyramids
-  const diptychPlaces = PLACES_DATA.slice(1, 3); // Karnak & Khan El Khalili
-  const archivalPlaces = PLACES_DATA.slice(3, 6); // Remaining landmarks
+  // Distribute Supabase places into varied editorial compositions
+  const leadPlace = places[0] || null;
+  const diptychPlaces = places.slice(1, 3);
+  const archivalPlaces = places.slice(3, 6);
 
   return (
     <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh' }}>
@@ -62,7 +64,7 @@ export default function Home() {
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: `url('${leadPlace.image}')`,
+            backgroundImage: leadPlace?.image ? `url('${leadPlace.image}')` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center 42%',
             opacity: 0.32,
@@ -502,14 +504,22 @@ export default function Home() {
                   </p>
 
                   {/* Architectural Metrics */}
-                  <div className="lead-metrics-grid">
-                    {(isArabic ? leadPlace.metrics : (leadPlace.metricsEn || leadPlace.metrics) || []).map((m, i) => (
-                      <div key={i} style={{ textAlign: 'center', minWidth: 0 }}>
-                        <div className="metric-val" style={{ fontWeight: 900, color: 'var(--primary)', fontSize: '15px' }}>{m.value}</div>
-                        <div className="metric-lbl" style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '2px', wordBreak: 'break-word' }}>{m.label}</div>
+                  {(() => {
+                    const metricsList = isArabic
+                      ? (leadPlace.metrics || leadPlace.metricsEn || [])
+                      : (leadPlace.metricsEn || leadPlace.metrics || []);
+                    if (!Array.isArray(metricsList) || metricsList.length === 0) return null;
+                    return (
+                      <div className="lead-metrics-grid">
+                        {metricsList.map((m, i) => (
+                          <div key={i} style={{ textAlign: 'center', minWidth: 0 }}>
+                            <div className="metric-val" style={{ fontWeight: 900, color: 'var(--primary)', fontSize: '15px' }}>{m.value}</div>
+                            <div className="metric-lbl" style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '2px', wordBreak: 'break-word' }}>{m.label}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 <div
@@ -527,10 +537,10 @@ export default function Home() {
                     <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--secondary)' }}>
                       schedule
                     </span>
-                    <span>{isArabic ? leadPlace.quickInfo?.duration : (leadPlace.quickInfo?.durationEn || leadPlace.quickInfo?.duration)}</span>
+                    <span>{isArabic ? (leadPlace.quickInfo?.duration || 'ساعتان مقترحة') : (leadPlace.quickInfo?.durationEn || leadPlace.quickInfo?.duration || '2 hours suggested')}</span>
                   </div>
 
-                  <Link to={`/places/${leadPlace.id}`} className="btn-primary" style={{ minHeight: '40px' }}>
+                  <Link to={`/places/${leadPlace.slug || leadPlace.id}`} className="btn-primary" style={{ minHeight: '40px' }}>
                     <span>{isArabic ? 'قراءة التوثيق الميداني' : 'Read Monograph'}</span>
                     <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '16px' }}>
                       arrow_forward
@@ -637,7 +647,7 @@ export default function Home() {
                       <span style={{ fontSize: '12px', color: 'var(--text-light)', fontWeight: 600 }}>
                         {place.coordinates}
                       </span>
-                      <Link to={`/places/${place.id}`} className="btn-outline" style={{ padding: '8px 16px', fontSize: '13px' }}>
+                      <Link to={`/places/${place.slug || place.id}`} className="btn-outline" style={{ padding: '8px 16px', fontSize: '13px' }}>
                         <span>{t('home.detailsBtn')}</span>
                         <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '16px' }}>
                           arrow_forward
@@ -736,7 +746,7 @@ export default function Home() {
                     </button>
 
                     <Link
-                      to={`/places/${place.id}`}
+                      to={`/places/${place.slug || place.id}`}
                       style={{
                         fontSize: '13px',
                         fontWeight: 700,

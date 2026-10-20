@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PLACES_DATA } from '../data/placesData';
 import { supabase } from '../lib/supabase';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -164,12 +163,10 @@ export default function PlaceDetails() {
   const { isFavorite, toggleFavorite, showToast } = useFavorites();
   const { t, isArabic, getPlaceName, getPlaceLocation, getPlaceDescription, getPlaceGateInfo } = useLanguage();
 
-  // Find static place as immediate fallback
-  const staticPlace = PLACES_DATA.find((p) => p.id === placeId || p.slug === placeId || p.alias === placeId);
-
-  // Check Supabase database so administrative edits take precedence
+  // Check Supabase database exclusively
   useEffect(() => {
     let isMounted = true;
+    setLoadingSupabase(true);
     let query = supabase.from('places').select('*');
     if (isUuid(placeId)) {
       query = query.or(`id.eq.${placeId},slug.eq.${placeId}`);
@@ -186,10 +183,11 @@ export default function PlaceDetails() {
         if (!error && data) {
           const galleryItems = Array.isArray(data.gallery) && data.gallery.length > 0
             ? data.gallery.map((img) => typeof img === 'string' ? { url: img, title: data.name, alt: data.name } : img)
-            : [{ url: data.image_url || staticPlace?.image, title: data.name, alt: data.name }];
+            : [{ url: data.image_url, title: data.name, alt: data.name }];
 
           setSupabasePlace({
             id: data.id,
+            slug: data.slug || data.id,
             name: data.name,
             name_en: data.name_en || data.name,
             nameEn: data.name_en || data.name,
@@ -200,20 +198,20 @@ export default function PlaceDetails() {
             category: data.category || (isArabic ? 'معلم سياحي' : 'Attraction'),
             category_en: data.category_en || data.category || 'Attraction',
             categoryEn: data.category_en || data.category || 'Attraction',
-            rating: staticPlace?.rating || 4.9,
-            reviewCount: staticPlace?.reviewCount || '1,450',
-            image: data.image_url || staticPlace?.image,
+            rating: data.rating || 4.9,
+            reviewCount: data.review_count || '1,450',
+            image: data.image_url,
             gallery: galleryItems,
-            historicalText: data.description || staticPlace?.historicalText || (isArabic ? 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.' : 'A distinguished tourism and heritage site in Egypt.'),
-            historicalTextEn: data.description_en || data.description || staticPlace?.historicalTextEn || 'A distinguished tourism and heritage site in Egypt.',
-            location: staticPlace?.location || (isArabic ? `${data.city || 'مصر'}، جمهورية مصر العربية` : `${data.city_en || data.city || 'Egypt'}, Egypt`),
-            locationEn: staticPlace?.locationEn || `${data.city_en || data.city || 'Egypt'}, Egypt`,
-            gateInfo: staticPlace?.gateInfo || (isArabic ? 'يُنصح بالحجز عبر البوابة الرسمية' : 'Bookings advised through official gate'),
-            gateInfoEn: staticPlace?.gateInfoEn || 'Bookings advised through official gate',
-            mapsUrl: data.latitude && data.longitude ? `https://maps.google.com/?q=${data.latitude},${data.longitude}` : (staticPlace?.mapsUrl || `https://maps.google.com/?q=${encodeURIComponent(data.name_en || data.name)}`),
-            badges: staticPlace?.badges || (isArabic ? ['معلم موثق', 'تراث وطني'] : ['Documented Landmark', 'National Heritage']),
-            badgesEn: staticPlace?.badgesEn || ['Documented Landmark', 'National Heritage'],
-            quickInfo: staticPlace?.quickInfo || {
+            historicalText: data.description || (isArabic ? 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.' : 'A distinguished tourism and heritage site in Egypt.'),
+            historicalTextEn: data.description_en || data.description || 'A distinguished tourism and heritage site in Egypt.',
+            location: isArabic ? `${data.city || 'مصر'}، جمهورية مصر العربية` : `${data.city_en || data.city || 'Egypt'}, Egypt`,
+            locationEn: `${data.city_en || data.city || 'Egypt'}, Egypt`,
+            gateInfo: isArabic ? 'يُنصح بالحجز عبر البوابة الرسمية' : 'Bookings advised through official gate',
+            gateInfoEn: 'Bookings advised through official gate',
+            mapsUrl: data.latitude && data.longitude ? `https://maps.google.com/?q=${data.latitude},${data.longitude}` : `https://maps.google.com/?q=${encodeURIComponent(data.name_en || data.name)}`,
+            badges: data.badges || (isArabic ? ['معلم موثق', 'تراث وطني'] : ['Documented Landmark', 'National Heritage']),
+            badgesEn: data.badges_en || ['Documented Landmark', 'National Heritage'],
+            quickInfo: data.quickInfo || {
               hours: '08:00 ص – 05:00 م',
               hoursEn: '08:00 AM – 05:00 PM',
               season: 'طوال العام',
@@ -223,10 +221,12 @@ export default function PlaceDetails() {
               payment: 'دفع إلكتروني بالبطاقات',
               paymentEn: 'Electronic card payment only',
             },
-            metrics: staticPlace?.metrics || [
+            metrics: [
               { label: isArabic ? 'التقييم' : 'Rating', value: '4.9 ★', sub: isArabic ? 'تقييم الزوار' : 'Visitor rating' },
-              { label: isArabic ? 'المدينة' : 'City', value: isArabic ? (data.city || 'مصر') : (data.city_en || 'Egypt'), sub: isArabic ? 'الموقع' : 'Location' },
+              { label: isArabic ? 'المدينة' : 'City', value: isArabic ? (data.city || 'مصر') : (data.city_en || data.city || 'Egypt'), sub: isArabic ? 'الموقع' : 'Location' },
             ],
+            tips: Array.isArray(data.tips) ? data.tips : [],
+            nearby: Array.isArray(data.nearby) ? data.nearby : [],
           });
         }
       })
@@ -240,13 +240,13 @@ export default function PlaceDetails() {
     return () => {
       isMounted = false;
     };
-  }, [placeId, staticPlace, isArabic]);
+  }, [placeId, isArabic]);
 
-  // Prioritize Supabase admin edits over static placeholder
-  const place = supabasePlace || staticPlace || PLACES_DATA[0];
+  // Exclusively use Supabase place
+  const place = supabasePlace;
 
   // Loading state for dynamic lookup
-  if (!staticPlace && loadingSupabase) {
+  if (loadingSupabase) {
     return (
       <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="admin-loading-spinner" />
@@ -254,8 +254,8 @@ export default function PlaceDetails() {
     );
   }
 
-  // Not Found fallback if ID was explicitly provided and does not exist in PLACES_DATA or Supabase
-  if (!staticPlace && hasCheckedSupabase && !place) {
+  // Not Found fallback if ID was explicitly provided and does not exist in Supabase
+  if (hasCheckedSupabase && !place) {
     return (
       <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
         <span className="material-symbols-outlined" style={{ fontSize: '64px', color: 'var(--gold-dark)', marginBottom: '16px' }}>

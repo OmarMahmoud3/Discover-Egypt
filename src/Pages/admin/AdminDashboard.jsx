@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
-import { PLACES_DATA } from '../../data/placesData';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import StatCard from '../../Components/admin/StatCard';
 
@@ -48,38 +47,18 @@ export default function AdminDashboard() {
         if (ignore) return;
 
         const dbPlaces = (placesRes.data && Array.isArray(placesRes.data)) ? placesRes.data : [];
-        const dbIds = new Set(dbPlaces.map((p) => p.id));
-
-        const defaultPlaces = PLACES_DATA.map((p) => ({
-          id: p.id,
-          name: p.name,
-          name_en: p.nameEn || p.name,
-          slug: p.slug || p.id,
-          city: p.city || p.locationShort || 'مصر',
-          category: p.category,
-          image_url: p.image,
-          is_published: true,
-          created_at: null,
-          isDefault: true,
-        }));
-
-        const mergedPlaces = [
-          ...dbPlaces,
-          ...defaultPlaces.filter((p) => !dbIds.has(p.id)),
-        ];
-
-        const publishedCount = mergedPlaces.filter((p) => p.is_published !== false).length;
-        const draftCount = mergedPlaces.length - publishedCount;
+        const publishedCount = dbPlaces.filter((p) => p.is_published !== false).length;
+        const draftCount = dbPlaces.length - publishedCount;
 
         setStats({
-          totalPlaces: mergedPlaces.length,
+          totalPlaces: dbPlaces.length,
           publishedPlaces: publishedCount,
           draftPlaces: draftCount,
           totalUsers: usersRes?.count ?? 0,
           totalFavorites: favsRes?.count ?? 0,
         });
 
-        setRecentPlaces(mergedPlaces.slice(0, 5));
+        setRecentPlaces(dbPlaces.slice(0, 5));
       } catch (err) {
         if (!ignore) {
           console.error('Error fetching admin stats:', err);
