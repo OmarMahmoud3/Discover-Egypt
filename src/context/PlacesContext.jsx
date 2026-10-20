@@ -1,19 +1,24 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import realPhotosMap from '../data/realPhotosMap.json';
 
 const PlacesContext = createContext();
 
 /**
  * Normalizes a place record fetched from Supabase
- * to ensure consistent properties across all views and components.
+ * to ensure consistent properties and verified real-world photography across all views.
  */
 export function normalizePlace(sp) {
   if (!sp) return null;
-  const gallery = Array.isArray(sp.gallery) && sp.gallery.length > 0
-    ? sp.gallery.map((g) => (typeof g === 'string' ? { url: g, title: sp.name, alt: sp.name } : g))
-    : sp.image_url
-      ? [{ url: sp.image_url, title: sp.name, alt: sp.name }]
+  const slug = sp.slug || sp.id;
+  const realPhoto = realPhotosMap[slug] || realPhotosMap[sp.id];
+  const activeImage = realPhoto || sp.image_url || '';
+
+  const gallery = activeImage
+    ? [{ url: activeImage, title: sp.name, alt: sp.name }]
+    : Array.isArray(sp.gallery) && sp.gallery.length > 0
+      ? sp.gallery.map((g) => (typeof g === 'string' ? { url: g, title: sp.name, alt: sp.name } : g))
       : [];
 
   return {
@@ -34,8 +39,8 @@ export function normalizePlace(sp) {
     description: sp.description || '',
     historicalText: sp.description || '',
     historicalTextEn: sp.description_en || sp.description || '',
-    image: sp.image_url || '',
-    image_url: sp.image_url || '',
+    image: activeImage,
+    image_url: activeImage,
     gallery,
     latitude: typeof sp.latitude === 'number' && !isNaN(sp.latitude) ? sp.latitude : null,
     longitude: typeof sp.longitude === 'number' && !isNaN(sp.longitude) ? sp.longitude : null,

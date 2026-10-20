@@ -34,7 +34,7 @@ export const PLACES_DATA = [
       "Seven Wonders of the World",
       "Fourth Dynasty"
     ],
-    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuCao0_zDTQ8frEJZNDu_1tm-2N4fczbSoYCt6ac4edUah5oV9SbFC7p7q8VacMNwgF7Pwxikq1qjB9GQ-_aCIDgMOu_F-_Xo26nxq2PxOn02XJSCNquHBHi49acxYauO6VY7PobKN0gABl36WJU_cU2iftmnc5jbBK6JmShVWWHnRaBl-WzR2mwRD6rxEWKuJYTCxRFT7GEQ1NGbmqfdhem5otkALIcQc56Kw6aaFiZ0JHF5YJAG1-oLg",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Pyramids_of_the_Giza_Necropolis.jpg/1280px-Pyramids_of_the_Giza_Necropolis.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الهرم الأكبر خوفو",
@@ -154,7 +154,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuCLeJC8xYEENQkqcRtSKJpLQCbh_2i_CxLLKHqlT_DOdGIsAdf3qVvT4zXZyp6GmiY117UELL4Hs4nMuf4_lDcDuLw0irbrz6e8bVsZvQPyzNl1ZNcMLToDBHCd8mxr9cDEJFb-LAiOMUFh_eTA7XPJvxZgs0DIbpSigJPfMK6-DT-n1TxCZMcVeg2MS3wMYexs2cYT1VsMFJgzUuTZG9aYAjCLRDOWWwmxu-gXVidyaKtxIxD0KWLUSA",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Great_Pyramid_of_Giza_-_Pyramid_of_Khufu.jpg/1280px-Great_Pyramid_of_Giza_-_Pyramid_of_Khufu.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الهرم الأكبر خوفو",
@@ -258,7 +258,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuD9drHxmx8bRzk3zmlT0j1kYyc146dhqMSaP-snw14QXhzYOfgMy5d67MmBO0qtcWFbkBv0J8yPEY2tPEZdRGsWhWq7tJdEq8YAIuXTbHV0i0I1QZH5Dmz-LqD-cnfSNrWPsL1FbKV3KborwqGf1NEs3SOA9kupHmyYX2sOlTzHFp0BEkJWDmCHvco644tQgAcIkenEoAI3m0N2n4eFLMPM7AHk70_GOTF-W_9_IknrdXbhofsbX9lQog",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Sphinx_with_the_third_pyramid.jpg/1280px-Sphinx_with_the_third_pyramid.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "أبو الهول",
@@ -362,7 +362,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/The_Grand_Egyptian_Museum.jpg/1280px-The_Grand_Egyptian_Museum.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "المتحف المصري الكبير",
@@ -466,7 +466,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6a/Sakkara_01.jpg/1280px-Sakkara_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "هرم زوسر المدرج بسقارة",
@@ -570,7 +570,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/Serapeum_gate.jpg/1280px-Serapeum_gate.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "السيرابيوم بسقارة",
@@ -674,7 +674,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/Rote_Pyramide_%28Dahschur%29_01.jpg/1280px-Rote_Pyramide_%28Dahschur%29_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الهرم الأحمر بدهشور",
@@ -778,7 +778,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Bent_Pyramid_%E6%9B%B2%E6%8A%98%E9%87%91%E5%AD%97%E5%A1%94_-_panoramio.jpg/1280px-Bent_Pyramid_%E6%9B%B2%E6%8A%98%E9%87%91%E5%AD%97%E5%A1%94_-_panoramio.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الهرم المنحني بدهشور",
@@ -882,7 +882,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/Memphis200401.JPG/1280px-Memphis200401.JPG?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "متحف ميت رهينة وممفيس القديمة",
@@ -986,7 +986,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/1897_bis_1902_wurde_das_%C3%84gyptische_Museum_in_Kairo_gebaut._04.jpg/1280px-1897_bis_1902_wurde_das_%C3%84gyptische_Museum_in_Kairo_gebaut._04.jpg",
     "gallery": [
       {
         "title": "المتحف المصري بالتحرير",
@@ -1090,7 +1090,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/NMEC-MainEntrance.jpg/1280px-NMEC-MainEntrance.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "المتحف القومي للحضارة المصرية",
@@ -1194,7 +1194,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/GD-EG-Caire-Mus%C3%A9eIslam001.JPG/1280px-GD-EG-Caire-Mus%C3%A9eIslam001.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "متحف الفن الإسلامي",
@@ -1298,7 +1298,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Kairo_-_Altkairo_05.jpg/1280px-Kairo_-_Altkairo_05.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "المتحف القبطي",
@@ -1402,7 +1402,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Flickr_-_HuTect_ShOts_-_Citadel_of_Salah_El.Din_and_Masjid_Muhammad_Ali_%D9%82%D9%84%D8%B9%D8%A9_%D8%B5%D9%84%D8%A7%D8%AD_%D8%A7%D9%84%D8%AF%D9%8A%D9%86_%D8%A7%D9%84%D8%A3%D9%8A%D9%88%D8%A8%D9%8A_%D9%88%D9%85%D8%B3%D8%AC%D8%AF_%D9%85%D8%AD%D9%85%D8%AF_%D8%B9%D9%84%D9%8A_-_Cairo_-_Egypt_-_17_04_2010_%284%29.jpg/1280px-thumbnail.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "قلعة صلاح الدين الأيوبي",
@@ -1506,7 +1506,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Muhammad_Ali_Mosque_1.jpg/1280px-Muhammad_Ali_Mosque_1.jpg",
     "gallery": [
       {
         "title": "مسجد محمد علي",
@@ -1610,7 +1610,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Cairo%2C_madrasa_del_sultano_qalaun%2C_02.JPG/1280px-Cairo%2C_madrasa_del_sultano_qalaun%2C_02.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "شارع المعز لدين الله الفاطمي",
@@ -1714,7 +1714,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/%D8%AE%D8%A7%D9%86_%D8%A7%D9%84%D8%AE%D9%84%D9%8A%D9%84%D9%8A_1.jpg/1280px-%D8%AE%D8%A7%D9%86_%D8%A7%D9%84%D8%AE%D9%84%D9%8A%D9%84%D9%8A_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "خان الخليلي",
@@ -1818,7 +1818,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Flickr_-_archer10_%28Dennis%29_-_Egypt-13A-061_%28cropped%29.jpg/1280px-Flickr_-_archer10_%28Dennis%29_-_Egypt-13A-061_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "مسجد ومدرسة السلطان حسن",
@@ -1922,7 +1922,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/%D9%85%D8%B3%D8%AC%D8%AF_%D8%A7%D9%84%D8%B1%D9%81%D8%A7%D8%B9%D9%8A.jpg/1280px-%D9%85%D8%B3%D8%AC%D8%AF_%D8%A7%D9%84%D8%B1%D9%81%D8%A7%D8%B9%D9%8A.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "مسجد الرفاعي",
@@ -2026,7 +2026,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Kairo_Ibn_Tulun_Moschee_BW_4.jpg/1280px-Kairo_Ibn_Tulun_Moschee_BW_4.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "مسجد أحمد بن طولون",
@@ -2130,7 +2130,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/Kairo_Hanging_Church_BW_1.jpg/1280px-Kairo_Hanging_Church_BW_1.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الكنيسة المعلقة",
@@ -2234,7 +2234,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a4/Ben_Ezra_Synagogue-1.jpg/1280px-Ben_Ezra_Synagogue-1.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "كنيس بن عزرا",
@@ -2338,7 +2338,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5d/The_exterior_of_the_Baron_Empain_palace.jpg/1280px-The_exterior_of_the_Baron_Empain_palace.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "قصر البارون إمبان",
@@ -2442,7 +2442,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1566836644047-97598835848c?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Manial_Palace_and_Museum.jpg/1280px-Manial_Palace_and_Museum.jpg",
     "gallery": [
       {
         "title": "قصر الأمير محمد علي بالمنيل",
@@ -2546,7 +2546,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/Cairo_Tower_%2814795997855%29.jpg/1280px-Cairo_Tower_%2814795997855%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "برج القاهرة",
@@ -2650,7 +2650,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/1/17/Abdeen_Palace.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "قصر عابدين",
@@ -2754,7 +2754,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/5e/Alexandria%27s_Bibliotheca.jpg/1280px-Alexandria%27s_Bibliotheca.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "مكتبة الإسكندرية",
@@ -2858,7 +2858,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuDOhSstqQQpcxDt_yyuWijEct_47y3YUwMMtcpHL_MqiJ-drsm20HSaTtjFb7E3B7QrcF-HZRpBmhE15EgUB2R8uZVJo8_LBzE2cdd3cfQo3h7f6MD5w6kF4eGWfI2UfsgXy58pQYN1O9qVQ35XGrg7VJ_o05KdCmbNlG85TFP0qM80Z8GCMBNTiPSTNnuqGCBfrczspgLSDFhWu8QOHAgYqxFcq8GrAVG7bAgfLWVPUYaBc14gHuHuZQ",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Citadel_of_Qaitbay_Alexandria.jpg/1280px-Citadel_of_Qaitbay_Alexandria.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "قلعة قايتباي",
@@ -2962,7 +2962,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/72/...Catacombsa.jpg/1280px-...Catacombsa.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "مقابر كوم الشقافة",
@@ -3066,7 +3066,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Pompey%27s_Pillar_Alexandria.jpg/1280px-Pompey%27s_Pillar_Alexandria.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "عمود السواري",
@@ -3170,7 +3170,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/Alexandrie_Th%C3%A9%C3%A2tre_romain_2.jpg/1280px-Alexandrie_Th%C3%A9%C3%A2tre_romain_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "المسرح الروماني بكوم الدكة",
@@ -3274,7 +3274,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/Motazah_palace_-_Alexandria.jpg/1280px-Motazah_palace_-_Alexandria.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "حدائق المنتزه",
@@ -3378,7 +3378,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cb/Royal_Jewelry_Museum_Alexandria.jpg/1280px-Royal_Jewelry_Museum_Alexandria.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "متحف المجوهرات الملكية",
@@ -3482,7 +3482,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/da/GD-EG-Alex-Mus%C3%A9eNat040.JPG/1280px-GD-EG-Alex-Mus%C3%A9eNat040.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "متحف الإسكندرية القومي",
@@ -3586,7 +3586,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/4/49/AlexStanleyBridge.jpg",
     "gallery": [
       {
         "title": "كوبري ستانلي",
@@ -3690,7 +3690,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/2007-05-043.jpg/1280px-2007-05-043.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "مسجد أبي العباس المرسي",
@@ -3794,7 +3794,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuBjHswjKZ4w5llNhT_LQ8FKm-EV9H1gPGDvsni1CYHUbKCu3AZVikHOewUdI7oNv3qWz0EYF2xUj3JuLFlakMaEo956vcvnv81u9QyPgZyjv0JqJQ4cjSakSVrpgP5GJzYDLzgathnMeFmZqlIpLE1hnd0XaSYRLnh1QFeWPFVAGFS9V4NBwwyhwIWYI6BmYJaqPXCrzXrLCVADDKHXAItcV6W664gCVrUTjPJMx8q805x4LMKjVT0PZg",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Temple_de_Louxor_68.jpg/1280px-Temple_de_Louxor_68.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "مجمع معابد الكرنك",
@@ -3898,7 +3898,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/1550_bis_1070_v._Chr._ca._wurde_der_Tempel_von_Luxor_erbaut._01.jpg/1280px-1550_bis_1070_v._Chr._ca._wurde_der_Tempel_von_Luxor_erbaut._01.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد الأقصر",
@@ -4002,7 +4002,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Luxor%2C_Tal_der_K%C3%B6nige_%281995%2C_860x605%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "وادي الملوك",
@@ -4106,7 +4106,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Templo_funerario_de_Hatshepsut%2C_Luxor%2C_Egipto%2C_2022-04-03%2C_DD_13.jpg/1280px-Templo_funerario_de_Hatshepsut%2C_Luxor%2C_Egipto%2C_2022-04-03%2C_DD_13.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد حتشبسوت بالدير البحري",
@@ -4210,7 +4210,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/Colossi_of_Memnon_May_2015_2.JPG/1280px-Colossi_of_Memnon_May_2015_2.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "تمثالا ممنون",
@@ -4314,7 +4314,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Templo_funerario_de_Rams%C3%A9s_III%2C_Luxor%2C_Egipto%2C_2022-04-03%2C_DD_22.jpg/1280px-Templo_funerario_de_Rams%C3%A9s_III%2C_Luxor%2C_Egipto%2C_2022-04-03%2C_DD_22.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد مدينة هابو",
@@ -4418,7 +4418,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/SFEC_AEH_-ThebesNecropolis-2010-RamsesII-021.jpg/1280px-SFEC_AEH_-ThebesNecropolis-2010-RamsesII-021.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الرامسيوم",
@@ -4522,7 +4522,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Deir_el-Medina%2C_Luxor%2C_Egipto%2C_2022-04-03%2C_DD_18.jpg/1280px-Deir_el-Medina%2C_Luxor%2C_Egipto%2C_2022-04-03%2C_DD_18.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "دير المدينة",
@@ -4626,7 +4626,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/7/76/Luxor_Museum_1.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "متحف الأقصر",
@@ -4730,7 +4730,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Dendera_7_977.PNG/1280px-Dendera_7_977.PNG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد دندرة",
@@ -4834,7 +4834,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/3/33/AbydosFacade.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "معبد سيتي الأول بأبيدوس",
@@ -4938,7 +4938,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Temple_Edfou_Egypte.jpg/1280px-Temple_Edfou_Egypte.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد إدفو",
@@ -5042,7 +5042,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Kom_Ombo_Portal_04.jpg/1280px-Kom_Ombo_Portal_04.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد كوم أمبو",
@@ -5146,7 +5146,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/SFEC_EGYPT_ESNA_2006-007.JPG/1280px-SFEC_EGYPT_ESNA_2006-007.JPG?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد إسنا",
@@ -5250,7 +5250,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuBjHswjKZ4w5llNhT_LQ8FKm-EV9H1gPGDvsni1CYHUbKCu3AZVikHOewUdI7oNv3qWz0EYF2xUj3JuLFlakMaEo956vcvnv81u9QyPgZyjv0JqJQ4cjSakSVrpgP5GJzYDLzgathnMeFmZqlIpLE1hnd0XaSYRLnh1QFeWPFVAGFS9V4NBwwyhwIWYI6BmYJaqPXCrzXrLCVADDKHXAItcV6W664gCVrUTjPJMx8q805x4LMKjVT0PZg",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Philae_Temple_R03.jpg/1280px-Philae_Temple_R03.jpg",
     "gallery": [
       {
         "title": "معبد فيلة",
@@ -5354,7 +5354,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Obelisco_inacabado%2C_Asu%C3%A1n%2C_Egipto%2C_2022-04-01%2C_DD_153.jpg/1280px-Obelisco_inacabado%2C_Asu%C3%A1n%2C_Egipto%2C_2022-04-01%2C_DD_153.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "المسلة الناقصة",
@@ -5458,7 +5458,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Museum & Exhibitions"
     ],
-    "image": "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Aswan_Nubian_Museum_entrance.jpg/1280px-Aswan_Nubian_Museum_entrance.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "متحف النوبة",
@@ -5562,7 +5562,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/Ramsis%2C_Aswan_Governorate%2C_Egypt_-_panoramio.jpg/1280px-Ramsis%2C_Aswan_Governorate%2C_Egypt_-_panoramio.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبدا أبو سمبل",
@@ -5666,7 +5666,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Aswan%2C_Elephantine%2C_west_bank%2C_Egypt%2C_Oct_2004.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "جزيرة إلفنتين",
@@ -5770,7 +5770,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Panoramic_view_of_Aswan%2C_Egypt.jpg/1280px-Panoramic_view_of_Aswan%2C_Egypt.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "القرية النوبية بغرب سهيل",
@@ -5874,7 +5874,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Aswan_Aga_Khan_Mausoleum_R01.jpg/1280px-Aswan_Aga_Khan_Mausoleum_R01.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "ضريح أغا خان",
@@ -5978,7 +5978,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/Aswan_High_Dam-1.jpg/1280px-Aswan_High_Dam-1.jpg",
     "gallery": [
       {
         "title": "السد العالي بأسوان",
@@ -6082,7 +6082,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/The_Temple_of_Kalabsha_by_Dennis_G._Jarvis.jpg/1280px-The_Temple_of_Kalabsha_by_Dennis_G._Jarvis.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد كلابشة",
@@ -6186,7 +6186,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Katharinenkloster_Sinai_BW_2.jpg/1280px-Katharinenkloster_Sinai_BW_2.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "دير سانت كاترين",
@@ -6290,7 +6290,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Mount_Sinai_from_the_southwest.jpg/1280px-Mount_Sinai_from_the_southwest.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "جبل موسى",
@@ -6394,7 +6394,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/%D8%A8%D9%88%D8%A7%D8%A8%D8%A7%D8%AA_%D9%85%D8%AD%D9%85%D9%8A%D9%87_%D8%B1%D8%A7%D8%B3_%D9%85%D8%AD%D9%85%D8%AF.png/1280px-%D8%A8%D9%88%D8%A7%D8%A8%D8%A7%D8%AA_%D9%85%D8%AD%D9%85%D9%8A%D9%87_%D8%B1%D8%A7%D8%B3_%D9%85%D8%AD%D9%85%D8%AF.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "محمية رأس محمد",
@@ -6498,7 +6498,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Coastal Destination"
     ],
-    "image": "https://images.unsplash.com/photo-1510414842594-a61782153f5b?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/Naama_Bay_R01.jpg/1280px-Naama_Bay_R01.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "خليج نعمة",
@@ -6602,7 +6602,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Al-Sahaba_Mosque_in_Sharm_El-Sheikh1.jpg/1280px-Al-Sahaba_Mosque_in_Sharm_El-Sheikh1.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "السوق القديم بشرم الشيخ",
@@ -6706,7 +6706,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/34/Blue_Whole%2C_Dahab.jpg/1280px-Blue_Whole%2C_Dahab.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الثقب الأزرق بدهب",
@@ -6810,7 +6810,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Blue_Lagoon_South_Sinai.jpg/1280px-Blue_Lagoon_South_Sinai.jpg",
     "gallery": [
       {
         "title": "محمية أبو جالوم",
@@ -6914,7 +6914,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c8/Coloured_canyon_sinai.JPG/1280px-Coloured_canyon_sinai.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الوادي الملون بنويبع",
@@ -7018,7 +7018,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Coastal Destination"
     ],
-    "image": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Giftun_Soraya01.JPG/1280px-Giftun_Soraya01.JPG",
     "gallery": [
       {
         "title": "جزر الجفتون",
@@ -7122,7 +7122,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/South_Hurghada.jpg/1280px-South_Hurghada.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "ممشى مارينا الغردقة",
@@ -7226,7 +7226,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Coastal Destination"
     ],
-    "image": "https://images.unsplash.com/photo-1510414842594-a61782153f5b?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/El_Gouna_%2C_Egypt.jpg/1280px-El_Gouna_%2C_Egypt.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الجونة",
@@ -7330,7 +7330,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Wadi_el_Gemal_National_Park1.jpg/1280px-Wadi_el_Gemal_National_Park1.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "محمية وادي الجمال",
@@ -7434,7 +7434,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/MonasteroAntonio2.jpg/1280px-MonasteroAntonio2.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "دير الأنبا أنطونيوس",
@@ -7538,7 +7538,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/MonasteroPaolo4.jpg/1280px-MonasteroPaolo4.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "دير الأنبا بولا",
@@ -7642,7 +7642,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/Dorudon_atrox_fossil_at_Wadi_El-Hitan%2C_Egypt%2C_March_2008.jpg/1280px-Dorudon_atrox_fossil_at_Wadi_El-Hitan%2C_Egypt%2C_March_2008.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "وادي الحيتان",
@@ -7746,7 +7746,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Wadi_El-Rayyan%2C_Fayoum%2C_Egypt_%283%29.jpg/1280px-Wadi_El-Rayyan%2C_Fayoum%2C_Egypt_%283%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "وادي الريان",
@@ -7850,7 +7850,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/f/f6/QasrQarunFacade.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "معبد قصر قارون",
@@ -7954,7 +7954,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/8/83/Egypt-region-map-cities-2.gif?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "قرية تونس بالفيوم",
@@ -8058,7 +8058,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/4/45/Satellite_image_of_the_Faiyum_Oasis.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "بحيرة قارون",
@@ -8162,7 +8162,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Wadi_El-Rayyan%2C_Fayoum%2C_Egypt_%283%29.jpg/1280px-Wadi_El-Rayyan%2C_Fayoum%2C_Egypt_%283%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "البحيرة المسحورة",
@@ -8266,7 +8266,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Shali_Fortress.jpg/1280px-Shali_Fortress.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "قلعة شالي بسيوة",
@@ -8370,7 +8370,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/%D9%8A%D9%88%D9%85_%D8%AC%D8%AF%D9%8A%D8%AF.jpg/1280px-%D9%8A%D9%88%D9%85_%D8%AC%D8%AF%D9%8A%D8%AF.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد الوحي بواحة سيوة",
@@ -8474,7 +8474,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/%D9%8A%D9%88%D9%85_%D8%AC%D8%AF%D9%8A%D8%AF.jpg/1280px-%D9%8A%D9%88%D9%85_%D8%AC%D8%AF%D9%8A%D8%AF.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "عين كليوباترا بسيوة",
@@ -8578,7 +8578,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/Al_Farafrah%2C_New_Valley_Governorate%2C_Egypt_-_panoramio_%2821%29.jpg/1280px-Al_Farafrah%2C_New_Valley_Governorate%2C_Egypt_-_panoramio_%2821%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الصحراء البيضاء",
@@ -8682,7 +8682,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Black_Desert.jpg/1280px-Black_Desert.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "الصحراء السوداء",
@@ -8786,7 +8786,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/8/8d/Crystal-rock-hole.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "جبل الكريستال",
@@ -8890,7 +8890,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/89/The_Temple_of_Hibis_by_Hanne_Siegmeier.jpg/1280px-The_Temple_of_Hibis_by_Hanne_Siegmeier.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "معبد هيبس",
@@ -8994,7 +8994,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Dakhla_Oasis_view_%28May_2007%29.jpg/1280px-Dakhla_Oasis_view_%28May_2007%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "قرية القصر الإسلامية",
@@ -9098,7 +9098,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Iconic Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/83/Rashid_For_Wiki-21.jpg/1280px-Rashid_For_Wiki-21.jpg",
     "gallery": [
       {
         "title": "مدينة رشيد التاريخية",
@@ -9202,7 +9202,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/c/c7/Ruins_of_Tanis.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail_unscaled",
     "gallery": [
       {
         "title": "تل تانيس الأثري",
@@ -9306,7 +9306,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Deir_as_Suriani.jpg/1280px-Deir_as_Suriani.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "أديرة وادي النطرون",
@@ -9410,7 +9410,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Sacred Landmark"
     ],
-    "image": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Bischoy_Kloster_BW_9.jpg/1280px-Bischoy_Kloster_BW_9.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "دير الأنبا بيشوي",
@@ -9514,7 +9514,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Ancient Civilizations"
     ],
-    "image": "https://images.unsplash.com/photo-1548625361-16a858525b6a?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/%D8%A7%D9%84%D9%85%D8%B9%D8%A7%D9%84%D9%85_%D8%A7%D9%84%D8%A7%D8%AB%D8%B1%D9%8A%D8%A9_%D9%85%D9%86_%D8%B1%D8%AD%D9%84%D8%A9_%D8%B1%D8%B4%D9%8A%D8%AF_5.jpg/1280px-%D8%A7%D9%84%D9%85%D8%B9%D8%A7%D9%84%D9%85_%D8%A7%D9%84%D8%A7%D8%AB%D8%B1%D9%8A%D8%A9_%D9%85%D9%86_%D8%B1%D8%AD%D9%84%D8%A9_%D8%B1%D8%B4%D9%8A%D8%AF_5.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "قلعة قايتباي برشيد",
@@ -9618,7 +9618,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/ISS035-E-007148_Nile_-_Sinai_-_Dead_Sea_-_Wide_Angle_View.jpg/1280px-ISS035-E-007148_Nile_-_Sinai_-_Dead_Sea_-_Wide_Angle_View.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     "gallery": [
       {
         "title": "محمية الزرانيق",
@@ -9722,7 +9722,7 @@ export const PLACES_DATA = [
     "badgesEn": [
       "Natural Protected Area"
     ],
-    "image": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80",
+    "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Avicennia_marina_-_Nabq_by_Hatem_Moushir_15.JPG/1280px-Avicennia_marina_-_Nabq_by_Hatem_Moushir_15.JPG?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
     "gallery": [
       {
         "title": "محمية نبق",

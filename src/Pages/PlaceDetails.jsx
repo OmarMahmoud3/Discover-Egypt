@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
 import { isUuid } from '../lib/uuidUtils';
+import realPhotosMap from '../data/realPhotosMap.json';
 
 function GalleryViewer({ place, placeName }) {
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
@@ -181,9 +182,13 @@ export default function PlaceDetails() {
         setLoadingSupabase(false);
         setHasCheckedSupabase(true);
         if (!error && data) {
-          const galleryItems = Array.isArray(data.gallery) && data.gallery.length > 0
-            ? data.gallery.map((img) => typeof img === 'string' ? { url: img, title: data.name, alt: data.name } : img)
-            : [{ url: data.image_url, title: data.name, alt: data.name }];
+          const realPhoto = realPhotosMap[data.slug] || realPhotosMap[data.id];
+          const activeImage = realPhoto || data.image_url;
+          const galleryItems = activeImage
+            ? [{ url: activeImage, title: data.name, alt: data.name }]
+            : Array.isArray(data.gallery) && data.gallery.length > 0
+              ? data.gallery.map((img) => (typeof img === 'string' ? { url: img, title: data.name, alt: data.name } : img))
+              : [];
 
           setSupabasePlace({
             id: data.id,
@@ -200,7 +205,7 @@ export default function PlaceDetails() {
             categoryEn: data.category_en || data.category || 'Attraction',
             rating: data.rating || 4.9,
             reviewCount: data.review_count || '1,450',
-            image: data.image_url,
+            image: activeImage,
             gallery: galleryItems,
             historicalText: data.description || (isArabic ? 'معلم سياحي وتراثي متميز في جمهورية مصر العربية.' : 'A distinguished tourism and heritage site in Egypt.'),
             historicalTextEn: data.description_en || data.description || 'A distinguished tourism and heritage site in Egypt.',
