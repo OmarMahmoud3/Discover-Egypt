@@ -261,8 +261,10 @@
   gap: 8px;
   border-bottom: 2px solid var(--border);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-bottom: 2px;
+  scroll-snap-type: x mandatory;
 }
 
 .profile-tabs-bar::-webkit-scrollbar {
@@ -284,6 +286,8 @@
   margin-bottom: -2px;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0; /* CRITICAL: Prevents squishing and overlapping on mobile */
+  scroll-snap-align: start;
   transition: all 0.2s ease;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   touch-action: manipulation;
@@ -736,32 +740,233 @@
 
 /* Responsive Breakpoints */
 @media (max-width: 768px) {
+  .profile-page-container {
+    padding: 14px 12px calc(96px + env(safe-area-inset-bottom, 16px));
+  }
+
+  .profile-page-inner {
+    gap: 16px;
+  }
+
+  .profile-hero-card {
+    padding: 18px 14px;
+    border-radius: var(--radius-md);
+  }
+
   .profile-hero-content {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 16px;
   }
-  
+
+  .profile-hero-user {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .profile-avatar-display {
+    width: 68px;
+    height: 68px;
+    font-size: 30px;
+    border-width: 2.5px;
+    flex-shrink: 0;
+  }
+
+  .profile-avatar-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
+  }
+
+  .profile-user-details {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .profile-display-name {
+    font-size: 20px;
+    line-height: 1.25;
+    margin-bottom: 2px;
+    word-break: break-word;
+  }
+
+  .profile-badge-strip {
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .profile-role-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+
+  .profile-status-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  .profile-email-row {
+    font-size: 12px;
+    word-break: break-all;
+  }
+
+  .profile-member-date {
+    font-size: 11px;
+  }
+
+  /* Quick Stats Strip in 2-column balanced grid */
   .profile-stats-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .profile-stat-link {
+    display: flex;
+    text-decoration: none;
+    color: inherit;
     width: 100%;
   }
 
   .profile-stat-box {
-    flex: 1 1 calc(50% - 6px);
+    width: 100%;
+    min-width: 0;
+    padding: 8px 10px;
+    gap: 8px;
+    justify-content: flex-start;
   }
 
+  .profile-stat-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .profile-stat-num {
+    font-size: 16px;
+  }
+
+  .profile-stat-label {
+    font-size: 10px;
+  }
+
+  /* Admin button stretches full width across both columns */
+  .profile-admin-btn {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    justify-content: center;
+    min-height: 42px;
+    padding: 8px 14px !important;
+    box-sizing: border-box;
+  }
+
+  /* Tabs Bar on Mobile: Touch scrollable with no overflow */
+  .profile-tabs-bar {
+    padding-inline: 2px;
+    gap: 6px;
+    margin-inline: -4px;
+  }
+
+  .profile-tab-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    min-height: 40px;
+    gap: 6px;
+  }
+
+  /* Card and Form Spacing */
+  .profile-card {
+    padding: 16px 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .profile-card-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  .profile-card-title {
+    font-size: 16px;
+  }
+
+  .profile-card-subtitle {
+    font-size: 12px;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .profile-input {
+    font-size: 16px; /* Prevents auto-zoom in iOS Safari */
+    min-height: 48px;
+    padding: 10px 12px;
+  }
+
+  /* Heritage Avatar Choice: Clean 4-column grid */
+  .avatar-selection-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .avatar-choice-btn {
+    padding: 6px 2px;
+    min-height: 52px;
+  }
+
+  .avatar-choice-emoji {
+    font-size: 24px;
+  }
+
+  .avatar-choice-label {
+    font-size: 9px;
+  }
+
+  /* Sticky Actions Bar on mobile */
   .profile-actions-bar {
     flex-direction: column;
     align-items: stretch;
-    bottom: 72px; /* Leave space above mobile bottom nav */
+    gap: 10px;
+    padding: 10px 14px;
+    bottom: calc(74px + env(safe-area-inset-bottom, 8px));
   }
 
   .profile-actions-buttons {
     display: flex;
     width: 100%;
+    gap: 8px;
   }
 
   .profile-actions-buttons button {
     flex: 1;
+    min-height: 42px;
+    padding: 8px 12px;
+    font-size: 13px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .profile-hero-user {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-badge-strip {
+    justify-content: center;
+  }
+
+  .profile-email-row {
+    justify-content: center;
+  }
+
+  .avatar-selection-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

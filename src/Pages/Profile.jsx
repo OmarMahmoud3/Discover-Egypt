@@ -415,7 +415,7 @@ export default function Profile() {
 
             {/* Quick Stats Strip */}
             <div className="profile-stats-strip">
-              <Link to="/favorites" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Link to="/favorites" className="profile-stat-link" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="profile-stat-box" style={{ cursor: 'pointer' }}>
                   <div className="profile-stat-icon">
                     <span className="material-symbols-outlined material-filled" style={{ color: 'var(--secondary)' }}>
@@ -444,6 +444,7 @@ export default function Profile() {
               {isAdmin && (
                 <button
                   type="button"
+                  className="profile-admin-btn"
                   onClick={() => navigate('/admin')}
                   style={{
                     backgroundColor: 'var(--gold-surface)',
