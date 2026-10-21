@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { PLACES_DATA } from '../../data/placesData';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import { isUuid } from '../../lib/uuidUtils';
 import AdminHeader from '../../Components/admin/AdminHeader';
@@ -131,6 +130,8 @@ export default function AdminPlaces() {
 
       const toUpdate = [];
       const toInsert = [];
+
+      const { PLACES_DATA } = await import('../../data/placesData');
 
       PLACES_DATA.forEach((p) => {
         const slug = p.slug || p.id;

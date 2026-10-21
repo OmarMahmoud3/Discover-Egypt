@@ -397,6 +397,7 @@ export default function Home() {
                   src={leadPlace.image}
                   alt={getPlaceName(leadPlace)}
                   loading="lazy"
+                  decoding="async"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -577,6 +578,7 @@ export default function Home() {
                       src={place.image}
                       alt={name}
                       loading="lazy"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div
@@ -686,6 +688,7 @@ export default function Home() {
                       src={place.image}
                       alt={name}
                       loading="lazy"
+                      decoding="async"
                       style={{
                         width: '74px',
                         height: '74px',

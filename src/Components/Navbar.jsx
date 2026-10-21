@@ -323,42 +323,81 @@ export default function Navbar({ session, onOpenAuth }) {
             </button>
 
             {/* Auth / Account Profile Button */}
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="nav-account-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '5px 12px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: session ? 'var(--secondary-surface)' : 'var(--primary)',
-                color: session ? 'var(--secondary)' : '#FFFFFF',
-                fontWeight: '700',
-                fontSize: '13px',
-                border: session ? '1px solid rgba(15, 118, 110, 0.3)' : '1px solid var(--primary-dark)',
-                transition: 'all 0.2s',
-                touchAction: 'manipulation',
-                minWidth: 0,
-                flexShrink: 0,
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: session ? 'var(--secondary)' : 'var(--gold)' }}>
-                account_circle
-              </span>
-              <span
-                className="auth-label"
+            {session ? (
+              <Link
+                to="/profile"
+                className="nav-account-btn"
+                title={t('nav.manageAccount')}
                 style={{
-                  maxWidth: '120px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: location.pathname.startsWith('/profile') || location.pathname.startsWith('/account') ? 'var(--secondary)' : 'var(--secondary-surface)',
+                  color: location.pathname.startsWith('/profile') || location.pathname.startsWith('/account') ? '#FFFFFF' : 'var(--secondary)',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  border: location.pathname.startsWith('/profile') || location.pathname.startsWith('/account') ? '1px solid var(--secondary-dark)' : '1px solid rgba(15, 118, 110, 0.3)',
+                  transition: 'all 0.2s',
+                  touchAction: 'manipulation',
+                  minWidth: 0,
+                  flexShrink: 0,
+                  textDecoration: 'none',
                 }}
               >
-                {session ? t('nav.greeting', { name: displayName }) : t('nav.login')}
-              </span>
-            </button>
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: '18px',
+                    color: location.pathname.startsWith('/profile') || location.pathname.startsWith('/account') ? '#FFFFFF' : 'var(--secondary)',
+                  }}
+                >
+                  account_circle
+                </span>
+                <span
+                  className="auth-label"
+                  style={{
+                    maxWidth: '120px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {t('nav.greeting', { name: displayName })}
+                </span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="nav-account-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--primary)',
+                  color: '#FFFFFF',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  border: '1px solid var(--primary-dark)',
+                  transition: 'all 0.2s',
+                  touchAction: 'manipulation',
+                  minWidth: 0,
+                  flexShrink: 0,
+                  cursor: 'pointer',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--gold)' }}>
+                  account_circle
+                </span>
+                <span className="auth-label">
+                  {t('nav.login')}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -573,17 +612,37 @@ export default function Navbar({ session, onOpenAuth }) {
 
         {/* Drawer Footer Actions */}
         <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-          <button
-            onClick={() => {
-              closeDrawer();
-              onOpenAuth();
-            }}
-            className="btn-primary"
-            style={{ width: '100%', marginBottom: '10px' }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>login</span>
-            <span>{session ? t('nav.manageAccount') : t('nav.login')}</span>
-          </button>
+          {session ? (
+            <Link
+              to="/profile"
+              onClick={closeDrawer}
+              className="btn-primary"
+              style={{
+                width: '100%',
+                marginBottom: '10px',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>account_circle</span>
+              <span>{t('nav.manageAccount')}</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => {
+                closeDrawer();
+                onOpenAuth();
+              }}
+              className="btn-primary"
+              style={{ width: '100%', marginBottom: '10px' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>login</span>
+              <span>{t('nav.login')}</span>
+            </button>
+          )}
         </div>
       </aside>
 

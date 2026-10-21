@@ -77,7 +77,7 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <li>
                 <Link
-                  to="/places/giza-pyramids"
+                  to="/places/giza-plateau"
                   style={{ color: '#E2E8F0', fontSize: '14px', transition: 'color 0.2s' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#E2E8F0')}
@@ -87,7 +87,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  to="/places/karnak-temple"
+                  to="/places/karnak-temple-complex"
                   style={{ color: '#E2E8F0', fontSize: '14px', transition: 'color 0.2s' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#E2E8F0')}
@@ -107,7 +107,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  to="/places/philae-temple"
+                  to="/places/philae-temple-complex"
                   style={{ color: '#E2E8F0', fontSize: '14px', transition: 'color 0.2s' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#E2E8F0')}

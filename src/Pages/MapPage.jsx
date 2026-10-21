@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useDeferredValue } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import PlacesMap from '../Components/PlacesMap';
 import { usePlaces } from '../context/PlacesContext';
@@ -12,6 +12,7 @@ export default function MapPage() {
   const initialCity = searchParams.get('city') || 'all';
 
   const [query, setQuery] = useState(initialQuery);
+  const deferredQuery = useDeferredValue(query);
   const [selectedCity, setSelectedCity] = useState(initialCity);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
@@ -84,11 +85,11 @@ export default function MapPage() {
       const pName = getPlaceName(p).toLowerCase();
       const pCity = getPlaceCity(p).toLowerCase();
       const pCategory = getPlaceCategory(p).toLowerCase();
-      const q = query.trim().toLowerCase();
+      const q = deferredQuery.trim().toLowerCase();
 
       const matchQuery =
         !q ||
-        matchesDestination(p, query) ||
+        matchesDestination(p, deferredQuery) ||
         pName.includes(q) ||
         pCity.includes(q) ||
         pCategory.includes(q) ||
@@ -117,7 +118,7 @@ export default function MapPage() {
 
       return matchQuery && matchCity && matchCategory;
     });
-  }, [allPlaces, query, selectedCity, selectedCategory, getPlaceName, getPlaceCity, getPlaceCategory]);
+  }, [allPlaces, deferredQuery, selectedCity, selectedCategory, getPlaceName, getPlaceCity, getPlaceCategory]);
 
   return (
     <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', padding: '32px 16px 90px' }}>

@@ -24,13 +24,6 @@ export default function ScrollToTop() {
       left: 0,
       behavior: 'instant',
     });
-
-    if (document.documentElement) {
-      document.documentElement.scrollTop = 0;
-    }
-    if (document.body) {
-      document.body.scrollTop = 0;
-    }
   }, [pathname, hash]);
 
   return null;

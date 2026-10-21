@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useFavorites } from '../context/FavoritesContext';
+import { usePlaces } from '../context/PlacesContext';
 import { useLanguage } from '../context/LanguageContext';
 import { isUuid } from '../lib/uuidUtils';
 import realPhotosMap from '../data/realPhotosMap.json';
@@ -157,16 +158,27 @@ export default function PlaceDetails() {
   const { id } = useParams();
   const placeId = id || 'giza-pyramids';
 
-  const [supabasePlace, setSupabasePlace] = useState(null);
-  const [loadingSupabase, setLoadingSupabase] = useState(true);
-  const [hasCheckedSupabase, setHasCheckedSupabase] = useState(false);
+  const { getPlaceByIdOrSlug } = usePlaces();
+  const cachedPlace = getPlaceByIdOrSlug(placeId);
+
+  const [supabasePlace, setSupabasePlace] = useState(() => cachedPlace || null);
+  const [loadingSupabase, setLoadingSupabase] = useState(() => !cachedPlace);
+  const [hasCheckedSupabase, setHasCheckedSupabase] = useState(() => !!cachedPlace);
 
   const { isFavorite, toggleFavorite, showToast } = useFavorites();
   const { t, isArabic, getPlaceName, getPlaceLocation, getPlaceDescription, getPlaceGateInfo } = useLanguage();
 
-  // Check Supabase database exclusively
+  // Check Supabase database with in-memory cache bypass
   useEffect(() => {
     let isMounted = true;
+    const cached = getPlaceByIdOrSlug(placeId);
+    if (cached) {
+      setSupabasePlace(cached);
+      setLoadingSupabase(false);
+      setHasCheckedSupabase(true);
+      return;
+    }
+
     setLoadingSupabase(true);
     let query = supabase.from('places').select('*');
     if (isUuid(placeId)) {
@@ -245,7 +257,7 @@ export default function PlaceDetails() {
     return () => {
       isMounted = false;
     };
-  }, [placeId, isArabic]);
+  }, [placeId, isArabic, getPlaceByIdOrSlug]);
 
   // Exclusively use Supabase place
   const place = supabasePlace;

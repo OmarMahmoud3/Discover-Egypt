@@ -249,18 +249,18 @@ export default function Favorites() {
                   className="journal-entry-card"
                 >
                   {/* Journal Photo */}
-                  <div style={{ position: 'relative', minHeight: '160px', aspectRatio: '16 / 10' }}>
+                  <div className="journal-entry-photo">
                     <img
                       src={place.image}
                       alt={placeName}
                       loading="lazy"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                     <div
                       style={{
                         position: 'absolute',
                         top: '10px',
                         insetInlineStart: '10px',
+                        zIndex: 2,
                       }}
                     >
                       <span className="badge badge-unesco" style={{ fontSize: '11px', padding: '3px 8px' }}>
@@ -270,13 +270,14 @@ export default function Favorites() {
                   </div>
 
                   {/* Journal Details */}
-                  <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div className="journal-entry-details">
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
                         <div className="editorial-tag">
                           <span>{category}</span>
                         </div>
                         <button
+                          type="button"
                           onClick={() => removeFavorite(place.id, placeName)}
                           aria-label={isArabic ? `إزالة ${placeName}` : `Remove ${placeName}`}
                           style={{
@@ -284,6 +285,21 @@ export default function Favorites() {
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: 'var(--radius-sm)',
+                            border: 'none',
+                            background: 'transparent',
+                            transition: 'color 0.15s, background-color 0.15s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--error)';
+                            e.currentTarget.style.backgroundColor = 'var(--error-bg)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--text-light)';
+                            e.currentTarget.style.backgroundColor = 'transparent';
                           }}
                           title={isArabic ? 'إزالة من الدفتر' : 'Remove from journal'}
                         >
@@ -293,7 +309,16 @@ export default function Favorites() {
                         </button>
                       </div>
 
-                      <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--primary)', margin: '0 0 6px' }}>
+                      <h2
+                        style={{
+                          fontSize: 'clamp(17px, 2.2vw, 20px)',
+                          fontWeight: 800,
+                          color: 'var(--primary)',
+                          margin: '0 0 6px',
+                          lineHeight: 1.35,
+                          wordBreak: 'break-word',
+                        }}
+                      >
                         {placeName}
                       </h2>
                       <p
@@ -317,8 +342,10 @@ export default function Favorites() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        marginTop: '16px',
-                        paddingTop: '10px',
+                        flexWrap: 'wrap',
+                        gap: '10px',
+                        marginTop: '14px',
+                        paddingTop: '12px',
                         borderTop: '1px solid var(--border)',
                       }}
                     >
@@ -330,9 +357,9 @@ export default function Favorites() {
                       </div>
 
                       <Link
-                        to={`/places/${place.id}`}
+                        to={`/places/${place.slug || place.id}`}
                         className="btn-outline"
-                        style={{ padding: '6px 14px', fontSize: '12px' }}
+                        style={{ padding: '6px 14px', fontSize: '12px', whiteSpace: 'nowrap' }}
                       >
                         <span>{t('favorites.viewDetailsBtn')}</span>
                         <span className="material-symbols-outlined icon-flip-ltr" style={{ fontSize: '14px' }}>

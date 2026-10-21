@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { translations } from '../i18n/translations';
 
 const LanguageContext = createContext();
@@ -37,21 +37,21 @@ export function LanguageProvider({ children }) {
       : 'Discover Egypt | Official Tourism & Heritage Portal';
   }, [lang, dir, isArabic]);
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     setLang((prev) => (prev === 'ar' ? 'en' : 'ar'));
-  };
+  }, []);
 
-  const setLanguage = (newLang) => {
+  const setLanguage = useCallback((newLang) => {
     if (newLang === 'ar' || newLang === 'en') {
       setLang(newLang);
     }
-  };
+  }, []);
 
   /**
    * Translate helper with nested key lookup & interpolation
    * e.g. t('nav.home'), t('favorites.savedCountSuffix', { count: 3 })
    */
-  const t = (path, params = {}) => {
+  const t = useCallback((path, params = {}) => {
     const keys = path.split('.');
     let current = translations[lang];
 
@@ -81,34 +81,34 @@ export function LanguageProvider({ children }) {
     }
 
     return current;
-  };
+  }, [lang]);
 
   // Place Localization Helpers
-  const getPlaceName = (place) => {
+  const getPlaceName = useCallback((place) => {
     if (!place) return '';
     if (!isArabic) {
       return place.name_en || place.nameEn || place.name || '';
     }
     return place.name || place.name_ar || place.nameEn || '';
-  };
+  }, [isArabic]);
 
-  const getPlaceCity = (place) => {
+  const getPlaceCity = useCallback((place) => {
     if (!place) return '';
     if (!isArabic) {
       return place.city_en || place.cityEn || place.city || '';
     }
     return place.city || place.city_ar || place.cityEn || '';
-  };
+  }, [isArabic]);
 
-  const getPlaceCategory = (place) => {
+  const getPlaceCategory = useCallback((place) => {
     if (!place) return '';
     if (!isArabic) {
       return place.category_en || place.categoryEn || place.category || '';
     }
     return place.category || place.category_ar || place.categoryEn || '';
-  };
+  }, [isArabic]);
 
-  const getPlaceDescription = (place) => {
+  const getPlaceDescription = useCallback((place) => {
     if (!place) return '';
     if (!isArabic) {
       return (
@@ -121,41 +121,57 @@ export function LanguageProvider({ children }) {
       );
     }
     return place.historicalText || place.description || place.description_ar || '';
-  };
+  }, [isArabic]);
 
-  const getPlaceLocation = (place) => {
+  const getPlaceLocation = useCallback((place) => {
     if (!place) return '';
     if (!isArabic) {
       return place.locationShortEn || place.location_en || place.locationShort || '';
     }
     return place.locationShort || place.location || '';
-  };
+  }, [isArabic]);
 
-  const getPlaceGateInfo = (place) => {
+  const getPlaceGateInfo = useCallback((place) => {
     if (!place) return '';
     if (!isArabic) {
       return place.gateInfoEn || place.gateInfo || '';
     }
     return place.gateInfo || '';
-  };
+  }, [isArabic]);
+
+  const value = useMemo(
+    () => ({
+      lang,
+      dir,
+      isArabic,
+      toggleLanguage,
+      setLanguage,
+      t,
+      getPlaceName,
+      getPlaceCity,
+      getPlaceCategory,
+      getPlaceDescription,
+      getPlaceLocation,
+      getPlaceGateInfo,
+    }),
+    [
+      lang,
+      dir,
+      isArabic,
+      toggleLanguage,
+      setLanguage,
+      t,
+      getPlaceName,
+      getPlaceCity,
+      getPlaceCategory,
+      getPlaceDescription,
+      getPlaceLocation,
+      getPlaceGateInfo,
+    ]
+  );
 
   return (
-    <LanguageContext.Provider
-      value={{
-        lang,
-        dir,
-        isArabic,
-        toggleLanguage,
-        setLanguage,
-        t,
-        getPlaceName,
-        getPlaceCity,
-        getPlaceCategory,
-        getPlaceDescription,
-        getPlaceLocation,
-        getPlaceGateInfo,
-      }}
-    >
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

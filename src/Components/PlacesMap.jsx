@@ -109,27 +109,34 @@ function MapResizeWatcher() {
   const map = useMap();
 
   useEffect(() => {
-    map.invalidateSize();
-    const timer1 = setTimeout(() => map.invalidateSize(), 80);
-    const timer2 = setTimeout(() => map.invalidateSize(), 300);
+    let rafId = null;
+    const scheduleInvalidate = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        map.invalidateSize();
+      });
+    };
+
+    scheduleInvalidate();
+    const timer = setTimeout(scheduleInvalidate, 200);
 
     const container = map.getContainer();
     let ro = null;
     if (typeof ResizeObserver !== 'undefined' && container) {
       ro = new ResizeObserver(() => {
-        map.invalidateSize();
+        scheduleInvalidate();
       });
       ro.observe(container);
     }
 
     const handleResize = () => {
-      map.invalidateSize();
+      scheduleInvalidate();
     };
 
     window.addEventListener('resize', handleResize);
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      if (rafId) cancelAnimationFrame(rafId);
+      clearTimeout(timer);
       if (ro) ro.disconnect();
       window.removeEventListener('resize', handleResize);
     };

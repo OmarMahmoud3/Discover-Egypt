@@ -13,12 +13,15 @@ import Footer from './Components/Footer';
 import MobileNav from './Components/MobileNav';
 
 import Home from './Pages/Home';
-import Explore from './Pages/Explore';
-import MapPage from './Pages/MapPage';
-import PlaceDetails from './Pages/PlaceDetails';
-import Favorites from './Pages/Favorites';
-import LogIn from './Pages/LogIn';
-import NotFound from './Pages/NotFound';
+
+// Lazy-loaded Public pages to optimize initial bundle size
+const Explore = lazy(() => import('./Pages/Explore'));
+const MapPage = lazy(() => import('./Pages/MapPage'));
+const PlaceDetails = lazy(() => import('./Pages/PlaceDetails'));
+const Favorites = lazy(() => import('./Pages/Favorites'));
+const Profile = lazy(() => import('./Pages/Profile'));
+const LogIn = lazy(() => import('./Pages/LogIn'));
+const NotFound = lazy(() => import('./Pages/NotFound'));
 
 import AdminRoute from './Components/admin/AdminRoute';
 import AdminLayout from './Components/admin/AdminLayout';
@@ -125,16 +128,20 @@ function AppContent() {
       <main id="main-content" style={{ flex: 1, outline: 'none' }}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/map" element={<MapPage />} />
-          <Route path="/places/:id" element={<PlaceDetails />} />
-          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/explore" element={<Suspense fallback={<AdminSuspenseFallback />}><Explore /></Suspense>} />
+          <Route path="/map" element={<Suspense fallback={<AdminSuspenseFallback />}><MapPage /></Suspense>} />
+          <Route path="/places/:id" element={<Suspense fallback={<AdminSuspenseFallback />}><PlaceDetails /></Suspense>} />
+          <Route path="/favorites" element={<Suspense fallback={<AdminSuspenseFallback />}><Favorites /></Suspense>} />
+          <Route path="/profile" element={<Suspense fallback={<AdminSuspenseFallback />}><Profile /></Suspense>} />
+          <Route path="/account" element={<Suspense fallback={<AdminSuspenseFallback />}><Profile /></Suspense>} />
           <Route
             path="/login"
             element={
-              <div style={{ padding: '60px 16px', display: 'flex', justifyContent: 'center' }}>
-                <LogIn session={session} onClose={() => navigate('/')} />
-              </div>
+              <Suspense fallback={<AdminSuspenseFallback />}>
+                <div style={{ padding: '60px 16px', display: 'flex', justifyContent: 'center' }}>
+                  <LogIn session={session} onClose={() => navigate('/')} />
+                </div>
+              </Suspense>
             }
           />
 
@@ -156,7 +163,7 @@ function AppContent() {
           </Route>
 
           {/* Fallback route */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<Suspense fallback={<AdminSuspenseFallback />}><NotFound /></Suspense>} />
         </Routes>
       </main>
 

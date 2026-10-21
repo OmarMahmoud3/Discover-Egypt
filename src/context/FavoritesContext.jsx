@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { usePlaces } from './PlacesContext';
 import { supabase } from '../lib/supabase';
 import { useAdminAuth } from './AdminAuthContext';
@@ -216,11 +216,13 @@ export function FavoritesProvider({ children }) {
     [userId, showToast, clearCloudFavorites]
   );
 
-  const favoritePlaces = places.filter(
-    (place) =>
-      Array.isArray(favoriteIds) &&
-      (favoriteIds.includes(place.id) || favoriteIds.includes(place.slug))
-  );
+  const favoritePlaces = useMemo(() => {
+    return places.filter(
+      (place) =>
+        Array.isArray(favoriteIds) &&
+        (favoriteIds.includes(place.id) || favoriteIds.includes(place.slug))
+    );
+  }, [places, favoriteIds]);
 
   return (
     <FavoritesContext.Provider

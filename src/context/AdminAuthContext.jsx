@@ -80,24 +80,10 @@ export function AdminAuthProvider({ children }) {
     }
   }, []);
 
-  // Initialize: get session and listen for auth changes
+  // Initialize: get session and listen for auth changes without duplicate profile queries
   useEffect(() => {
     let mounted = true;
-
-    const init = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-      setSession(currentSession);
-
-      if (currentSession?.user?.id) {
-        await fetchProfile(currentSession.user.id, currentSession.user.email);
-      }
-
-      if (mounted) setLoading(false);
-    };
-
-    init();
+    let initialized = false;
 
     const {
       data: { subscription },
@@ -110,6 +96,18 @@ export function AdminAuthProvider({ children }) {
       } else {
         setProfile(null);
       }
+      if (mounted) setLoading(false);
+      initialized = true;
+    });
+
+    // Resilient fallback in case onAuthStateChange is delayed
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      if (!mounted || initialized) return;
+      setSession(currentSession);
+      if (currentSession?.user?.id) {
+        await fetchProfile(currentSession.user.id, currentSession.user.email);
+      }
+      if (mounted) setLoading(false);
     });
 
     return () => {

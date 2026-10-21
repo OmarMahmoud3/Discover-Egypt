@@ -1,18 +1,22 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAdminAuth } from '../context/AdminAuthContext';
 
 export default function MobileNav({ onOpenAuth }) {
   const location = useLocation();
   const { favoriteIds } = useFavorites();
   const { t } = useLanguage();
+  const { session } = useAdminAuth();
 
   const items = [
     { path: '/', label: t('mobile.home'), icon: 'home' },
     { path: '/explore', label: t('mobile.explore'), icon: 'explore' },
     { path: '/map', label: t('mobile.map'), icon: 'map' },
     { path: '/favorites', label: t('mobile.favorites'), icon: 'favorite', hasBadge: favoriteIds.length > 0 },
-    { action: onOpenAuth, label: t('mobile.profile'), icon: 'person' },
+    session
+      ? { path: '/profile', label: t('mobile.profile'), icon: 'person' }
+      : { action: onOpenAuth, label: t('mobile.profile'), icon: 'person' },
   ];
 
   return (
@@ -44,7 +48,11 @@ export default function MobileNav({ onOpenAuth }) {
         }}
       >
         {items.map((item, index) => {
-          const active = item.path ? (item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)) : false;
+          const active = item.path
+            ? (item.path === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(item.path) || (item.path === '/profile' && location.pathname.startsWith('/account')))
+            : false;
 
           const content = (
             <div

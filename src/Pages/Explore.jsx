@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useDeferredValue, lazy, Suspense } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useLanguage } from '../context/LanguageContext';
-import PlacesMap from '../Components/PlacesMap';
 import VoiceSearchButton from '../Components/VoiceSearchButton';
 import { matchesDestination } from '../lib/searchUtils';
+
+// Lazy-load interactive map so Leaflet is never downloaded in default grid mode
+const PlacesMap = lazy(() => import('../Components/PlacesMap'));
 
 export default function Explore() {
   const [searchParams] = useSearchParams();
@@ -14,11 +16,12 @@ export default function Explore() {
   const initialView = searchParams.get('view') === 'map' ? 'map' : 'grid';
 
   const [query, setQuery] = useState(initialQuery);
+  const deferredQuery = useDeferredValue(query);
   const [selectedCity, setSelectedCity] = useState(initialCity);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState(initialView);
 
-  const { places: allPlaces, loading } = usePlaces();
+  const { places: allPlaces } = usePlaces();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { t, isArabic, getPlaceName, getPlaceCity, getPlaceCategory, getPlaceDescription } = useLanguage();
 
@@ -93,11 +96,11 @@ export default function Explore() {
       const pName = getPlaceName(p).toLowerCase();
       const pCity = getPlaceCity(p).toLowerCase();
       const pCategory = getPlaceCategory(p).toLowerCase();
-      const q = query.trim().toLowerCase();
+      const q = deferredQuery.trim().toLowerCase();
 
       const matchQuery =
         !q ||
-        matchesDestination(p, query) ||
+        matchesDestination(p, deferredQuery) ||
         pName.includes(q) ||
         pCity.includes(q) ||
         pCategory.includes(q) ||
@@ -129,7 +132,7 @@ export default function Explore() {
 
       return matchQuery && matchCity && matchCategory;
     });
-  }, [allPlaces, query, selectedCity, selectedCategory, getPlaceName, getPlaceCity, getPlaceCategory]);
+  }, [allPlaces, deferredQuery, selectedCity, selectedCategory, getPlaceName, getPlaceCity, getPlaceCategory]);
 
   return (
     <div style={{ backgroundColor: 'var(--surface)', minHeight: '100vh', padding: '36px 16px 90px' }}>
@@ -424,7 +427,35 @@ export default function Explore() {
         {/* View Mode Switching: Interactive Map or Editorial Grid */}
         {viewMode === 'map' ? (
           <div id="explore-map-container" style={{ marginBottom: '20px' }}>
-            <PlacesMap places={filtered} />
+            <Suspense
+              fallback={
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '400px',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 'var(--radius-card)',
+                    border: '1px solid var(--border)',
+                  }}
+                  aria-busy="true"
+                >
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid var(--border)',
+                      borderTopColor: 'var(--secondary)',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                    }}
+                  />
+                </div>
+              }
+            >
+              <PlacesMap places={filtered} />
+            </Suspense>
           </div>
         ) : filtered.length === 0 ? (
           <div

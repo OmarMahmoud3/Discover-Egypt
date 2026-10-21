@@ -72,6 +72,14 @@ const missingInAr = enAdminKeys.filter((k) => !arAdminKeys.includes(k));
 assert(missingInEn.length === 0, `English admin translations match Arabic keys (missing: ${missingInEn.join(', ') || 'none'})`);
 assert(missingInAr.length === 0, `Arabic admin translations match English keys (missing: ${missingInAr.join(', ') || 'none'})`);
 
+const arProfileKeys = Object.keys(translations.ar.profile || {});
+const enProfileKeys = Object.keys(translations.en.profile || {});
+const missingProfileInEn = arProfileKeys.filter((k) => !enProfileKeys.includes(k));
+const missingProfileInAr = enProfileKeys.filter((k) => !arProfileKeys.includes(k));
+assert(arProfileKeys.length >= 30, `Profile translations contain comprehensive dictionary (actual: ${arProfileKeys.length} keys)`);
+assert(missingProfileInEn.length === 0, `English profile translations match Arabic keys (missing: ${missingProfileInEn.join(', ') || 'none'})`);
+assert(missingProfileInAr.length === 0, `Arabic profile translations match English keys (missing: ${missingProfileInAr.join(', ') || 'none'})`);
+
 // --- 3. Critical Component & Asset Files ---
 console.log('\n[TEST GROUP 3] Component Files & Architecture Assets');
 const criticalFiles = [
@@ -88,6 +96,7 @@ const criticalFiles = [
   'src/Pages/Explore.jsx',
   'src/Pages/Home.jsx',
   'src/Pages/LogIn.jsx',
+  'src/Pages/Profile.jsx',
   'src/Pages/PlaceDetails.jsx',
   'src/Pages/MapPage.jsx',
   'src/Components/PlacesMap.jsx',
@@ -98,6 +107,7 @@ const criticalFiles = [
   'src/Pages/admin/AdminUsers.jsx',
   'src/Pages/admin/AdminSettings.jsx',
   'src/styles/admin.css',
+  'src/styles/profile.css',
   'jsconfig.json',
   'src/lib/searchUtils.js',
   'src/hooks/useVoiceSearch.js',
