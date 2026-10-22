@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BrandLogo from '../Components/BrandLogo';
 import { useLanguage } from '../context/LanguageContext';
@@ -7,15 +7,27 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 
 export default function LogIn({ session, onClose }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAdmin } = useAdminAuth();
   const [mode, setMode] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(() => location?.state?.message || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Clear incoming state message on mount so it doesn't linger on refresh
+  useEffect(() => {
+    if (location?.state?.message) {
+      try {
+        window.history.replaceState({}, document.title);
+      } catch {
+        // ignore
+      }
+    }
+  }, [location?.state?.message]);
 
   const { t, isArabic } = useLanguage();
 

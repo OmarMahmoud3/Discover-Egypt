@@ -368,7 +368,7 @@ testMsgs = testReconcile(testMsgs, { id: 'srv-1', sender_id: 'u1', content: 'tes
 assert(testMsgs.length === 1, 'HTTP response arrives with same ID produces zero duplicates');
 
 // --- Test Group 9: Permanent Account Deletion & Security RPC ---
-console.log('\n[TEST GROUP 9] Permanent Account Deletion & Security RPC');
+console.log('\n[TEST GROUP 9] Permanent Account Deletion, Edge Function & Admin API');
 
 const rpcFilePath = path.resolve('supabase/delete_user_rpc.sql');
 assert(fs.existsSync(rpcFilePath), 'supabase/delete_user_rpc.sql exists');
@@ -381,12 +381,23 @@ assert(rpcContent.includes('DELETE FROM public.messages WHERE sender_id = curren
 assert(rpcContent.includes('DELETE FROM public.conversations'), 'delete_own_user purges user conversations');
 assert(rpcContent.includes('Cannot delete the only remaining administrator account'), 'delete_own_user guards against deleting sole administrator');
 
+// Verify Supabase Edge Function with Admin API
+const edgeFnFile = path.resolve('supabase/functions/delete-user/index.ts');
+assert(fs.existsSync(edgeFnFile), 'supabase/functions/delete-user/index.ts exists');
+const edgeFnCode = fs.readFileSync(edgeFnFile, 'utf8');
+assert(edgeFnCode.includes('adminClient.auth.admin.deleteUser'), 'delete-user Edge Function invokes Supabase Admin API deleteUser');
+assert(edgeFnCode.includes("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')"), 'Service role key is kept strictly on server');
+
 assert(typeof deleteCurrentUserAccount === 'function', 'deleteCurrentUserAccount is exported from communityService.js');
 
 const profileSource = fs.readFileSync(path.resolve('src/Pages/Profile.jsx'), 'utf8');
 assert(profileSource.includes('profile-danger-card'), 'Profile.jsx includes Danger Zone card in Security tab');
 assert(profileSource.includes('delete-modal-dialog'), 'Profile.jsx includes Delete Account modal with WCAG alertdialog');
 assert(profileSource.includes('deleteConfirmWord'), 'Profile.jsx verifies explicit confirmation keyword');
+assert(profileSource.includes("navigate('/login'"), 'Profile.jsx redirects to /login on confirmed deletion');
+
+const logInSource = fs.readFileSync(path.resolve('src/Pages/LogIn.jsx'), 'utf8');
+assert(logInSource.includes('location?.state?.message'), 'LogIn.jsx displays post-deletion confirmation toast');
 
 // --- Summary ---
 console.log('\n======================================================');

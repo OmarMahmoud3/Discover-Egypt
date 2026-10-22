@@ -950,9 +950,11 @@ ALTER TABLE public.conversations REPLICA IDENTITY FULL;
 ALTER TABLE public.messages REPLICA IDENTITY FULL;`;
 
 /**
- * Permanently deletes the currently authenticated user's account and associated data.
- * Calls Supabase RPC `delete_own_user()`, cleans up user-scoped local storage,
- * and signs the user out of all sessions.
+ * Permanently deletes the currently authenticated user's account and associated data
+ * on the server via Supabase Admin API / Edge Function using service role key,
+ * with atomic database RPC fallback.
+ * Strictly verifies identity, purges relational records, terminates session,
+ * and only signals success when the server confirms deletion.
  */
 export async function deleteCurrentUserAccount() {
   const { data: authData, error: authErr } = await supabase.auth.getUser();
@@ -961,43 +963,120 @@ export async function deleteCurrentUserAccount() {
   }
 
   const userId = authData.user.id;
+  let serverConfirmed = false;
+  let lastErrorMsg = null;
 
-  // 1. Call atomic database RPC function in Supabase
-  let dbDeleted = false;
+  // Strategy 1: Dedicated Server Edge Function 'delete-user' (Supabase Admin API with Service Role Key)
   try {
-    const { data: rpcData, error: rpcError } = await supabase.rpc('delete_own_user');
-    if (rpcError) {
-      // Check if it's the system protection error (cannot delete sole admin)
-      if (rpcError.message?.includes('System Protection') || rpcError.message?.includes('administrator')) {
-        throw new Error(rpcError.message);
-      }
-      console.warn('RPC delete_own_user notice:', rpcError.message);
-      // Fallback: If RPC not yet installed in remote schema cache, try deleting from public tables
+    const edgeRes = await supabase.functions.invoke('delete-user', {
+      body: {},
+    });
+
+    if (!edgeRes.error && edgeRes.data?.success) {
+      serverConfirmed = true;
+    } else if (edgeRes.error) {
+      let errMsg = edgeRes.error.message;
       try {
-        await supabase.from('profiles').delete().eq('id', userId);
-        await supabase.from('community_connections').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
-        await supabase.from('conversations').delete().or(`participant1_id.eq.${userId},participant2_id.eq.${userId}`);
-        await supabase.from('messages').delete().eq('sender_id', userId);
-      } catch (tableErr) {
-        console.warn('Direct table cleanup notice:', tableErr);
+        const errorJson = await edgeRes.error.context?.json();
+        if (errorJson?.error) errMsg = errorJson.error;
+      } catch {
+        // ignore json parse error
       }
-    } else {
-      dbDeleted = true;
+
+      // Check if it's 404 (Edge Function not deployed on this instance)
+      const is404 =
+        edgeRes.error?.context?.status === 404 ||
+        edgeRes.error?.name === 'FunctionsHttpError' ||
+        errMsg?.includes('404');
+
+      if (!is404) {
+        lastErrorMsg = errMsg;
+        console.error('[Account Deletion Error in delete-user]:', errMsg);
+        throw new Error(errMsg);
+      }
+    } else if (edgeRes.data?.error) {
+      lastErrorMsg = edgeRes.data.error;
+      console.error('[Account Deletion Error in delete-user data]:', lastErrorMsg);
+      throw new Error(lastErrorMsg);
     }
-  } catch (err) {
-    if (err.message?.includes('System Protection') || err.message?.includes('administrator')) {
-      throw err;
+  } catch (edgeErr) {
+    // If it was an actual server error (not 404), rethrow immediately
+    if (lastErrorMsg || (!edgeErr.message?.includes('404') && !edgeErr.message?.includes('Failed to fetch') && !edgeErr.message?.includes('FunctionsHttpError'))) {
+      throw edgeErr;
     }
-    console.warn('Database deletion exception:', err);
   }
 
-  // 2. Clear all user-scoped storage items
+  // Strategy 2: Fallback to 'admin-users' Edge Function if 'delete-user' returned 404
+  if (!serverConfirmed && !lastErrorMsg) {
+    try {
+      const adminEdgeRes = await supabase.functions.invoke('admin-users', {
+        body: { action: 'delete_own_account' },
+      });
+
+      if (!adminEdgeRes.error && adminEdgeRes.data?.success) {
+        serverConfirmed = true;
+      } else if (adminEdgeRes.error) {
+        let errMsg = adminEdgeRes.error.message;
+        try {
+          const errorJson = await adminEdgeRes.error.context?.json();
+          if (errorJson?.error) errMsg = errorJson.error;
+        } catch {
+          // ignore
+        }
+
+        const is404 =
+          adminEdgeRes.error?.context?.status === 404 ||
+          adminEdgeRes.error?.name === 'FunctionsHttpError' ||
+          errMsg?.includes('404');
+
+        if (!is404) {
+          lastErrorMsg = errMsg;
+          console.error('[Account Deletion Error in admin-users]:', errMsg);
+          throw new Error(errMsg);
+        }
+      } else if (adminEdgeRes.data?.error) {
+        lastErrorMsg = adminEdgeRes.data.error;
+        console.error('[Account Deletion Error in admin-users data]:', lastErrorMsg);
+        throw new Error(lastErrorMsg);
+      }
+    } catch (adminEdgeErr) {
+      if (lastErrorMsg || (!adminEdgeErr.message?.includes('404') && !adminEdgeErr.message?.includes('Failed to fetch') && !adminEdgeErr.message?.includes('FunctionsHttpError'))) {
+        throw adminEdgeErr;
+      }
+    }
+  }
+
+  // Strategy 3: Atomic Server Database RPC 'delete_own_user' (PostgreSQL SECURITY DEFINER)
+  if (!serverConfirmed && !lastErrorMsg) {
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('delete_own_user');
+      if (rpcError) {
+        lastErrorMsg = rpcError.message;
+        console.error('[Account Deletion Error in delete_own_user RPC]:', lastErrorMsg);
+        throw new Error(rpcError.message);
+      } else if (rpcData?.success) {
+        serverConfirmed = true;
+      }
+    } catch (rpcCatchErr) {
+      console.error('[Account Deletion RPC Exception]:', rpcCatchErr);
+      throw rpcCatchErr;
+    }
+  }
+
+  // If server deletion did not succeed, DO NOT proceed to logout or signal success
+  if (!serverConfirmed) {
+    const failureReason = lastErrorMsg || 'Server account deletion could not be completed.';
+    console.error('[Account Deletion Aborted]:', failureReason);
+    throw new Error(failureReason);
+  }
+
+  // 4. Purge all user-scoped storage items ONLY after server confirmed deletion
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(`discover_egypt_favorites_${userId}`);
       localStorage.removeItem('discover_egypt_test_session');
 
-      // Purge from local offline storage fallbacks
+      // Purge local offline storage fallbacks
       const localReqs = getLocalRequests().filter(
         (r) => r.sender_id !== userId && r.receiver_id !== userId
       );
@@ -1012,15 +1091,15 @@ export async function deleteCurrentUserAccount() {
       saveLocalMessages(localMsgs);
     }
   } catch (storageErr) {
-    console.warn('Storage purge error:', storageErr);
+    console.warn('[Account Deletion Storage Warning]:', storageErr);
   }
 
-  // 3. Completely terminate active authentication session
+  // 5. Completely terminate active authentication session
   try {
     await supabase.auth.signOut();
   } catch (signOutErr) {
-    console.warn('SignOut error on deletion:', signOutErr);
+    console.warn('[Account Deletion SignOut Warning]:', signOutErr);
   }
 
-  return { success: true, userId, dbDeleted };
+  return { success: true, userId, serverConfirmed: true };
 }

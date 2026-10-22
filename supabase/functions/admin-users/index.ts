@@ -69,21 +69,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const currentUserId = callerUser?.id;
 
-    // 3. Verify caller's authoritative role in public.profiles
-    const { data: callerProfile, error: profileErr } = await adminClient
-      .from('profiles')
-      .select('role')
-      .eq('id', currentUserId)
-      .maybeSingle();
-
-    if (profileErr || callerProfile?.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden: Only administrators can access user management operations.' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // 4. Parse request payload
+    // 3. Parse request payload
     let payload: any = {};
     if (req.method === 'POST') {
       try {
@@ -94,6 +80,62 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const action = payload.action || 'list_users';
+
+    // 4. Verify caller's authoritative role in public.profiles
+    const { data: callerProfile, error: profileErr } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUserId)
+      .maybeSingle();
+
+    const isCallerAdmin = !profileErr && callerProfile?.role === 'admin';
+
+    // Special Action: delete_own_account (Allowed for any authenticated user on their OWN account)
+    if (action === 'delete_own_account' || (action === 'delete_user' && !payload.targetUserId)) {
+      // Check sole administrator safeguard
+      if (isCallerAdmin) {
+        const { count: adminCount } = await adminClient
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'admin');
+
+        if ((adminCount ?? 0) <= 1) {
+          return new Response(
+            JSON.stringify({ error: 'System Protection: Cannot delete the only remaining administrator account.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      // Explicit relational deletions
+      await adminClient.from('favorites').delete().eq('user_id', currentUserId).catch(() => {});
+      await adminClient.from('messages').delete().eq('sender_id', currentUserId).catch(() => {});
+      await adminClient.from('conversations').delete().or(`participant1_id.eq.${currentUserId},participant2_id.eq.${currentUserId}`).catch(() => {});
+      await adminClient.from('community_connections').delete().or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`).catch(() => {});
+      await adminClient.from('profiles').delete().eq('id', currentUserId).catch(() => {});
+
+      // Delete from Supabase Auth via Admin API
+      const { error: delErr } = await adminClient.auth.admin.deleteUser(currentUserId);
+      if (delErr) {
+        return new Response(
+          JSON.stringify({ error: `Failed to delete user authentication record: ${delErr.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Account permanently deleted from Supabase Auth.', userId: currentUserId }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // All other administrative operations require verified admin role
+    if (!isCallerAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Only administrators can access user management operations.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // 5. Operation: list_users
     if (action === 'list_users') {

@@ -100,7 +100,7 @@ export default function Profile() {
         await deleteCurrentUserAccount();
       }
       setDeleteModalOpen(false);
-      navigate('/', {
+      navigate('/login', {
         replace: true,
         state: { accountDeleted: true, message: t('profile.deleteAccountSuccess') },
       });
