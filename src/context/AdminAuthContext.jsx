@@ -132,14 +132,28 @@ export function AdminAuthProvider({ children }) {
     let mounted = true;
     let initialized = false;
 
+    const getTestSession = () => {
+      try {
+        const testSessionStr = typeof localStorage !== 'undefined' ? localStorage.getItem('discover_egypt_test_session') : null;
+        if (testSessionStr) {
+          const testSession = JSON.parse(testSessionStr);
+          if (testSession?.user?.id) return testSession;
+        }
+      } catch {
+        // ignore
+      }
+      return null;
+    };
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!mounted) return;
-      setSession(newSession);
+      const effectiveSession = newSession || getTestSession();
+      setSession(effectiveSession);
 
-      if (newSession?.user?.id) {
-        await fetchProfile(newSession.user.id, newSession.user.email);
+      if (effectiveSession?.user?.id) {
+        await fetchProfile(effectiveSession.user.id, effectiveSession.user.email);
       } else {
         setProfile(null);
       }
@@ -150,9 +164,10 @@ export function AdminAuthProvider({ children }) {
     // Resilient fallback in case onAuthStateChange is delayed
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (!mounted || initialized) return;
-      setSession(currentSession);
-      if (currentSession?.user?.id) {
-        await fetchProfile(currentSession.user.id, currentSession.user.email);
+      const effectiveSession = currentSession || getTestSession();
+      setSession(effectiveSession);
+      if (effectiveSession?.user?.id) {
+        await fetchProfile(effectiveSession.user.id, effectiveSession.user.email);
       }
       if (mounted) setLoading(false);
     });

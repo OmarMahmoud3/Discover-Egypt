@@ -11,7 +11,19 @@ import { PLACES_DATA } from '../src/data/placesData.js';
 import { translations } from '../src/i18n/translations.js';
 import { adminTranslations } from '../src/i18n/adminTranslations.js';
 import { supabase } from '../src/lib/supabase.js';
-import { calculateSharedInterests, normalizeArabic, filterCommunityProfiles } from '../src/lib/communityService.js';
+import {
+  calculateSharedInterests,
+  normalizeArabic,
+  filterCommunityProfiles,
+  sendConnectionRequest,
+  respondToConnectionRequest,
+  getOrCreateConversation,
+  fetchConversations,
+  fetchMessages,
+  sendMessage,
+  subscribeToRequests,
+  subscribeToMessages,
+} from '../src/lib/communityService.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -121,7 +133,9 @@ const criticalFiles = [
   'src/styles/profile.css',
   'src/styles/community.css',
   'src/lib/communityService.js',
+  'src/Components/ChatDrawer.jsx',
   'supabase/community_discovery_schema.sql',
+  'supabase/community_messaging_schema.sql',
   'jsconfig.json',
   'src/lib/searchUtils.js',
   'src/hooks/useVoiceSearch.js',
@@ -267,6 +281,53 @@ assert(footerContent.includes('to="/community"'), 'Footer includes /community li
 assert(homeContent.includes('to="/community"'), 'Home page features /community button for immediate discovery');
 assert(translations.ar.mobile && typeof translations.ar.mobile.community === 'string', 'Arabic mobile translations contain community key');
 assert(translations.en.mobile && typeof translations.en.mobile.community === 'string', 'English mobile translations contain community key');
+
+// --- 7. Community Requests & Realtime Messaging Verification ---
+console.log('\n[TEST GROUP 7] Community Requests & Realtime Messaging Verification');
+const messagingSchemaContent = fs.readFileSync(path.resolve('supabase/community_messaging_schema.sql'), 'utf-8');
+
+// Schema integrity and RLS policy verification
+assert(messagingSchemaContent.includes('CREATE TABLE IF NOT EXISTS public.community_connections'), 'community_messaging_schema.sql creates community_connections table');
+assert(messagingSchemaContent.includes('CREATE TABLE IF NOT EXISTS public.conversations'), 'community_messaging_schema.sql creates conversations table');
+assert(messagingSchemaContent.includes('CREATE TABLE IF NOT EXISTS public.messages'), 'community_messaging_schema.sql creates messages table');
+assert(messagingSchemaContent.includes('ALTER TABLE public.community_connections ENABLE ROW LEVEL SECURITY'), 'RLS enabled on community_connections');
+assert(messagingSchemaContent.includes('ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY'), 'RLS enabled on conversations');
+assert(messagingSchemaContent.includes('ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY'), 'RLS enabled on messages');
+assert(messagingSchemaContent.includes('supabase_realtime ADD TABLE public.community_connections'), 'Realtime publication enabled on community_connections');
+assert(messagingSchemaContent.includes('supabase_realtime ADD TABLE public.messages'), 'Realtime publication enabled on messages');
+
+// Service function API verification
+assert(typeof sendConnectionRequest === 'function', 'sendConnectionRequest is exported');
+assert(typeof respondToConnectionRequest === 'function', 'respondToConnectionRequest is exported');
+assert(typeof getOrCreateConversation === 'function', 'getOrCreateConversation is exported');
+assert(typeof fetchConversations === 'function', 'fetchConversations is exported');
+assert(typeof fetchMessages === 'function', 'fetchMessages is exported');
+assert(typeof sendMessage === 'function', 'sendMessage is exported');
+assert(typeof subscribeToRequests === 'function', 'subscribeToRequests is exported');
+assert(typeof subscribeToMessages === 'function', 'subscribeToMessages is exported');
+
+// Validation tests
+let selfConnectError = false;
+try {
+  await sendConnectionRequest({ senderId: 'user-1', receiverId: 'user-1', message: 'Hello' });
+} catch (e) {
+  selfConnectError = true;
+}
+assert(selfConnectError, 'sendConnectionRequest prevents self-connecting');
+
+let missingMsgError = false;
+try {
+  await sendConnectionRequest({ senderId: 'user-1', receiverId: 'user-2', message: '' });
+} catch (e) {
+  missingMsgError = true;
+}
+assert(missingMsgError, 'sendConnectionRequest enforces non-empty message content');
+
+// Conversation participant ordering logic (deterministic p1 < p2)
+const convOrderA = await getOrCreateConversation({ user1Id: 'user-b', user2Id: 'user-a' });
+const convOrderB = await getOrCreateConversation({ user1Id: 'user-a', user2Id: 'user-b' });
+assert(convOrderA.participant1_id === 'user-a' && convOrderA.participant2_id === 'user-b', 'getOrCreateConversation normalizes participant IDs in canonical order');
+assert(convOrderA.participant1_id === convOrderB.participant1_id && convOrderA.participant2_id === convOrderB.participant2_id, 'Canonical order matches regardless of argument order');
 
 // --- Summary ---
 console.log('\n======================================================');
