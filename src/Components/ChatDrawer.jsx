@@ -2,6 +2,36 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchMessages, sendMessage, subscribeToMessages, HERITAGE_AVATARS_MAP } from '../lib/communityService';
 
+// Deduplicate and reconcile messages (handles optimistic updates and realtime race conditions)
+function reconcileMessage(prevMessages, incoming) {
+  if (!incoming || !incoming.id) return prevMessages;
+
+  // 1. If message already exists by real id, ignore duplicate
+  const existingExactIndex = prevMessages.findIndex((m) => m.id === incoming.id);
+  if (existingExactIndex !== -1) {
+    return prevMessages;
+  }
+
+  // 2. If incoming is a confirmed server message, check for matching pending optimistic message
+  if (!incoming.is_pending) {
+    const pendingIndex = prevMessages.findIndex(
+      (m) =>
+        m.is_pending &&
+        m.sender_id === incoming.sender_id &&
+        m.content === incoming.content
+    );
+
+    if (pendingIndex !== -1) {
+      const next = [...prevMessages];
+      next[pendingIndex] = incoming;
+      return next;
+    }
+  }
+
+  // 3. Otherwise append
+  return [...prevMessages, incoming];
+}
+
 export default function ChatDrawer({
   isOpen,
   onClose,
@@ -32,7 +62,12 @@ export default function ChatDrawer({
           setMessages((prev) => {
             const fetched = Array.isArray(data) ? data : [];
             const fetchedIds = new Set(fetched.map((m) => m.id));
-            const pendingOrNew = prev.filter((m) => !fetchedIds.has(m.id));
+            const pendingOrNew = prev.filter(
+              (m) =>
+                m.is_pending ||
+                (!fetchedIds.has(m.id) &&
+                  !fetched.some((f) => f.content === m.content && f.sender_id === m.sender_id))
+            );
             return [...fetched, ...pendingOrNew];
           });
           setLoading(false);
@@ -45,10 +80,7 @@ export default function ChatDrawer({
 
     // Subscribe to incoming realtime messages
     const unsubscribe = subscribeToMessages(conversationId, (newMsg) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
-      });
+      setMessages((prev) => reconcileMessage(prev, newMsg));
     });
 
     return () => {
@@ -78,9 +110,22 @@ export default function ChatDrawer({
     const text = inputText.trim();
     if (!text || sending || !conversationId || !currentUser?.id) return;
 
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimisticMsg = {
+      id: tempId,
+      conversation_id: conversationId,
+      sender_id: currentUser.id,
+      content: text,
+      created_at: new Date().toISOString(),
+      is_pending: true,
+    };
+
     setSending(true);
     setSendError(null);
     setInputText('');
+
+    // Immediately display the optimistic message in the UI
+    setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
       const res = await sendMessage({
@@ -89,13 +134,14 @@ export default function ChatDrawer({
         content: text,
       });
 
-      if (res?.data && !messages.some((m) => m.id === res.data.id)) {
-        setMessages((prev) => [...prev, res.data]);
-        setLoading(false);
+      if (res?.data) {
+        // Reconcile optimistic message with server data atomically
+        setMessages((prev) => reconcileMessage(prev, res.data));
       }
     } catch (err) {
       console.error('Failed to send message:', err);
-      // Restore input text on error
+      // Remove optimistic message on error and restore input
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setInputText(text);
       setSendError(t('community.sendMessageError') || 'Failed to send message');
     } finally {
@@ -196,7 +242,8 @@ export default function ChatDrawer({
                 return (
                   <div
                     key={msg.id || msg.created_at}
-                    className={`chat-message-row ${isMine ? 'mine' : 'theirs'}`}
+                    className={`chat-message-row ${isMine ? 'mine' : 'theirs'}${msg.is_pending ? ' is-pending' : ''}`}
+                    style={msg.is_pending ? { opacity: 0.75 } : undefined}
                   >
                     <div className="chat-bubble">
                       <p className="chat-bubble-text">{msg.content}</p>

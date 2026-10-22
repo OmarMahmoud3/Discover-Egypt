@@ -682,6 +682,7 @@ export async function fetchConversations(userId) {
 export async function fetchMessages(conversationId) {
   if (!conversationId) return [];
 
+  let list = [];
   try {
     const { data, error } = await supabase
       .from('messages')
@@ -690,16 +691,24 @@ export async function fetchMessages(conversationId) {
       .order('created_at', { ascending: true });
 
     if (!error && Array.isArray(data)) {
-      return data;
+      list = data;
+    } else {
+      list = getLocalMessages().filter((m) => m.conversation_id === conversationId);
     }
   } catch (err) {
     console.warn('Error fetching messages from Supabase:', err);
+    list = getLocalMessages().filter((m) => m.conversation_id === conversationId);
   }
 
-  // Fallback to local storage
-  return getLocalMessages()
-    .filter((m) => m.conversation_id === conversationId)
-    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Deduplicate by message ID and sort by timestamp
+  const seen = new Set();
+  const unique = [];
+  for (const m of list) {
+    if (m?.id && seen.has(m.id)) continue;
+    if (m?.id) seen.add(m.id);
+    unique.push(m);
+  }
+  return unique.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 }
 
 /**
@@ -801,8 +810,9 @@ export function subscribeToMessages(conversationId, callback) {
   if (!conversationId || typeof callback !== 'function') return () => {};
 
   try {
+    const channelName = `chat-${conversationId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const channel = supabase
-      .channel(`chat-${conversationId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

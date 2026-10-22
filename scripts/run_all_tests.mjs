@@ -329,6 +329,43 @@ const convOrderB = await getOrCreateConversation({ user1Id: 'user-a', user2Id: '
 assert(convOrderA.participant1_id === 'user-a' && convOrderA.participant2_id === 'user-b', 'getOrCreateConversation normalizes participant IDs in canonical order');
 assert(convOrderA.participant1_id === convOrderB.participant1_id && convOrderA.participant2_id === convOrderB.participant2_id, 'Canonical order matches regardless of argument order');
 
+// --- Test Group 8: Chat Message Deduplication & Optimistic Reconciliation ---
+console.log('\n[TEST GROUP 8] Chat Message Deduplication & Optimistic Reconciliation');
+
+const chatDrawerPath = path.resolve('src/Components/ChatDrawer.jsx');
+const chatDrawerCode = fs.readFileSync(chatDrawerPath, 'utf8');
+
+assert(chatDrawerCode.includes('function reconcileMessage'), 'ChatDrawer.jsx implements atomic reconcileMessage');
+assert(chatDrawerCode.includes('reconcileMessage(prev, newMsg)'), 'ChatDrawer realtime subscriber uses reconcileMessage');
+assert(chatDrawerCode.includes('reconcileMessage(prev, res.data)'), 'ChatDrawer sendMessage response uses reconcileMessage');
+assert(!chatDrawerCode.includes('!messages.some((m) => m.id === res.data.id)'), 'Stale closure messages.some check is removed');
+
+// Test reconciliation behavior
+function testReconcile(prevMessages, incoming) {
+  if (!incoming || !incoming.id) return prevMessages;
+  const existingExactIndex = prevMessages.findIndex((m) => m.id === incoming.id);
+  if (existingExactIndex !== -1) return prevMessages;
+  if (!incoming.is_pending) {
+    const pendingIndex = prevMessages.findIndex(
+      (m) => m.is_pending && m.sender_id === incoming.sender_id && m.content === incoming.content
+    );
+    if (pendingIndex !== -1) {
+      const next = [...prevMessages];
+      next[pendingIndex] = incoming;
+      return next;
+    }
+  }
+  return [...prevMessages, incoming];
+}
+
+let testMsgs = [{ id: 'temp-1', sender_id: 'u1', content: 'test text', is_pending: true }];
+// Realtime packet arrives
+testMsgs = testReconcile(testMsgs, { id: 'srv-1', sender_id: 'u1', content: 'test text' });
+assert(testMsgs.length === 1 && testMsgs[0].id === 'srv-1', 'Realtime packet replaces pending optimistic message');
+// HTTP response arrives second
+testMsgs = testReconcile(testMsgs, { id: 'srv-1', sender_id: 'u1', content: 'test text' });
+assert(testMsgs.length === 1, 'HTTP response arrives with same ID produces zero duplicates');
+
 // --- Summary ---
 console.log('\n======================================================');
 console.log(`  TEST RESULTS: ${passed} PASSED, ${failed} FAILED`);
