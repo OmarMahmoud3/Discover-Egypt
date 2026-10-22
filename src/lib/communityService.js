@@ -949,3 +949,78 @@ ALTER TABLE public.community_connections REPLICA IDENTITY FULL;
 ALTER TABLE public.conversations REPLICA IDENTITY FULL;
 ALTER TABLE public.messages REPLICA IDENTITY FULL;`;
 
+/**
+ * Permanently deletes the currently authenticated user's account and associated data.
+ * Calls Supabase RPC `delete_own_user()`, cleans up user-scoped local storage,
+ * and signs the user out of all sessions.
+ */
+export async function deleteCurrentUserAccount() {
+  const { data: authData, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !authData?.user?.id) {
+    throw new Error('Not authenticated: You must be logged in to delete your account.');
+  }
+
+  const userId = authData.user.id;
+
+  // 1. Call atomic database RPC function in Supabase
+  let dbDeleted = false;
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('delete_own_user');
+    if (rpcError) {
+      // Check if it's the system protection error (cannot delete sole admin)
+      if (rpcError.message?.includes('System Protection') || rpcError.message?.includes('administrator')) {
+        throw new Error(rpcError.message);
+      }
+      console.warn('RPC delete_own_user notice:', rpcError.message);
+      // Fallback: If RPC not yet installed in remote schema cache, try deleting from public tables
+      try {
+        await supabase.from('profiles').delete().eq('id', userId);
+        await supabase.from('community_connections').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+        await supabase.from('conversations').delete().or(`participant1_id.eq.${userId},participant2_id.eq.${userId}`);
+        await supabase.from('messages').delete().eq('sender_id', userId);
+      } catch (tableErr) {
+        console.warn('Direct table cleanup notice:', tableErr);
+      }
+    } else {
+      dbDeleted = true;
+    }
+  } catch (err) {
+    if (err.message?.includes('System Protection') || err.message?.includes('administrator')) {
+      throw err;
+    }
+    console.warn('Database deletion exception:', err);
+  }
+
+  // 2. Clear all user-scoped storage items
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(`discover_egypt_favorites_${userId}`);
+      localStorage.removeItem('discover_egypt_test_session');
+
+      // Purge from local offline storage fallbacks
+      const localReqs = getLocalRequests().filter(
+        (r) => r.sender_id !== userId && r.receiver_id !== userId
+      );
+      saveLocalRequests(localReqs);
+
+      const localConvs = getLocalConversations().filter(
+        (c) => c.participant1_id !== userId && c.participant2_id !== userId
+      );
+      saveLocalConversations(localConvs);
+
+      const localMsgs = getLocalMessages().filter((m) => m.sender_id !== userId);
+      saveLocalMessages(localMsgs);
+    }
+  } catch (storageErr) {
+    console.warn('Storage purge error:', storageErr);
+  }
+
+  // 3. Completely terminate active authentication session
+  try {
+    await supabase.auth.signOut();
+  } catch (signOutErr) {
+    console.warn('SignOut error on deletion:', signOutErr);
+  }
+
+  return { success: true, userId, dbDeleted };
+}

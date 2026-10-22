@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { BRAND_PILLARS } from '../data/brandPillars';
 import { usePlaces } from '../context/PlacesContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -9,6 +9,23 @@ import VoiceSearchButton from '../Components/VoiceSearchButton';
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const [feedbackToast, setFeedbackToast] = useState(() => location?.state?.message || null);
+
+  useEffect(() => {
+    if (feedbackToast) {
+      const timer = setTimeout(() => {
+        setFeedbackToast(null);
+        try {
+          window.history.replaceState({}, document.title);
+        } catch {
+          // ignore
+        }
+      }, 5500);
+      return () => clearTimeout(timer);
+    }
+  }, [feedbackToast]);
+
   const { places } = usePlaces();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { t, isArabic, getPlaceName, getPlaceCity, getPlaceDescription, getPlaceCategory } = useLanguage();
@@ -834,6 +851,52 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Floating Feedback Toast (e.g. Account Deletion Confirmation) */}
+      {feedbackToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            insetInlineEnd: '24px',
+            zIndex: 9999,
+            backgroundColor: '#064E3B',
+            color: '#ECFDF5',
+            padding: '14px 22px',
+            borderRadius: '12px',
+            border: '1px solid #10B981',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '14px',
+            fontWeight: 700,
+            animation: 'slideUpIn 0.3s ease',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ color: '#34D399', fontSize: '22px' }}>
+            check_circle
+          </span>
+          <span>{feedbackToast}</span>
+          <button
+            type="button"
+            onClick={() => setFeedbackToast(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#A7F3D0',
+              cursor: 'pointer',
+              fontSize: '16px',
+              padding: '2px',
+              marginInlineStart: '8px',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

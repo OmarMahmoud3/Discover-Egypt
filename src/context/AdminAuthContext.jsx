@@ -185,6 +185,15 @@ export function AdminAuthProvider({ children }) {
     setProfile(null);
   }, []);
 
+  // Permanent Account Deletion handler
+  const handleDeleteAccount = useCallback(async () => {
+    const { deleteCurrentUserAccount } = await import('../lib/communityService');
+    const result = await deleteCurrentUserAccount();
+    setSession(null);
+    setProfile(null);
+    return result;
+  }, []);
+
   // Re-check profile (e.g. after refresh)
   const refreshProfile = useCallback(async () => {
     if (session?.user?.id) {
@@ -210,6 +219,7 @@ export function AdminAuthProvider({ children }) {
     isAdmin,
     isReady,
     handleLogout,
+    handleDeleteAccount,
     refreshProfile,
   };
 

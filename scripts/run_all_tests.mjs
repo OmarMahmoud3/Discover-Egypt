@@ -23,6 +23,7 @@ import {
   sendMessage,
   subscribeToRequests,
   subscribeToMessages,
+  deleteCurrentUserAccount,
 } from '../src/lib/communityService.js';
 import fs from 'fs';
 import path from 'path';
@@ -365,6 +366,27 @@ assert(testMsgs.length === 1 && testMsgs[0].id === 'srv-1', 'Realtime packet rep
 // HTTP response arrives second
 testMsgs = testReconcile(testMsgs, { id: 'srv-1', sender_id: 'u1', content: 'test text' });
 assert(testMsgs.length === 1, 'HTTP response arrives with same ID produces zero duplicates');
+
+// --- Test Group 9: Permanent Account Deletion & Security RPC ---
+console.log('\n[TEST GROUP 9] Permanent Account Deletion & Security RPC');
+
+const rpcFilePath = path.resolve('supabase/delete_user_rpc.sql');
+assert(fs.existsSync(rpcFilePath), 'supabase/delete_user_rpc.sql exists');
+
+const rpcContent = fs.readFileSync(rpcFilePath, 'utf8');
+assert(rpcContent.includes('CREATE OR REPLACE FUNCTION public.delete_own_user'), 'delete_own_user RPC function defined');
+assert(rpcContent.includes('auth.uid()'), 'delete_own_user verifies auth.uid() identity');
+assert(rpcContent.includes('DELETE FROM auth.users WHERE id = current_user_id'), 'delete_own_user permanently deletes auth.users record');
+assert(rpcContent.includes('DELETE FROM public.messages WHERE sender_id = current_user_id'), 'delete_own_user purges user messages');
+assert(rpcContent.includes('DELETE FROM public.conversations'), 'delete_own_user purges user conversations');
+assert(rpcContent.includes('Cannot delete the only remaining administrator account'), 'delete_own_user guards against deleting sole administrator');
+
+assert(typeof deleteCurrentUserAccount === 'function', 'deleteCurrentUserAccount is exported from communityService.js');
+
+const profileSource = fs.readFileSync(path.resolve('src/Pages/Profile.jsx'), 'utf8');
+assert(profileSource.includes('profile-danger-card'), 'Profile.jsx includes Danger Zone card in Security tab');
+assert(profileSource.includes('delete-modal-dialog'), 'Profile.jsx includes Delete Account modal with WCAG alertdialog');
+assert(profileSource.includes('deleteConfirmWord'), 'Profile.jsx verifies explicit confirmation keyword');
 
 // --- Summary ---
 console.log('\n======================================================');

@@ -23,7 +23,7 @@ const HERITAGE_AVATARS = [
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { session, profile, isAdmin, handleLogout, refreshProfile } = useAdminAuth();
+  const { session, profile, isAdmin, handleLogout, handleDeleteAccount, refreshProfile } = useAdminAuth();
   const { lang, setLanguage, t, isArabic } = useLanguage();
   const { favoriteIds } = useFavorites();
   const { places } = usePlaces();
@@ -73,6 +73,52 @@ export default function Profile() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  // Delete Account State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const expectedConfirmWord = t('profile.deleteConfirmWord') || (isArabic ? 'حذف' : 'DELETE');
+  const normalizedDeleteInput = deleteConfirmInput.trim().toUpperCase();
+  const isDeleteConfirmed =
+    normalizedDeleteInput === expectedConfirmWord.toUpperCase() ||
+    normalizedDeleteInput === 'حذف' ||
+    normalizedDeleteInput === 'DELETE';
+
+  const onConfirmDeleteAccount = async () => {
+    if (!isDeleteConfirmed || deleteLoading) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+
+    try {
+      if (typeof handleDeleteAccount === 'function') {
+        await handleDeleteAccount();
+      } else {
+        const { deleteCurrentUserAccount } = await import('../lib/communityService');
+        await deleteCurrentUserAccount();
+      }
+      setDeleteModalOpen(false);
+      navigate('/', {
+        replace: true,
+        state: { accountDeleted: true, message: t('profile.deleteAccountSuccess') },
+      });
+    } catch (err) {
+      console.error('Account deletion error:', err);
+      const isSystemAdminErr =
+        err.message?.includes('System Protection') ||
+        err.message?.includes('administrator') ||
+        err.message?.includes('المسؤول');
+
+      setDeleteError(
+        isSystemAdminErr
+          ? t('profile.deleteAdminError')
+          : (err.message || t('profile.deleteAccountError'))
+      );
+      setDeleteLoading(false);
+    }
+  };
 
   // Page interaction state
   const [saving, setSaving] = useState(false);
@@ -1051,6 +1097,39 @@ export default function Profile() {
                   </button>
                 </div>
               </form>
+
+              {/* Danger Zone: Permanent Account Deletion */}
+              <div className="profile-danger-card">
+                <div className="profile-danger-header">
+                  <div>
+                    <div className="profile-danger-title-row">
+                      <span className="material-symbols-outlined" style={{ color: '#DC2626', fontSize: '22px' }}>
+                        warning
+                      </span>
+                      <h3 className="profile-danger-title">
+                        {t('profile.deleteAccountDangerTitle')}
+                      </h3>
+                    </div>
+                    <p className="profile-danger-desc">
+                      {t('profile.deleteAccountDangerDesc')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="profile-danger-btn"
+                    onClick={() => {
+                      setDeleteModalOpen(true);
+                      setDeleteConfirmInput('');
+                      setDeleteError('');
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                      delete_forever
+                    </span>
+                    <span>{t('profile.deleteAccountBtn')}</span>
+                  </button>
+                </div>
+              </div>
             </section>
           )}
 
@@ -1545,6 +1624,153 @@ export default function Profile() {
                 }}
               >
                 {t('profile.confirmLogoutBtn')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permanent Account Deletion Confirmation Modal */}
+      {deleteModalOpen && (
+        <div
+          className="delete-modal-overlay"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          onClick={() => {
+            if (!deleteLoading) setDeleteModalOpen(false);
+          }}
+        >
+          <div
+            className="delete-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+            dir={isArabic ? 'rtl' : 'ltr'}
+          >
+            {/* Header */}
+            <div className="delete-modal-header">
+              <div className="delete-modal-header-text">
+                <div className="delete-modal-header-icon">
+                  <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>
+                    delete_forever
+                  </span>
+                </div>
+                <h3 id="delete-dialog-title" className="delete-modal-title">
+                  {t('profile.deleteModalTitle')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="delete-modal-close-btn"
+                onClick={() => {
+                  if (!deleteLoading) setDeleteModalOpen(false);
+                }}
+                disabled={deleteLoading}
+                aria-label={t('profile.cancelBtn')}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="delete-modal-body">
+              {/* Critical Warning Alert */}
+              <div className="delete-warning-banner">
+                <span className="material-symbols-outlined" style={{ fontSize: '20px', flexShrink: 0 }}>
+                  warning
+                </span>
+                <span>{t('profile.deleteModalWarning')}</span>
+              </div>
+
+              {/* Data Eradication Summary List */}
+              <div className="delete-data-list">
+                <div className="delete-data-list-title">
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#DC2626' }}>
+                    shield
+                  </span>
+                  <span>{t('profile.deleteDataListTitle')}</span>
+                </div>
+                <ul className="delete-data-items">
+                  <li className="delete-data-item">
+                    <span className="delete-data-item-icon">🔐</span>
+                    <span>{t('profile.deleteDataAuth')}</span>
+                  </li>
+                  <li className="delete-data-item">
+                    <span className="delete-data-item-icon">👤</span>
+                    <span>{t('profile.deleteDataProfile')}</span>
+                  </li>
+                  <li className="delete-data-item">
+                    <span className="delete-data-item-icon">💖</span>
+                    <span>{t('profile.deleteDataFavorites')}</span>
+                  </li>
+                  <li className="delete-data-item">
+                    <span className="delete-data-item-icon">💬</span>
+                    <span>{t('profile.deleteDataMessages')}</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Explicit Confirmation Input */}
+              <div className="delete-confirm-box">
+                <label htmlFor="delete-confirm-input" className="delete-confirm-label">
+                  {t('profile.deleteConfirmPrompt', { word: expectedConfirmWord })}
+                </label>
+                <input
+                  id="delete-confirm-input"
+                  type="text"
+                  className={`delete-confirm-input ${isDeleteConfirmed ? 'is-matched' : ''}`}
+                  value={deleteConfirmInput}
+                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                  placeholder={t('profile.deleteConfirmPlaceholder')}
+                  disabled={deleteLoading}
+                  autoComplete="off"
+                />
+              </div>
+
+              {/* Error feedback if any */}
+              {deleteError && (
+                <div className="delete-modal-error" role="alert">
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    error
+                  </span>
+                  <span>{deleteError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="delete-modal-footer">
+              <button
+                type="button"
+                className="delete-cancel-btn"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deleteLoading}
+              >
+                {t('profile.cancelBtn')}
+              </button>
+              <button
+                type="button"
+                className="delete-submit-btn"
+                onClick={onConfirmDeleteAccount}
+                disabled={!isDeleteConfirmed || deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: '16px', animation: 'spin 0.8s linear infinite' }}
+                    >
+                      progress_activity
+                    </span>
+                    <span>{t('profile.deletingAccount')}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                      delete_forever
+                    </span>
+                    <span>{t('profile.confirmDeleteBtn')}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
