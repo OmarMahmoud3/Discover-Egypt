@@ -331,6 +331,7 @@ export const translations = {
       deleteAccountSuccess: 'تم حذف حسابك وجميع بياناتك المرتبطة به نهائياً بنجاح.',
       deleteAccountError: 'تعذر حذف الحساب، يرجى المحاولة لاحقاً أو مراجعة الاتصال.',
       deleteAdminError: 'لا يمكن حذف الحساب الإداري الوحيد المتبقي للنظام.',
+      deleteServerNotConfigured: 'ميزة حذف الحساب تتطلب تفعيل دالة SQL في قاعدة بيانات Supabase. يرجى تشغيل ملف supabase/delete_user_rpc.sql في محرر SQL في Supabase أو نشر دالة Edge Function (delete-user).',
     },
     community: {
       pageTitle: 'اكتشف أشخاصاً',
@@ -753,6 +754,7 @@ export const translations = {
       deleteAccountSuccess: 'Your account and all associated data have been permanently deleted.',
       deleteAccountError: 'Failed to delete account. Please try again later or check your connection.',
       deleteAdminError: 'Cannot delete the sole administrator account of the system.',
+      deleteServerNotConfigured: 'Permanent account deletion requires enabling the SQL function in Supabase. Please run supabase/delete_user_rpc.sql in the Supabase SQL Editor or deploy the delete-user Edge Function.',
     },
     community: {
       pageTitle: 'Discover People',

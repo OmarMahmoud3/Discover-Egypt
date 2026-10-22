@@ -80,8 +80,25 @@ assert.ok(
   commServiceCode.includes('await supabase.auth.signOut()'),
   'deleteCurrentUserAccount must sign the user out of all sessions'
 );
+assert.ok(
+  commServiceCode.includes('isEdgeFunctionUnavailable'),
+  'communityService.js must implement isEdgeFunctionUnavailable to detect undeployed functions'
+);
 
-console.log('✅ 3. Client service layer server-side invocation & error propagation verified.');
+// Verify isEdgeFunctionUnavailable logic directly
+{
+  const { isEdgeFunctionUnavailable } = await import('../src/lib/communityService.js');
+  assert.equal(isEdgeFunctionUnavailable({ name: 'FunctionsFetchError', message: 'Failed to send a request to the Edge Function' }), true);
+  assert.equal(isEdgeFunctionUnavailable(null, 'Failed to send a request to the Edge Function'), true);
+  assert.equal(isEdgeFunctionUnavailable({ name: 'FunctionsRelayError', message: 'Relay error' }), true);
+  assert.equal(isEdgeFunctionUnavailable({ context: { status: 404 } }), true);
+  assert.equal(isEdgeFunctionUnavailable(new Error('Failed to fetch')), true);
+  // Real server permission or system admin errors should NOT be treated as unavailable
+  assert.equal(isEdgeFunctionUnavailable(new Error('System Protection: Cannot delete sole administrator')), false);
+  assert.equal(isEdgeFunctionUnavailable(new Error('Forbidden: You cannot delete another user account')), false);
+}
+
+console.log('✅ 3. Client service layer server-side invocation, Edge reachability fallback & error propagation verified.');
 
 // 4. Verify Profile.jsx redirects to /login on success and preserves modal on error
 const profilePath = path.resolve('src/Pages/Profile.jsx');

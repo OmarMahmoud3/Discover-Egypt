@@ -956,6 +956,30 @@ ALTER TABLE public.messages REPLICA IDENTITY FULL;`;
  * Strictly verifies identity, purges relational records, terminates session,
  * and only signals success when the server confirms deletion.
  */
+/**
+ * Helper to determine if an Edge Function invocation failed due to being
+ * undeployed or unreachable (e.g. 404, FunctionsFetchError, FunctionsRelayError).
+ */
+export function isEdgeFunctionUnavailable(err, rawMsg = '') {
+  if (!err && !rawMsg) return false;
+  const name = err?.name || '';
+  const msg = `${rawMsg} ${err?.message || ''}`.toLowerCase();
+  const status = err?.context?.status;
+
+  return (
+    status === 404 ||
+    name === 'FunctionsFetchError' ||
+    name === 'FunctionsRelayError' ||
+    (name === 'FunctionsHttpError' && (status === 404 || msg.includes('404'))) ||
+    msg.includes('failed to send a request to the edge function') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('not found') ||
+    msg.includes('not_found') ||
+    msg.includes('relay error') ||
+    msg.includes('non-2xx status code')
+  );
+}
+
 export async function deleteCurrentUserAccount() {
   const { data: authData, error: authErr } = await supabase.auth.getUser();
   if (authErr || !authData?.user?.id) {
@@ -975,7 +999,7 @@ export async function deleteCurrentUserAccount() {
     if (!edgeRes.error && edgeRes.data?.success) {
       serverConfirmed = true;
     } else if (edgeRes.error) {
-      let errMsg = edgeRes.error.message;
+      let errMsg = edgeRes.error.message || '';
       try {
         const errorJson = await edgeRes.error.context?.json();
         if (errorJson?.error) errMsg = errorJson.error;
@@ -983,13 +1007,9 @@ export async function deleteCurrentUserAccount() {
         // ignore json parse error
       }
 
-      // Check if it's 404 (Edge Function not deployed on this instance)
-      const is404 =
-        edgeRes.error?.context?.status === 404 ||
-        edgeRes.error?.name === 'FunctionsHttpError' ||
-        errMsg?.includes('404');
-
-      if (!is404) {
+      if (isEdgeFunctionUnavailable(edgeRes.error, errMsg)) {
+        console.info('[delete-user Edge Function is unavailable or not deployed. Trying fallback strategy...]');
+      } else {
         lastErrorMsg = errMsg;
         console.error('[Account Deletion Error in delete-user]:', errMsg);
         throw new Error(errMsg);
@@ -1000,13 +1020,12 @@ export async function deleteCurrentUserAccount() {
       throw new Error(lastErrorMsg);
     }
   } catch (edgeErr) {
-    // If it was an actual server error (not 404), rethrow immediately
-    if (lastErrorMsg || (!edgeErr.message?.includes('404') && !edgeErr.message?.includes('Failed to fetch') && !edgeErr.message?.includes('FunctionsHttpError'))) {
+    if (lastErrorMsg || !isEdgeFunctionUnavailable(edgeErr, edgeErr.message)) {
       throw edgeErr;
     }
   }
 
-  // Strategy 2: Fallback to 'admin-users' Edge Function if 'delete-user' returned 404
+  // Strategy 2: Fallback to 'admin-users' Edge Function if 'delete-user' is not available
   if (!serverConfirmed && !lastErrorMsg) {
     try {
       const adminEdgeRes = await supabase.functions.invoke('admin-users', {
@@ -1016,7 +1035,7 @@ export async function deleteCurrentUserAccount() {
       if (!adminEdgeRes.error && adminEdgeRes.data?.success) {
         serverConfirmed = true;
       } else if (adminEdgeRes.error) {
-        let errMsg = adminEdgeRes.error.message;
+        let errMsg = adminEdgeRes.error.message || '';
         try {
           const errorJson = await adminEdgeRes.error.context?.json();
           if (errorJson?.error) errMsg = errorJson.error;
@@ -1024,12 +1043,9 @@ export async function deleteCurrentUserAccount() {
           // ignore
         }
 
-        const is404 =
-          adminEdgeRes.error?.context?.status === 404 ||
-          adminEdgeRes.error?.name === 'FunctionsHttpError' ||
-          errMsg?.includes('404');
-
-        if (!is404) {
+        if (isEdgeFunctionUnavailable(adminEdgeRes.error, errMsg)) {
+          console.info('[admin-users Edge Function is unavailable or not deployed. Trying database RPC...]');
+        } else {
           lastErrorMsg = errMsg;
           console.error('[Account Deletion Error in admin-users]:', errMsg);
           throw new Error(errMsg);
@@ -1040,7 +1056,7 @@ export async function deleteCurrentUserAccount() {
         throw new Error(lastErrorMsg);
       }
     } catch (adminEdgeErr) {
-      if (lastErrorMsg || (!adminEdgeErr.message?.includes('404') && !adminEdgeErr.message?.includes('Failed to fetch') && !adminEdgeErr.message?.includes('FunctionsHttpError'))) {
+      if (lastErrorMsg || !isEdgeFunctionUnavailable(adminEdgeErr, adminEdgeErr.message)) {
         throw adminEdgeErr;
       }
     }
@@ -1051,13 +1067,25 @@ export async function deleteCurrentUserAccount() {
     try {
       const { data: rpcData, error: rpcError } = await supabase.rpc('delete_own_user');
       if (rpcError) {
-        lastErrorMsg = rpcError.message;
-        console.error('[Account Deletion Error in delete_own_user RPC]:', lastErrorMsg);
-        throw new Error(rpcError.message);
+        const isNotInstalled =
+          rpcError.code === 'PGRST202' ||
+          rpcError.message?.includes('Could not find the function') ||
+          rpcError.message?.includes('schema cache');
+
+        if (isNotInstalled) {
+          lastErrorMsg =
+            'يتطلب حذف الحساب تفعيل دالة SQL في قاعدة بيانات Supabase. يرجى تنفيذ ملف supabase/delete_user_rpc.sql في محرر SQL في Supabase أو نشر دالة Edge Function (supabase functions deploy delete-user).';
+          console.warn('[Account Deletion RPC not installed in Supabase]:', rpcError.message);
+        } else {
+          lastErrorMsg = rpcError.message;
+          console.error('[Account Deletion Error in delete_own_user RPC]:', lastErrorMsg);
+        }
+        throw new Error(lastErrorMsg);
       } else if (rpcData?.success) {
         serverConfirmed = true;
       }
     } catch (rpcCatchErr) {
+      if (lastErrorMsg) throw rpcCatchErr;
       console.error('[Account Deletion RPC Exception]:', rpcCatchErr);
       throw rpcCatchErr;
     }

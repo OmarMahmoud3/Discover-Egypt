@@ -111,9 +111,18 @@ export default function Profile() {
         err.message?.includes('administrator') ||
         err.message?.includes('المسؤول');
 
+      const isServerNotConfigured =
+        err.message?.includes('Edge Function') ||
+        err.message?.includes('PGRST202') ||
+        err.message?.includes('delete_own_user') ||
+        err.message?.includes('تفعيل دالة SQL') ||
+        err.message?.includes('غير مفعلة');
+
       setDeleteError(
         isSystemAdminErr
           ? t('profile.deleteAdminError')
+          : isServerNotConfigured
+          ? (t('profile.deleteServerNotConfigured') || err.message)
           : (err.message || t('profile.deleteAccountError'))
       );
       setDeleteLoading(false);
