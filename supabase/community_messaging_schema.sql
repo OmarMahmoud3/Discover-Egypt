@@ -148,6 +148,28 @@ CREATE POLICY "Conversation participants can send messages"
     )
   );
 
+-- Conversation participants can update message read status
+DROP POLICY IF EXISTS "Conversation participants can mark messages as read" ON public.messages;
+CREATE POLICY "Conversation participants can mark messages as read"
+  ON public.messages
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.conversations c
+      WHERE c.id = messages.conversation_id
+        AND (c.participant1_id = auth.uid() OR c.participant2_id = auth.uid())
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.conversations c
+      WHERE c.id = messages.conversation_id
+        AND (c.participant1_id = auth.uid() OR c.participant2_id = auth.uid())
+    )
+  );
+
+
 
 -- 4. Enable Supabase Realtime Publication for instant delivery
 -- This broadcasts INSERT and UPDATE events to authenticated subscribers

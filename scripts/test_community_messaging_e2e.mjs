@@ -109,7 +109,7 @@ async function run() {
 
     const outgoingSubTab1 = page1.locator('.community-sub-tab-btn', { hasText: 'الطلبات المرسلة' });
     await outgoingSubTab1.click();
-    await page1.waitForTimeout(400);
+    await page1.waitForSelector('.request-card', { timeout: 5000 });
 
     // Verify outgoing request is listed with status 'pending'
     const outgoingCards = page1.locator('.request-card');
@@ -183,7 +183,7 @@ async function run() {
     await chatInput2.fill('أهلاً بك يا عمر! مرحباً بالتأكيد، يسعدني التنسيق معك لزيارة معابد الأقصر والكرنك.');
     const sendBtn2 = page2.locator('.chat-send-btn');
     await sendBtn2.click();
-    await page2.waitForTimeout(600);
+    await page2.waitForSelector('.chat-message-row', { timeout: 5000 });
 
     const msgCount2 = await page2.locator('.chat-message-row').count();
     console.log(`  -> Total messages visible in User 2 chat: ${msgCount2}`);

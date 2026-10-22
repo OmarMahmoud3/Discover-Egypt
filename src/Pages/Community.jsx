@@ -47,6 +47,8 @@ export default function Community() {
   // Data states
   const [allProfiles, setAllProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [outgoingRequests, setOutgoingRequests] = useState([]);
   const [conversations, setConversations] = useState([]);
@@ -101,6 +103,8 @@ export default function Community() {
   // Load requests and conversations
   const loadRequestsAndConversations = useCallback(async () => {
     if (!session?.user?.id) return;
+    setRequestsLoading(true);
+    setConversationsLoading(true);
     try {
       const [incoming, outgoing, convs] = await Promise.all([
         fetchIncomingRequests(session.user.id),
@@ -112,6 +116,9 @@ export default function Community() {
       setConversations(convs || []);
     } catch (err) {
       console.warn('Error loading requests/conversations:', err);
+    } finally {
+      setRequestsLoading(false);
+      setConversationsLoading(false);
     }
   }, [session?.user?.id]);
 
@@ -147,6 +154,12 @@ export default function Community() {
     return map;
   }, [outgoingRequests]);
 
+  const incomingRequestsMap = useMemo(() => {
+    const map = new Map();
+    incomingRequests.forEach((r) => map.set(r.sender_id, r));
+    return map;
+  }, [incomingRequests]);
+
   const acceptedConversationsMap = useMemo(() => {
     const map = new Map();
     conversations.forEach((c) => {
@@ -159,6 +172,7 @@ export default function Community() {
   const pendingIncomingCount = useMemo(() => {
     return incomingRequests.filter((r) => r.status === 'pending').length;
   }, [incomingRequests]);
+
 
   // Open Safe Connect Modal
   const handleOpenConnect = (explorer) => {
@@ -200,8 +214,18 @@ export default function Community() {
 
       if (res.success) {
         showToast(t('community.requestSentSuccess'), 'success');
+        if (res.data) {
+          const newOutReq = {
+            ...res.data,
+            receiver: connectModalUser,
+          };
+          setOutgoingRequests((prev) => [
+            newOutReq,
+            ...prev.filter((r) => r.id !== newOutReq.id),
+          ]);
+        }
         handleCloseModal();
-        loadRequestsAndConversations();
+        await loadRequestsAndConversations();
       } else if (res.alreadyPending) {
         showToast(t('community.requestAlreadyPending'), 'info');
         handleCloseModal();
@@ -230,19 +254,38 @@ export default function Community() {
 
       if (res.success) {
         showToast(t('community.requestAccepted'), 'success');
-        await loadRequestsAndConversations();
 
-        // Open chat immediately with the sender
+        // Optimistically update incoming requests state immediately
+        setIncomingRequests((prev) =>
+          prev.map((r) => (r.id === request.id ? { ...r, status: 'accepted' } : r))
+        );
+
+        // If conversation returned, add immediately to conversations state and open chat drawer
         if (res.conversation) {
+          const newConv = {
+            ...res.conversation,
+            otherUser: request.sender,
+          };
+          setConversations((prev) => {
+            const exists = prev.some((c) => c.id === newConv.id);
+            return exists ? prev : [newConv, ...prev];
+          });
+
           setActiveChat({
             otherUser: request.sender,
             conversationId: res.conversation.id,
           });
           setChatOpen(true);
         }
+
+        // Fresh background sync
+        loadRequestsAndConversations();
+      } else {
+        showToast(t('community.requestActionError'), 'error');
       }
     } catch (err) {
       console.error('Failed to accept request:', err);
+      showToast(t('community.requestActionError'), 'error');
     } finally {
       setRespondingId(null);
     }
@@ -262,10 +305,16 @@ export default function Community() {
 
       if (res.success) {
         showToast(t('community.requestRejected'), 'info');
+        setIncomingRequests((prev) =>
+          prev.map((r) => (r.id === request.id ? { ...r, status: 'rejected' } : r))
+        );
         loadRequestsAndConversations();
+      } else {
+        showToast(t('community.requestActionError'), 'error');
       }
     } catch (err) {
       console.error('Failed to reject request:', err);
+      showToast(t('community.requestActionError'), 'error');
     } finally {
       setRespondingId(null);
     }
@@ -537,6 +586,8 @@ export default function Community() {
                   const outgoingReq = outgoingRequestsMap.get(explorer.id);
                   const isAccepted = outgoingReq?.status === 'accepted' || acceptedConversationsMap.has(explorer.id);
                   const isPending = outgoingReq?.status === 'pending';
+                  const incomingReq = incomingRequestsMap.get(explorer.id);
+                  const hasIncomingPending = incomingReq?.status === 'pending';
                   const hasShared = explorer.sharedCount > 0;
 
                   return (
@@ -629,6 +680,23 @@ export default function Community() {
                             <span aria-hidden="true">⏳</span>
                             <span>{t('community.statusPending')}</span>
                           </button>
+                        ) : hasIncomingPending ? (
+                          <button
+                            type="button"
+                            className="explorer-connect-btn"
+                            style={{
+                              background: 'var(--gold-surface)',
+                              color: 'var(--primary)',
+                              border: '1px solid var(--border-gold)',
+                            }}
+                            onClick={() => {
+                              setActiveTab('requests');
+                              setRequestsSubTab('incoming');
+                            }}
+                          >
+                            <span aria-hidden="true">📬</span>
+                            <span>{t('community.viewIncomingRequest')}</span>
+                          </button>
                         ) : (
                           <button
                             type="button"
@@ -670,10 +738,34 @@ export default function Community() {
             </div>
 
             {requestsSubTab === 'incoming' ? (
-              incomingRequests.length === 0 ? (
+              requestsLoading && incomingRequests.length === 0 ? (
+                <div className="requests-grid">
+                  {[1, 2].map((n) => (
+                    <div key={n} className="community-skeleton-card">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F0EDE4' }} />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div className="skeleton-line" style={{ width: '60%' }} />
+                          <div className="skeleton-line" style={{ width: '40%' }} />
+                        </div>
+                      </div>
+                      <div className="skeleton-line" style={{ width: '90%' }} />
+                      <div className="skeleton-line" style={{ width: '70%' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : incomingRequests.length === 0 ? (
                 <div className="community-empty-card">
                   <div className="community-empty-icon">📬</div>
                   <h2>{t('community.noIncomingRequests')}</h2>
+                  <button
+                    type="button"
+                    className="community-action-btn primary"
+                    style={{ marginTop: 12 }}
+                    onClick={() => setActiveTab('explorers')}
+                  >
+                    🧭 {t('community.tabExplorers')}
+                  </button>
                 </div>
               ) : (
                 <div className="requests-grid">
@@ -709,7 +801,17 @@ export default function Community() {
                             disabled={respondingId === req.id}
                             onClick={() => handleAcceptRequest(req)}
                           >
-                            ✓ {t('community.acceptRequest')}
+                            {respondingId === req.id ? (
+                              <>
+                                <span className="btn-spinner" aria-hidden="true" />
+                                <span>{t('community.sendingRequest')}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span aria-hidden="true">✓</span>
+                                <span>{t('community.acceptRequest')}</span>
+                              </>
+                            )}
                           </button>
                           <button
                             type="button"
@@ -717,7 +819,14 @@ export default function Community() {
                             disabled={respondingId === req.id}
                             onClick={() => handleRejectRequest(req)}
                           >
-                            ✕ {t('community.rejectRequest')}
+                            {respondingId === req.id ? (
+                              <span className="btn-spinner" style={{ borderTopColor: '#C0392B' }} aria-hidden="true" />
+                            ) : (
+                              <>
+                                <span aria-hidden="true">✕</span>
+                                <span>{t('community.rejectRequest')}</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       ) : (
@@ -742,10 +851,34 @@ export default function Community() {
                 </div>
               )
             ) : (
-              outgoingRequests.length === 0 ? (
+              requestsLoading && outgoingRequests.length === 0 ? (
+                <div className="requests-grid">
+                  {[1, 2].map((n) => (
+                    <div key={n} className="community-skeleton-card">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F0EDE4' }} />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div className="skeleton-line" style={{ width: '60%' }} />
+                          <div className="skeleton-line" style={{ width: '40%' }} />
+                        </div>
+                      </div>
+                      <div className="skeleton-line" style={{ width: '90%' }} />
+                      <div className="skeleton-line" style={{ width: '70%' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : outgoingRequests.length === 0 ? (
                 <div className="community-empty-card">
                   <div className="community-empty-icon">📤</div>
                   <h2>{t('community.noOutgoingRequests')}</h2>
+                  <button
+                    type="button"
+                    className="community-action-btn primary"
+                    style={{ marginTop: 12 }}
+                    onClick={() => setActiveTab('explorers')}
+                  >
+                    🧭 {t('community.tabExplorers')}
+                  </button>
                 </div>
               ) : (
                 <div className="requests-grid">
@@ -800,10 +933,34 @@ export default function Community() {
         {/* --- TAB 3: CONVERSATIONS & CHATS --- */}
         {activeTab === 'conversations' && session && (
           <section className="community-conversations-view">
-            {conversations.length === 0 ? (
+            {conversationsLoading && conversations.length === 0 ? (
+              <div className="conversations-grid">
+                {[1, 2].map((n) => (
+                  <div key={n} className="community-skeleton-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F0EDE4' }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div className="skeleton-line" style={{ width: '60%' }} />
+                        <div className="skeleton-line" style={{ width: '40%' }} />
+                      </div>
+                    </div>
+                    <div className="skeleton-line" style={{ width: '90%' }} />
+                    <div className="skeleton-line" style={{ width: '70%' }} />
+                  </div>
+                ))}
+              </div>
+            ) : conversations.length === 0 ? (
               <div className="community-empty-card">
                 <div className="community-empty-icon">💬</div>
                 <h2>{t('community.noConversations')}</h2>
+                <button
+                  type="button"
+                  className="community-action-btn primary"
+                  style={{ marginTop: 12 }}
+                  onClick={() => setActiveTab('explorers')}
+                >
+                  🧭 {t('community.tabExplorers')}
+                </button>
               </div>
             ) : (
               <div className="conversations-grid">

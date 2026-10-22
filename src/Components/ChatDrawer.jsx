@@ -14,6 +14,7 @@ export default function ChatDrawer({
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -23,11 +24,17 @@ export default function ChatDrawer({
 
     let isMounted = true;
     setLoading(true);
+    setSendError(null);
 
     fetchMessages(conversationId)
       .then((data) => {
         if (isMounted) {
-          setMessages(data || []);
+          setMessages((prev) => {
+            const fetched = Array.isArray(data) ? data : [];
+            const fetchedIds = new Set(fetched.map((m) => m.id));
+            const pendingOrNew = prev.filter((m) => !fetchedIds.has(m.id));
+            return [...fetched, ...pendingOrNew];
+          });
           setLoading(false);
         }
       })
@@ -72,6 +79,7 @@ export default function ChatDrawer({
     if (!text || sending || !conversationId || !currentUser?.id) return;
 
     setSending(true);
+    setSendError(null);
     setInputText('');
 
     try {
@@ -83,13 +91,16 @@ export default function ChatDrawer({
 
       if (res?.data && !messages.some((m) => m.id === res.data.id)) {
         setMessages((prev) => [...prev, res.data]);
+        setLoading(false);
       }
     } catch (err) {
       console.error('Failed to send message:', err);
       // Restore input text on error
       setInputText(text);
+      setSendError(t('community.sendMessageError') || 'Failed to send message');
     } finally {
       setSending(false);
+      setLoading(false);
     }
   };
 
@@ -99,6 +110,13 @@ export default function ChatDrawer({
       handleSend();
     }
   };
+
+  const handleFocus = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 250);
+  };
+
 
   const renderAvatar = (avatarUrl) => {
     if (avatarUrl && (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://'))) {
@@ -156,7 +174,7 @@ export default function ChatDrawer({
 
         {/* Messages Body */}
         <div className="chat-drawer-body">
-          {loading ? (
+          {loading && messages.length === 0 ? (
             <div className="chat-drawer-loading">
               <span className="chat-spinner" />
               <span>{isArabic ? 'جارٍ تحميل الرسائل...' : 'Loading messages...'}</span>
@@ -192,6 +210,29 @@ export default function ChatDrawer({
           )}
         </div>
 
+        {/* Send Error Notice */}
+        {sendError && (
+          <div className="chat-send-error-bar" role="alert" style={{
+            background: '#FFEBEE',
+            color: '#C62828',
+            padding: '8px 16px',
+            fontSize: '12px',
+            borderTop: '1px solid #FFCDD2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <span>⚠️ {sendError}</span>
+            <button
+              type="button"
+              onClick={() => setSendError(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C62828', fontWeight: 'bold' }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Input Bar */}
         <form className="chat-drawer-footer" onSubmit={handleSend}>
           <input
@@ -200,7 +241,11 @@ export default function ChatDrawer({
             className="chat-input-field"
             placeholder={t('community.typeMessage')}
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
+            onChange={(e) => {
+              setInputText(e.target.value);
+              if (sendError) setSendError(null);
+            }}
+            onFocus={handleFocus}
             onKeyDown={handleKeyDown}
             disabled={sending}
             maxLength={1000}
