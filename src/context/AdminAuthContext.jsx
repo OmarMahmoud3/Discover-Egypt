@@ -30,13 +30,59 @@ export function AdminAuthProvider({ children }) {
 
     setRoleLoading(true);
     try {
-      const { data, error } = await supabase
+      let data = null;
+      let error = null;
+
+      const fullRes = await supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, preferred_language, role, created_at')
+        .select('id, display_name, avatar_url, preferred_language, role, bio, interests, is_public, city, contact_preference, social_handle, created_at')
         .eq('id', userId)
         .single();
 
-      if (error) {
+      if (!fullRes.error) {
+        data = fullRes.data;
+      } else {
+        // Fallback to basic columns if extended columns are not present
+        const basicRes = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, preferred_language, role, created_at')
+          .eq('id', userId)
+          .single();
+        data = basicRes.data;
+        error = basicRes.error;
+      }
+
+      // If user is authenticated in Supabase but profile row doesn't exist yet, auto-create real profile
+      if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows'))) {
+        const { data: authData } = await supabase.auth.getUser();
+        const userMeta = authData?.user?.user_metadata || {};
+        const realProfile = {
+          id: userId,
+          display_name: userMeta.full_name || userMeta.name || emailClean.split('@')[0] || 'مستكشف',
+          avatar_url: userMeta.avatar_url || 'pharaoh',
+          preferred_language: userMeta.preferred_language || 'ar',
+          role: isKnownAdmin ? 'admin' : 'user',
+          is_public: userMeta.is_public !== undefined ? userMeta.is_public : true,
+          bio: userMeta.bio || '',
+          interests: Array.isArray(userMeta.interests) ? userMeta.interests : [],
+          city: userMeta.default_city || userMeta.city || '',
+          contact_preference: userMeta.contact_preference || 'in_app',
+          social_handle: userMeta.social_handle || '',
+        };
+
+        const { data: upserted } = await supabase
+          .from('profiles')
+          .upsert(realProfile, { onConflict: 'id' })
+          .select()
+          .single();
+
+        if (upserted) {
+          setProfile(upserted);
+          return upserted;
+        }
+      }
+
+      if (error && !data) {
         console.warn('Failed to fetch admin profile:', error.message);
         if (isKnownAdmin) {
           const fallbackProfile = {
@@ -44,6 +90,8 @@ export function AdminAuthProvider({ children }) {
             role: 'admin',
             display_name: emailClean.split('@')[0],
             preferred_language: 'ar',
+            is_public: true,
+            interests: [],
           };
           setProfile(fallbackProfile);
           return fallbackProfile;
@@ -55,7 +103,6 @@ export function AdminAuthProvider({ children }) {
       // If database profile has no role yet but is a known admin
       if (isKnownAdmin && data.role !== 'admin') {
         data.role = 'admin';
-        // Auto-heal database role asynchronously
         supabase.from('profiles').update({ role: 'admin' }).eq('id', userId).then(() => {});
       }
 

@@ -12,6 +12,7 @@ export default function MobileNav({ onOpenAuth }) {
   const items = [
     { path: '/', label: t('mobile.home'), icon: 'home' },
     { path: '/explore', label: t('mobile.explore'), icon: 'explore' },
+    { path: '/community', label: t('mobile.community'), icon: 'groups' },
     { path: '/map', label: t('mobile.map'), icon: 'map' },
     { path: '/favorites', label: t('mobile.favorites'), icon: 'favorite', hasBadge: favoriteIds.length > 0 },
     session
@@ -42,9 +43,9 @@ export default function MobileNav({ onOpenAuth }) {
           justifyContent: 'space-around',
           alignItems: 'center',
           height: '62px',
-          maxWidth: '480px',
+          maxWidth: '520px',
           margin: '0 auto',
-          paddingInline: '8px',
+          paddingInline: '4px',
         }}
       >
         {items.map((item, index) => {

@@ -20,6 +20,7 @@ const MapPage = lazy(() => import('./Pages/MapPage'));
 const PlaceDetails = lazy(() => import('./Pages/PlaceDetails'));
 const Favorites = lazy(() => import('./Pages/Favorites'));
 const Profile = lazy(() => import('./Pages/Profile'));
+const Community = lazy(() => import('./Pages/Community'));
 const LogIn = lazy(() => import('./Pages/LogIn'));
 const NotFound = lazy(() => import('./Pages/NotFound'));
 
@@ -134,6 +135,8 @@ function AppContent() {
           <Route path="/favorites" element={<Suspense fallback={<AdminSuspenseFallback />}><Favorites /></Suspense>} />
           <Route path="/profile" element={<Suspense fallback={<AdminSuspenseFallback />}><Profile /></Suspense>} />
           <Route path="/account" element={<Suspense fallback={<AdminSuspenseFallback />}><Profile /></Suspense>} />
+          <Route path="/community" element={<Suspense fallback={<AdminSuspenseFallback />}><Community /></Suspense>} />
+          <Route path="/people" element={<Suspense fallback={<AdminSuspenseFallback />}><Community /></Suspense>} />
           <Route
             path="/login"
             element={

@@ -9,12 +9,17 @@ export default function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    if (hash) {
-      // Allow in-page anchor links to scroll smoothly to target
-      const target = document.querySelector(hash);
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth' });
-        return;
+    // Only attempt scrolling if hash is a valid anchor identifier, not an OAuth redirect token (e.g., #access_token=...)
+    if (hash && !hash.includes('=') && !hash.startsWith('#access_token') && !hash.startsWith('#error')) {
+      try {
+        const id = decodeURIComponent(hash.replace(/^#/, ''));
+        const target = document.getElementById(id) || document.querySelector(hash);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+          return;
+        }
+      } catch {
+        // Silently ignore invalid selector syntax
       }
     }
 

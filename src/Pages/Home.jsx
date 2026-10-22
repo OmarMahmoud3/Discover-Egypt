@@ -811,6 +811,25 @@ export default function Home() {
               >
                 <span>{t('home.journeyBannerBtnAll')}</span>
               </Link>
+              <Link
+                to="/community"
+                className="btn-outline"
+                style={{
+                  color: 'var(--gold)',
+                  borderColor: 'var(--gold)',
+                  backgroundColor: 'rgba(212, 166, 74, 0.12)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  groups
+                </span>
+                <span>{isArabic ? 'اكتشف أشخاصاً' : 'Discover People'}</span>
+              </Link>
             </div>
           </div>
         </div>

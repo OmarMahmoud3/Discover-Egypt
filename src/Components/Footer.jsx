@@ -155,6 +155,28 @@ export default function Footer() {
                 </span>
                 <span>{isArabic ? 'صُنع لعشاق مصر' : 'Made for Egypt Lovers'}</span>
               </li>
+              <li style={{ marginTop: '6px' }}>
+                <Link
+                  to="/community"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: 'var(--gold)',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    groups
+                  </span>
+                  <span>{isArabic ? 'مجتمع المسافرين (اكتشف أشخاصاً)' : 'Traveler Community (Discover People)'}</span>
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

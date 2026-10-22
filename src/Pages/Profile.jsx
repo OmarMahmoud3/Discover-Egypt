@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { usePlaces } from '../context/PlacesContext';
 import { supabase } from '../lib/supabase';
+import { CURATED_INTERESTS } from '../lib/communityService';
 import LogIn from './LogIn';
 import '../styles/profile.css';
 
@@ -27,8 +28,24 @@ export default function Profile() {
   const { favoriteIds } = useFavorites();
   const { places } = usePlaces();
 
-  // Active sub-tab
-  const [activeTab, setActiveTab] = useState('personal');
+  // URL search params for active tab deep-linking
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTabParam = searchParams.get('tab');
+  const validTabs = ['personal', 'preferences', 'security', 'favorites', 'interests'];
+  const [activeTab, setActiveTab] = useState(
+    validTabs.includes(initialTabParam) ? initialTabParam : 'personal'
+  );
+
+  const handleTabChange = (tabKey) => {
+    setActiveTab(tabKey);
+    setSearchParams({ tab: tabKey });
+  };
+
+  useEffect(() => {
+    if (initialTabParam && validTabs.includes(initialTabParam)) {
+      setActiveTab(initialTabParam);
+    }
+  }, [initialTabParam]);
 
   // Form editable state
   const [displayName, setDisplayName] = useState('');
@@ -38,6 +55,13 @@ export default function Profile() {
   const [preferredLang, setPreferredLang] = useState('ar');
   const [defaultCity, setDefaultCity] = useState('all');
   const [travelTips, setTravelTips] = useState(true);
+
+  // Community & Interests state
+  const [interests, setInterests] = useState([]);
+  const [isPublic, setIsPublic] = useState(true);
+  const [contactPref, setContactPref] = useState('in_app');
+  const [socialHandle, setSocialHandle] = useState('');
+  const [customInterestInput, setCustomInterestInput] = useState('');
 
   // Baseline state to detect dirty changes
   const [baseline, setBaseline] = useState(null);
@@ -71,6 +95,14 @@ export default function Profile() {
     const initialBio = meta.bio || '';
     const initialCity = meta.default_city || 'all';
     const initialTips = meta.travel_tips !== undefined ? meta.travel_tips : true;
+    const initialInterests = Array.isArray(profile?.interests)
+      ? profile.interests
+      : (Array.isArray(meta.interests) ? meta.interests : []);
+    const initialIsPublic = profile?.is_public !== undefined
+      ? profile.is_public
+      : (meta.is_public !== undefined ? meta.is_public : true);
+    const initialContactPref = profile?.contact_preference || meta.contact_preference || 'in_app';
+    const initialSocialHandle = profile?.social_handle || meta.social_handle || '';
 
     setDisplayName(initialName);
     setAvatarUrl(initialAvatar);
@@ -81,6 +113,10 @@ export default function Profile() {
     setPreferredLang(initialLang);
     setDefaultCity(initialCity);
     setTravelTips(initialTips);
+    setInterests(initialInterests);
+    setIsPublic(initialIsPublic);
+    setContactPref(initialContactPref);
+    setSocialHandle(initialSocialHandle);
 
     setBaseline({
       displayName: initialName,
@@ -89,21 +125,47 @@ export default function Profile() {
       preferredLang: initialLang,
       defaultCity: initialCity,
       travelTips: initialTips,
+      interests: initialInterests,
+      isPublic: initialIsPublic,
+      contactPref: initialContactPref,
+      socialHandle: initialSocialHandle,
     });
   }, [session, profile, lang]);
 
   // Compute dirty state (has uncommitted changes)
   const hasChanges = useMemo(() => {
     if (!baseline) return false;
+    const interestsEqual =
+      Array.isArray(interests) &&
+      Array.isArray(baseline.interests) &&
+      interests.length === baseline.interests.length &&
+      interests.every((val, idx) => val === baseline.interests[idx]);
+
     return (
       displayName !== baseline.displayName ||
       avatarUrl !== baseline.avatarUrl ||
       bio !== baseline.bio ||
       preferredLang !== baseline.preferredLang ||
       defaultCity !== baseline.defaultCity ||
-      travelTips !== baseline.travelTips
+      travelTips !== baseline.travelTips ||
+      !interestsEqual ||
+      isPublic !== baseline.isPublic ||
+      contactPref !== baseline.contactPref ||
+      socialHandle !== baseline.socialHandle
     );
-  }, [baseline, displayName, avatarUrl, bio, preferredLang, defaultCity, travelTips]);
+  }, [
+    baseline,
+    displayName,
+    avatarUrl,
+    bio,
+    preferredLang,
+    defaultCity,
+    travelTips,
+    interests,
+    isPublic,
+    contactPref,
+    socialHandle,
+  ]);
 
   // Revert all changes
   const handleCancelChanges = () => {
@@ -119,6 +181,10 @@ export default function Profile() {
     setPreferredLang(baseline.preferredLang);
     setDefaultCity(baseline.defaultCity);
     setTravelTips(baseline.travelTips);
+    setInterests(baseline.interests || []);
+    setIsPublic(baseline.isPublic);
+    setContactPref(baseline.contactPref);
+    setSocialHandle(baseline.socialHandle);
     showToast(t('profile.changesDiscarded'), 'info');
   };
 
@@ -133,18 +199,35 @@ export default function Profile() {
       const cleanAvatar = avatarUrl.trim();
       const cleanBio = bio.trim();
 
-      // 1. Update public.profiles table
+      // 1. Upsert public.profiles table (including community attributes)
+      const updateData = {
+        id: session.user.id,
+        display_name: cleanName,
+        avatar_url: cleanAvatar,
+        preferred_language: preferredLang,
+        bio: cleanBio,
+        interests: interests,
+        is_public: isPublic,
+        city: defaultCity !== 'all' ? defaultCity : '',
+        contact_preference: contactPref,
+        social_handle: socialHandle.trim(),
+      };
+
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
-          display_name: cleanName,
-          avatar_url: cleanAvatar,
-          preferred_language: preferredLang,
-        })
-        .eq('id', session.user.id);
+        .upsert(updateData, { onConflict: 'id' });
 
       if (profileError) {
-        console.warn('Profile table update notice:', profileError.message);
+        console.warn('Profile table upsert notice (falling back if columns not present):', profileError.message);
+        // Fallback update with core columns if optional community columns aren't in remote schema yet
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: session.user.id,
+            display_name: cleanName,
+            avatar_url: cleanAvatar,
+            preferred_language: preferredLang,
+          }, { onConflict: 'id' });
       }
 
       // 2. Update Supabase Auth user metadata
@@ -157,6 +240,10 @@ export default function Profile() {
           bio: cleanBio,
           default_city: defaultCity,
           travel_tips: travelTips,
+          interests: interests,
+          is_public: isPublic,
+          contact_preference: contactPref,
+          social_handle: socialHandle.trim(),
         },
       });
 
@@ -178,6 +265,10 @@ export default function Profile() {
         preferredLang,
         defaultCity,
         travelTips,
+        interests: [...interests],
+        isPublic,
+        contactPref,
+        socialHandle: socialHandle.trim(),
       });
 
       showToast(t('profile.saveSuccess'), 'success');
@@ -478,7 +569,7 @@ export default function Profile() {
             role="tab"
             aria-selected={activeTab === 'personal'}
             className={`profile-tab-btn ${activeTab === 'personal' ? 'active' : ''}`}
-            onClick={() => setActiveTab('personal')}
+            onClick={() => handleTabChange('personal')}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               person
@@ -489,9 +580,22 @@ export default function Profile() {
           <button
             type="button"
             role="tab"
+            aria-selected={activeTab === 'interests'}
+            className={`profile-tab-btn ${activeTab === 'interests' ? 'active' : ''}`}
+            onClick={() => handleTabChange('interests')}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+              groups
+            </span>
+            <span>{t('profile.tabInterests')}</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
             aria-selected={activeTab === 'preferences'}
             className={`profile-tab-btn ${activeTab === 'preferences' ? 'active' : ''}`}
-            onClick={() => setActiveTab('preferences')}
+            onClick={() => handleTabChange('preferences')}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               tune
@@ -504,7 +608,7 @@ export default function Profile() {
             role="tab"
             aria-selected={activeTab === 'security'}
             className={`profile-tab-btn ${activeTab === 'security' ? 'active' : ''}`}
-            onClick={() => setActiveTab('security')}
+            onClick={() => handleTabChange('security')}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               lock
@@ -517,7 +621,7 @@ export default function Profile() {
             role="tab"
             aria-selected={activeTab === 'favorites'}
             className={`profile-tab-btn ${activeTab === 'favorites' ? 'active' : ''}`}
-            onClick={() => setActiveTab('favorites')}
+            onClick={() => handleTabChange('favorites')}
           >
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
               bookmarks
@@ -1042,6 +1146,278 @@ export default function Profile() {
                   ))}
                 </div>
               )}
+            </section>
+          )}
+
+          {/* TAB 5: Interests & Community Discovery */}
+          {activeTab === 'interests' && (
+            <section className="profile-card" aria-label={t('profile.tabInterests')}>
+              <div className="profile-card-header">
+                <div>
+                  <h2 className="profile-card-title">
+                    <span className="material-symbols-outlined" style={{ color: 'var(--secondary)' }}>
+                      groups
+                    </span>
+                    <span>{t('profile.tabInterests')}</span>
+                  </h2>
+                  <p className="profile-card-subtitle">{t('profile.interestsTabDesc')}</p>
+                </div>
+              </div>
+
+              <div className="profile-form-grid">
+                {/* 1. Privacy Discovery Toggle */}
+                <div className="profile-form-group profile-full-width">
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '14px',
+                      padding: '16px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--surface)',
+                      border: isPublic ? '1px solid var(--border-gold)' : '1px solid var(--border)',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.2s ease',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        accentColor: 'var(--secondary)',
+                        marginTop: '2px',
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--primary)' }}>
+                        {t('profile.allowDiscoveryLabel')}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+                        {t('profile.allowDiscoveryDesc')}
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* 2. Interests Selection */}
+                <div className="profile-form-group profile-full-width">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label className="profile-label" style={{ margin: 0 }}>
+                      <span>{t('profile.myInterestsLabel')}</span>
+                    </label>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: 'var(--gold-dark)',
+                        background: 'var(--gold-surface)',
+                        padding: '2px 10px',
+                        borderRadius: '999px',
+                        border: '1px solid var(--border-gold)',
+                      }}
+                    >
+                      {t('profile.selectedCount').replace('{count}', interests.length)}
+                    </span>
+                  </div>
+
+                  {/* Curated Pre-set Interest Chips */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                    {CURATED_INTERESTS.map((item) => {
+                      const tagLabel = isArabic ? item.labelAr : item.labelEn;
+                      const isSelected = interests.includes(tagLabel) || interests.includes(item.labelAr) || interests.includes(item.labelEn);
+
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setInterests(interests.filter((i) => i !== tagLabel && i !== item.labelAr && i !== item.labelEn));
+                            } else {
+                              setInterests([...interests, tagLabel]);
+                            }
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 14px',
+                            borderRadius: '20px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            border: isSelected ? '1px solid var(--gold)' : '1px solid var(--border)',
+                            backgroundColor: isSelected ? 'var(--gold-surface)' : 'var(--beige-light)',
+                            color: isSelected ? 'var(--primary)' : 'var(--text-muted)',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <span aria-hidden="true">{item.icon}</span>
+                          <span>{tagLabel}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 800, color: isSelected ? 'var(--secondary)' : 'var(--text-light)' }}>
+                            {isSelected ? '✓' : '+'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add Custom Interest Input */}
+                  <div style={{ display: 'flex', gap: '8px', maxWidth: '480px' }}>
+                    <input
+                      type="text"
+                      className="profile-input"
+                      placeholder={t('profile.addCustomInterest')}
+                      value={customInterestInput}
+                      onChange={(e) => setCustomInterestInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const trimmed = customInterestInput.trim();
+                          if (trimmed && !interests.includes(trimmed)) {
+                            setInterests([...interests, trimmed]);
+                            setCustomInterestInput('');
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => {
+                        const trimmed = customInterestInput.trim();
+                        if (trimmed && !interests.includes(trimmed)) {
+                          setInterests([...interests, trimmed]);
+                          setCustomInterestInput('');
+                        }
+                      }}
+                      disabled={!customInterestInput.trim()}
+                      style={{ padding: '0 18px', whiteSpace: 'nowrap', opacity: customInterestInput.trim() ? 1 : 0.6 }}
+                    >
+                      {t('profile.addInterestBtn')}
+                    </button>
+                  </div>
+
+                  {/* Custom Added Tags display */}
+                  {interests.some((i) => !CURATED_INTERESTS.some((ci) => ci.labelAr === i || ci.labelEn === i)) && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+                      {interests
+                        .filter((i) => !CURATED_INTERESTS.some((ci) => ci.labelAr === i || ci.labelEn === i))
+                        .map((customTag, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              backgroundColor: 'var(--secondary-surface)',
+                              color: 'var(--secondary-dark)',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              border: '1px solid var(--secondary-light)',
+                            }}
+                          >
+                            <span>#{customTag}</span>
+                            <button
+                              type="button"
+                              onClick={() => setInterests(interests.filter((i) => i !== customTag))}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--secondary-dark)', fontSize: '14px', lineHeight: 1 }}
+                              aria-label={`Remove ${customTag}`}
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Preferred Contact Method */}
+                <div className="profile-form-group profile-full-width">
+                  <label className="profile-label">
+                    <span>{t('profile.contactPrefLabel')}</span>
+                  </label>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '14px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--surface)',
+                        border: contactPref === 'in_app' ? '1px solid var(--secondary)' : '1px solid var(--border)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="contact_pref"
+                        value="in_app"
+                        checked={contactPref === 'in_app'}
+                        onChange={() => setContactPref('in_app')}
+                        style={{ accentColor: 'var(--secondary)', cursor: 'pointer' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--primary)' }}>
+                          🛡️ {t('profile.contactPrefInApp')}
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '14px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--surface)',
+                        border: contactPref === 'social' ? '1px solid var(--secondary)' : '1px solid var(--border)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="contact_pref"
+                        value="social"
+                        checked={contactPref === 'social'}
+                        onChange={() => setContactPref('social')}
+                        style={{ accentColor: 'var(--secondary)', cursor: 'pointer' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--primary)' }}>
+                          🌐 {t('profile.contactPrefSocial')}
+                        </div>
+                      </div>
+                    </label>
+
+                    {contactPref === 'social' && (
+                      <div style={{ marginTop: '6px', maxWidth: '420px', paddingLeft: isArabic ? 0 : '28px', paddingRight: isArabic ? '28px' : 0 }}>
+                        <label htmlFor="social-handle" className="profile-label" style={{ fontSize: '12px' }}>
+                          {t('profile.socialHandleLabel')}
+                        </label>
+                        <input
+                          id="social-handle"
+                          type="text"
+                          className="profile-input"
+                          value={socialHandle}
+                          onChange={(e) => setSocialHandle(e.target.value)}
+                          placeholder={t('profile.socialHandlePlaceholder')}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </section>
           )}
         </div>

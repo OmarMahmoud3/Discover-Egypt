@@ -11,6 +11,7 @@ import { PLACES_DATA } from '../src/data/placesData.js';
 import { translations } from '../src/i18n/translations.js';
 import { adminTranslations } from '../src/i18n/adminTranslations.js';
 import { supabase } from '../src/lib/supabase.js';
+import { calculateSharedInterests } from '../src/lib/communityService.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -80,6 +81,15 @@ assert(arProfileKeys.length >= 30, `Profile translations contain comprehensive d
 assert(missingProfileInEn.length === 0, `English profile translations match Arabic keys (missing: ${missingProfileInEn.join(', ') || 'none'})`);
 assert(missingProfileInAr.length === 0, `Arabic profile translations match English keys (missing: ${missingProfileInAr.join(', ') || 'none'})`);
 
+// Community translations parity
+const arCommunityKeys = Object.keys(translations.ar.community || {});
+const enCommunityKeys = Object.keys(translations.en.community || {});
+const missingCommunityInEn = arCommunityKeys.filter((k) => !enCommunityKeys.includes(k));
+const missingCommunityInAr = enCommunityKeys.filter((k) => !arCommunityKeys.includes(k));
+assert(arCommunityKeys.length >= 25, `Community translations contain comprehensive dictionary (actual: ${arCommunityKeys.length} keys)`);
+assert(missingCommunityInEn.length === 0, `English community translations match Arabic keys (missing: ${missingCommunityInEn.join(', ') || 'none'})`);
+assert(missingCommunityInAr.length === 0, `Arabic community translations match English keys (missing: ${missingCommunityInAr.join(', ') || 'none'})`);
+
 // --- 3. Critical Component & Asset Files ---
 console.log('\n[TEST GROUP 3] Component Files & Architecture Assets');
 const criticalFiles = [
@@ -97,6 +107,7 @@ const criticalFiles = [
   'src/Pages/Home.jsx',
   'src/Pages/LogIn.jsx',
   'src/Pages/Profile.jsx',
+  'src/Pages/Community.jsx',
   'src/Pages/PlaceDetails.jsx',
   'src/Pages/MapPage.jsx',
   'src/Components/PlacesMap.jsx',
@@ -108,6 +119,9 @@ const criticalFiles = [
   'src/Pages/admin/AdminSettings.jsx',
   'src/styles/admin.css',
   'src/styles/profile.css',
+  'src/styles/community.css',
+  'src/lib/communityService.js',
+  'supabase/community_discovery_schema.sql',
   'jsconfig.json',
   'src/lib/searchUtils.js',
   'src/hooks/useVoiceSearch.js',
@@ -188,6 +202,35 @@ assert(typeof supabase === 'object' && supabase !== null, 'Supabase client is ex
 assert(typeof supabase.from === 'function', 'Supabase client provides query builder API (.from)');
 assert(typeof supabase.auth === 'object', 'Supabase client provides auth API (.auth)');
 assert(typeof supabase.functions === 'object', 'Supabase client provides edge functions API (.functions)');
+
+// --- 5. Community Discovery: Real Users & Universal Accessibility ---
+console.log('\n[TEST GROUP 5] Community Real Users & Universal Accessibility');
+const communityServiceContent = fs.readFileSync(path.resolve('src/lib/communityService.js'), 'utf-8');
+const profileContent = fs.readFileSync(path.resolve('src/Pages/Profile.jsx'), 'utf-8');
+const schemaContent = fs.readFileSync(path.resolve('supabase/community_discovery_schema.sql'), 'utf-8');
+const mobileNavContent = fs.readFileSync(path.resolve('src/Components/MobileNav.jsx'), 'utf-8');
+const footerContent = fs.readFileSync(path.resolve('src/Components/Footer.jsx'), 'utf-8');
+const homeContent = fs.readFileSync(path.resolve('src/Pages/Home.jsx'), 'utf-8');
+
+assert(!communityServiceContent.includes('SEED_EXPLORERS'), 'Zero SEED_EXPLORERS in communityService.js');
+assert(!communityServiceContent.includes('Salma El-Naggar'), 'Zero mock user names in communityService.js');
+assert(communityServiceContent.includes(".from('profiles')"), 'communityService directly queries Supabase profiles table');
+
+// Test calculateSharedInterests
+const shared = calculateSharedInterests(['الآثار الفرعونية', 'الغوص'], ['الآثار الفرعونية', 'التخييم والمغامرات']);
+assert(Array.isArray(shared) && shared.length === 1 && shared[0] === 'الآثار الفرعونية', 'calculateSharedInterests accurately calculates overlap between real profiles');
+
+assert(!profileContent.includes("'الآثار الفرعونية', 'المتاحف والتاريخ المصري'"), 'Profile.jsx does not inject static fallback interests');
+assert(profileContent.includes('is_public'), 'Profile.jsx includes is_public privacy toggle control');
+assert(!schemaContent.includes("UPDATE public.profiles SET interests ="), 'community_discovery_schema.sql contains no mock data seeding queries');
+assert(schemaContent.includes("is_public"), 'community_discovery_schema.sql enforces RLS policy for public discovery');
+
+// Universal Visibility for All Users
+assert(mobileNavContent.includes("'/community'"), 'MobileNav includes /community for all mobile users');
+assert(footerContent.includes('to="/community"'), 'Footer includes /community link for all site visitors');
+assert(homeContent.includes('to="/community"'), 'Home page features /community button for immediate discovery');
+assert(translations.ar.mobile && typeof translations.ar.mobile.community === 'string', 'Arabic mobile translations contain community key');
+assert(translations.en.mobile && typeof translations.en.mobile.community === 'string', 'English mobile translations contain community key');
 
 // --- Summary ---
 console.log('\n======================================================');
