@@ -29,9 +29,14 @@ export const CITIES_LIST = [
 ];
 
 /**
- * Normalizes Arabic text for flexible matching (removes tashkeel, harmonizes alef & taa marbuta)
+ * Normalizes Arabic text for flexible matching (removes tashkeel, harmonizes alef & taa marbuta).
+ * 100% null-safe and handles non-string inputs gracefully.
  */
-function normalizeArabic(str = '') {
+export function normalizeArabic(str = '') {
+  if (typeof str !== 'string') {
+    if (str == null) return '';
+    str = String(str);
+  }
   return str
     .toLowerCase()
     .replace(/[\u064B-\u065F\u0670]/g, '')
@@ -46,8 +51,66 @@ function normalizeArabic(str = '') {
  */
 export function calculateSharedInterests(userInterests = [], explorerInterests = []) {
   if (!Array.isArray(userInterests) || !Array.isArray(explorerInterests)) return [];
-  const set = new Set(userInterests.map((i) => i.trim().toLowerCase()));
-  return explorerInterests.filter((item) => set.has(item.trim().toLowerCase()));
+  const set = new Set(userInterests.filter(Boolean).map((i) => String(i).trim().toLowerCase()));
+  return explorerInterests.filter(Boolean).filter((item) => set.has(String(item).trim().toLowerCase()));
+}
+
+/**
+ * Filters a list of prepared community profiles based on search text, selected interest, city, and shared toggle.
+ * Runs instantly in memory with zero network latency.
+ */
+export function filterCommunityProfiles(profiles = [], {
+  search = '',
+  selectedInterest = 'all',
+  selectedCity = 'all',
+  onlyShared = false,
+} = {}) {
+  if (!Array.isArray(profiles)) return [];
+  let results = [...profiles];
+
+  // 1. Apply Search Query Filter (name, bio, interests, city)
+  const queryNorm = normalizeArabic(search);
+  if (queryNorm) {
+    results = results.filter((p) => {
+      const nameMatch = normalizeArabic(p.displayNameLocalized || p.display_name || '').includes(queryNorm);
+      const bioMatch = normalizeArabic(p.bioLocalized || p.bio || '').includes(queryNorm);
+      const cityMatch = normalizeArabic(p.cityLocalized || p.city || '').includes(queryNorm);
+      const interestMatch = Array.isArray(p.interests) && p.interests.some((i) => normalizeArabic(i || '').includes(queryNorm));
+      return nameMatch || bioMatch || cityMatch || interestMatch;
+    });
+  }
+
+  // 2. Apply Specific Interest Category Filter
+  if (selectedInterest && selectedInterest !== 'all') {
+    const target = selectedInterest.trim().toLowerCase();
+    results = results.filter((p) =>
+      Array.isArray(p.interests) &&
+      p.interests.some((i) => typeof i === 'string' && i.trim().toLowerCase() === target)
+    );
+  }
+
+  // 3. Apply City Filter
+  if (selectedCity && selectedCity !== 'all') {
+    const cityNorm = normalizeArabic(selectedCity);
+    results = results.filter((p) =>
+      normalizeArabic(p.city || p.cityLocalized || '').includes(cityNorm)
+    );
+  }
+
+  // 4. Apply "Shared Only" Filter
+  if (onlyShared) {
+    results = results.filter((p) => (p.sharedCount || 0) > 0);
+  }
+
+  // 5. Sort: highest shared interests first, then newest
+  results.sort((a, b) => {
+    if ((b.sharedCount || 0) !== (a.sharedCount || 0)) {
+      return (b.sharedCount || 0) - (a.sharedCount || 0);
+    }
+    return new Date(b.created_at || b.member_since || 0) - new Date(a.created_at || a.member_since || 0);
+  });
+
+  return results;
 }
 
 /**
@@ -118,47 +181,13 @@ export async function fetchCommunityProfiles({
     };
   });
 
-  // 6. Apply Search Query Filter (name, bio, interests, city)
-  const queryNorm = normalizeArabic(search);
-  let results = profilesWithShared;
-
-  if (queryNorm) {
-    results = results.filter((p) => {
-      const nameMatch = normalizeArabic(p.displayNameLocalized || p.display_name).includes(queryNorm);
-      const bioMatch = normalizeArabic(p.bioLocalized || p.bio).includes(queryNorm);
-      const cityMatch = normalizeArabic(p.cityLocalized || p.city).includes(queryNorm);
-      const interestMatch = p.interests.some((i) => normalizeArabic(i).includes(queryNorm));
-      return nameMatch || bioMatch || cityMatch || interestMatch;
-    });
-  }
-
-  // 7. Apply Specific Interest Category Filter
-  if (selectedInterest && selectedInterest !== 'all') {
-    results = results.filter((p) =>
-      p.interests.some((i) => i.trim().toLowerCase() === selectedInterest.trim().toLowerCase())
-    );
-  }
-
-  // 8. Apply City Filter
-  if (selectedCity && selectedCity !== 'all') {
-    const cityNorm = normalizeArabic(selectedCity);
-    results = results.filter((p) => normalizeArabic(p.city || p.cityLocalized).includes(cityNorm));
-  }
-
-  // 9. Apply "Shared Only" Filter
-  if (onlyShared) {
-    results = results.filter((p) => p.sharedCount > 0);
-  }
-
-  // 10. Sort: highest shared interests first, then newest
-  results.sort((a, b) => {
-    if (b.sharedCount !== a.sharedCount) {
-      return b.sharedCount - a.sharedCount;
-    }
-    return new Date(b.created_at || b.member_since || 0) - new Date(a.created_at || a.member_since || 0);
+  // 4. Apply filters and sorting
+  return filterCommunityProfiles(profilesWithShared, {
+    search,
+    selectedInterest,
+    selectedCity,
+    onlyShared,
   });
-
-  return results;
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   CURATED_INTERESTS,
   CITIES_LIST,
   fetchCommunityProfiles,
+  filterCommunityProfiles,
   sendConnectionRequest,
 } from '../lib/communityService';
 import '../styles/community.css';
@@ -33,7 +34,7 @@ export default function Community() {
   const [onlyShared, setOnlyShared] = useState(false);
 
   // Data states
-  const [profiles, setProfiles] = useState([]);
+  const [allProfiles, setAllProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [connectedIds, setConnectedIds] = useState(new Set());
 
@@ -58,33 +59,40 @@ export default function Community() {
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  // Fetch community profiles with filters
+  // Fetch all discoverable profiles once on mount or account/lang switch
   const loadProfiles = useCallback(async () => {
     setLoading(true);
     try {
       const data = await fetchCommunityProfiles({
         currentUserId: session?.user?.id || null,
         currentUserInterests,
-        search,
-        selectedInterest,
-        selectedCity,
-        onlyShared,
+        search: '',
+        selectedInterest: 'all',
+        selectedCity: 'all',
+        onlyShared: false,
         lang,
       });
-      setProfiles(data);
+      setAllProfiles(data);
     } catch (err) {
       console.warn('Error loading community profiles:', err);
     } finally {
       setLoading(false);
     }
-  }, [session, currentUserInterests, search, selectedInterest, selectedCity, onlyShared, lang]);
+  }, [session, currentUserInterests, lang]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadProfiles();
-    }, 150);
-    return () => clearTimeout(timer);
+    loadProfiles();
   }, [loadProfiles]);
+
+  // Instant in-memory real-time filtering as user types or toggles chips
+  const profiles = useMemo(() => {
+    return filterCommunityProfiles(allProfiles, {
+      search,
+      selectedInterest,
+      selectedCity,
+      onlyShared,
+    });
+  }, [allProfiles, search, selectedInterest, selectedCity, onlyShared]);
 
   // Load existing sent requests from localStorage
   useEffect(() => {

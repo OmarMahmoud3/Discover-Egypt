@@ -11,7 +11,7 @@ import { PLACES_DATA } from '../src/data/placesData.js';
 import { translations } from '../src/i18n/translations.js';
 import { adminTranslations } from '../src/i18n/adminTranslations.js';
 import { supabase } from '../src/lib/supabase.js';
-import { calculateSharedInterests } from '../src/lib/communityService.js';
+import { calculateSharedInterests, normalizeArabic, filterCommunityProfiles } from '../src/lib/communityService.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -219,6 +219,42 @@ assert(communityServiceContent.includes(".from('profiles')"), 'communityService 
 // Test calculateSharedInterests
 const shared = calculateSharedInterests(['الآثار الفرعونية', 'الغوص'], ['الآثار الفرعونية', 'التخييم والمغامرات']);
 assert(Array.isArray(shared) && shared.length === 1 && shared[0] === 'الآثار الفرعونية', 'calculateSharedInterests accurately calculates overlap between real profiles');
+
+// --- 6. Community Search & Null Safety Verification ---
+console.log('\n[TEST GROUP 6] Community Search & Null Safety Verification');
+
+// 6.1 normalizeArabic null-safety tests
+assert(normalizeArabic(null) === '', 'normalizeArabic handles null safely without crashing');
+assert(normalizeArabic(undefined) === '', 'normalizeArabic handles undefined safely');
+assert(normalizeArabic('') === '', 'normalizeArabic handles empty string safely');
+assert(normalizeArabic(123) === '123', 'normalizeArabic handles numeric input safely');
+assert(normalizeArabic('أحمد') === 'احمد', 'normalizeArabic normalizes alef with hamza to bare alef');
+assert(normalizeArabic('فاطمة') === 'فاطمه', 'normalizeArabic normalizes taa marbuta to haa');
+assert(normalizeArabic('مُصْطَفَى') === 'مصطفي', 'normalizeArabic strips harakat/tashkeel and harmonizes alef maqsura');
+assert(normalizeArabic('مصطفى ') === 'مصطفي', 'normalizeArabic trims trailing whitespace and normalizes alef maqsura');
+
+// 6.2 filterCommunityProfiles null-safety & search accuracy
+const mockDbProfiles = [
+  { id: '1', display_name: 'مصطفى ', bio: null, city: null, interests: ['الآثار الفرعونية'] },
+  { id: '2', display_name: 'Omar Mahmoud', bio: 'Traveler & Explorer', city: 'Cairo', interests: ['الغوص بالبحر الأحمر'] },
+  { id: '3', display_name: 'ok', bio: null, city: '', interests: [] },
+  { id: '4', display_name: 'سارة أحمد', bio: 'عاشقة للأهرامات والنيل', city: 'الجيزة', interests: ['جولات النيل والفلوكة'] }
+];
+
+const mustafaResults = filterCommunityProfiles(mockDbProfiles, { search: 'مصطفى' });
+assert(mustafaResults.length === 1 && mustafaResults[0].id === '1', 'filterCommunityProfiles accurately finds "مصطفى" ignoring trailing space and matching alef maqsura');
+
+const mustafaHamzaResults = filterCommunityProfiles(mockDbProfiles, { search: 'مصطفي' });
+assert(mustafaHamzaResults.length === 1 && mustafaHamzaResults[0].id === '1', 'filterCommunityProfiles matches "مصطفي" with yaa to "مصطفى"');
+
+const omarResults = filterCommunityProfiles(mockDbProfiles, { search: 'omar' });
+assert(omarResults.length === 1 && omarResults[0].id === '2', 'filterCommunityProfiles matches English name case-insensitively');
+
+const bioSearch = filterCommunityProfiles(mockDbProfiles, { search: 'نيل' });
+assert(bioSearch.length === 1 && bioSearch[0].id === '4', 'filterCommunityProfiles matches inside bio without crashing on null bio of other users');
+
+const emptySearch = filterCommunityProfiles(mockDbProfiles, { search: '' });
+assert(emptySearch.length === 4, 'filterCommunityProfiles with empty search returns all profiles intact');
 
 assert(!profileContent.includes("'الآثار الفرعونية', 'المتاحف والتاريخ المصري'"), 'Profile.jsx does not inject static fallback interests');
 assert(profileContent.includes('is_public'), 'Profile.jsx includes is_public privacy toggle control');
