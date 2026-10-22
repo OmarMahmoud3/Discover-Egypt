@@ -273,6 +273,29 @@ function saveLocalMessages(list) {
   }
 }
 
+let _tablesInstalledCache = null;
+
+/**
+ * Checks if the required messaging and connection tables exist in Supabase
+ */
+export async function checkCommunityTablesInstalled(forceRefresh = false) {
+  if (!forceRefresh && _tablesInstalledCache !== null) {
+    return _tablesInstalledCache;
+  }
+  try {
+    const { error } = await supabase.from('community_connections').select('id').limit(1);
+    if (error && (error.code === 'PGRST205' || error.message?.includes('schema cache'))) {
+      _tablesInstalledCache = false;
+      return false;
+    }
+    _tablesInstalledCache = true;
+    return true;
+  } catch {
+    _tablesInstalledCache = false;
+    return false;
+  }
+}
+
 /**
  * Sends a safe, in-app connection request from one explorer to another
  */
@@ -302,18 +325,30 @@ export async function sendConnectionRequest({
 
   try {
     // 1. Check if a pending request already exists in Supabase
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('community_connections')
       .select('id, status')
       .or(`and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${senderId})`)
       .eq('status', 'pending')
       .maybeSingle();
 
+    if (checkError) {
+      const isMissingTable = checkError.code === 'PGRST205' || checkError.message?.includes('schema cache');
+      if (isMissingTable) {
+        _tablesInstalledCache = false;
+        return {
+          success: false,
+          dbMissing: true,
+          error: 'Database table community_connections is not yet created in Supabase.',
+        };
+      }
+    }
+
     if (existing) {
       return { success: false, alreadyPending: true, data: existing };
     }
 
-    // 2. Insert connection request
+    // 2. Insert connection request into Supabase
     const { data, error } = await supabase
       .from('community_connections')
       .insert([payload])
@@ -322,32 +357,23 @@ export async function sendConnectionRequest({
 
     if (error) {
       console.warn('Database insert into community_connections:', error.message);
-      // Fallback storage in localStorage
-      const local = getLocalRequests();
-      const newReq = {
-        ...payload,
-        id: 'local-' + Date.now(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      local.unshift(newReq);
-      saveLocalRequests(local);
-      return { success: true, localOnly: true, data: newReq };
+      const isMissingTable = error.code === 'PGRST205' || error.message?.includes('schema cache');
+      if (isMissingTable) {
+        _tablesInstalledCache = false;
+        return {
+          success: false,
+          dbMissing: true,
+          error: 'Database table community_connections is missing in Supabase. Run community_messaging_schema.sql to activate.',
+        };
+      }
+      return { success: false, error: error.message };
     }
 
+    _tablesInstalledCache = true;
     return { success: true, data };
   } catch (err) {
     console.warn('Network exception while sending connection request:', err);
-    const local = getLocalRequests();
-    const newReq = {
-      ...payload,
-      id: 'local-' + Date.now(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    local.unshift(newReq);
-    saveLocalRequests(local);
-    return { success: true, localOnly: true, data: newReq };
+    return { success: false, error: err.message };
   }
 }
 
@@ -801,3 +827,115 @@ export function subscribeToMessages(conversationId, callback) {
     return () => {};
   }
 }
+
+/**
+ * Full SQL schema required on Supabase to enable community connections & chat
+ */
+export const COMMUNITY_MESSAGING_SQL = `-- DISCOVER EGYPT — Community Connection Requests & Realtime Messaging Schema
+CREATE TABLE IF NOT EXISTS public.community_connections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  receiver_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  purpose text DEFAULT 'travel_buddy',
+  message text NOT NULL,
+  shared_interests text[] DEFAULT '{}',
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled')),
+  created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL,
+  CONSTRAINT no_self_connect CHECK (sender_id <> receiver_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS unique_pending_connection_idx 
+  ON public.community_connections (LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id))
+  WHERE status = 'pending';
+
+ALTER TABLE public.community_connections ENABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE public.community_connections TO authenticated;
+
+DROP POLICY IF EXISTS "Participants can view their connection requests" ON public.community_connections;
+CREATE POLICY "Participants can view their connection requests"
+  ON public.community_connections FOR SELECT TO authenticated
+  USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+
+DROP POLICY IF EXISTS "Senders can create connection requests" ON public.community_connections;
+CREATE POLICY "Senders can create connection requests"
+  ON public.community_connections FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = sender_id AND sender_id <> receiver_id);
+
+DROP POLICY IF EXISTS "Receiver can accept or reject, sender can cancel" ON public.community_connections;
+CREATE POLICY "Receiver can accept or reject, sender can cancel"
+  ON public.community_connections FOR UPDATE TO authenticated
+  USING (auth.uid() = receiver_id OR (auth.uid() = sender_id AND status = 'pending'))
+  WITH CHECK (auth.uid() = receiver_id OR (auth.uid() = sender_id AND status = 'cancelled'));
+
+CREATE TABLE IF NOT EXISTS public.conversations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  connection_id uuid REFERENCES public.community_connections(id) ON DELETE SET NULL,
+  participant1_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  participant2_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  last_message_text text DEFAULT '',
+  last_message_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL,
+  created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL,
+  CONSTRAINT no_self_conversation CHECK (participant1_id <> participant2_id),
+  CONSTRAINT unique_participants UNIQUE (participant1_id, participant2_id)
+);
+
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE public.conversations TO authenticated;
+
+DROP POLICY IF EXISTS "Participants can view their conversations" ON public.conversations;
+CREATE POLICY "Participants can view their conversations"
+  ON public.conversations FOR SELECT TO authenticated
+  USING (auth.uid() = participant1_id OR auth.uid() = participant2_id);
+
+DROP POLICY IF EXISTS "Participants can insert conversations" ON public.conversations;
+CREATE POLICY "Participants can insert conversations"
+  ON public.conversations FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = participant1_id OR auth.uid() = participant2_id);
+
+DROP POLICY IF EXISTS "Participants can update their conversations" ON public.conversations;
+CREATE POLICY "Participants can update their conversations"
+  ON public.conversations FOR UPDATE TO authenticated
+  USING (auth.uid() = participant1_id OR auth.uid() = participant2_id)
+  WITH CHECK (auth.uid() = participant1_id OR auth.uid() = participant2_id);
+
+CREATE TABLE IF NOT EXISTS public.messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content text NOT NULL,
+  is_read boolean DEFAULT false NOT NULL,
+  created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE public.messages TO authenticated;
+
+DROP POLICY IF EXISTS "Conversation participants can view messages" ON public.messages;
+CREATE POLICY "Conversation participants can view messages"
+  ON public.messages FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = messages.conversation_id AND (c.participant1_id = auth.uid() OR c.participant2_id = auth.uid())));
+
+DROP POLICY IF EXISTS "Conversation participants can send messages" ON public.messages;
+CREATE POLICY "Conversation participants can send messages"
+  ON public.messages FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = sender_id AND EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = messages.conversation_id AND (c.participant1_id = auth.uid() OR c.participant2_id = auth.uid())));
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'community_connections') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.community_connections;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'conversations') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'messages') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  END IF;
+END $$;
+
+ALTER TABLE public.community_connections REPLICA IDENTITY FULL;
+ALTER TABLE public.conversations REPLICA IDENTITY FULL;
+ALTER TABLE public.messages REPLICA IDENTITY FULL;`;
+

@@ -14,6 +14,8 @@ import {
   fetchConversations,
   getOrCreateConversation,
   subscribeToRequests,
+  checkCommunityTablesInstalled,
+  COMMUNITY_MESSAGING_SQL,
 } from '../lib/communityService';
 import ChatDrawer from '../Components/ChatDrawer';
 import '../styles/community.css';
@@ -61,9 +63,21 @@ export default function Community() {
   const [sendingConnect, setSendingConnect] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Database Schema Readiness state
+  const [dbTablesReady, setDbTablesReady] = useState(true);
+  const [showDbModal, setShowDbModal] = useState(false);
+  const [dbCopied, setDbCopied] = useState(false);
+
   // Active Chat states
   const [activeChat, setActiveChat] = useState(null); // { otherUser, conversationId }
   const [chatOpen, setChatOpen] = useState(false);
+
+  // Check Supabase tables on mount
+  useEffect(() => {
+    checkCommunityTablesInstalled().then((ready) => {
+      setDbTablesReady(ready);
+    });
+  }, []);
 
   // Extract current user interests from auth profile or user metadata
   const currentUserInterests = useMemo(() => {
@@ -226,11 +240,14 @@ export default function Community() {
         }
         handleCloseModal();
         await loadRequestsAndConversations();
+      } else if (res.dbMissing) {
+        setDbTablesReady(false);
+        showToast(t('community.dbRequiredError'), 'error');
       } else if (res.alreadyPending) {
-        showToast(t('community.requestAlreadyPending'), 'info');
+        showToast(t('community.connectedBtn') || t('community.requestAlreadyPending'), 'info');
         handleCloseModal();
       } else {
-        showToast(t('community.requestSentError'), 'error');
+        showToast(res.error || t('community.requestSentError'), 'error');
       }
     } catch (err) {
       console.warn('Failed to send connection:', err);
@@ -401,6 +418,27 @@ export default function Community() {
           </div>
         </header>
 
+        {/* Database Setup Notice Banner (Visible when Supabase tables are pending) */}
+        {!dbTablesReady && (
+          <aside className="community-db-notice-banner" role="alert">
+            <div className="community-db-notice-info">
+              <span style={{ fontSize: 24 }} aria-hidden="true">⚠️</span>
+              <div>
+                <strong style={{ display: 'block', fontSize: 14 }}>{t('community.dbNoticeTitle')}</strong>
+                <span>{t('community.dbNoticeDesc')}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="community-db-notice-btn"
+              onClick={() => setShowDbModal(true)}
+            >
+              <span>⚙️</span>
+              <span>{t('community.dbNoticeBtn')}</span>
+            </button>
+          </aside>
+        )}
+
         {/* Primary Community Tabs: Explorers / Requests / Conversations */}
         <nav className="community-nav-tabs" aria-label="Community Sections">
           <button
@@ -409,7 +447,8 @@ export default function Community() {
             onClick={() => setActiveTab('explorers')}
           >
             <span aria-hidden="true">🧭</span>
-            <span>{t('community.tabExplorers')}</span>
+            <span className="community-tab-label-full">{t('community.tabExplorers')}</span>
+            <span className="community-tab-label-short">{t('community.tabExplorersShort')}</span>
           </button>
 
           {session && (
@@ -423,7 +462,8 @@ export default function Community() {
                 }}
               >
                 <span aria-hidden="true">📬</span>
-                <span>{t('community.tabRequests')}</span>
+                <span className="community-tab-label-full">{t('community.tabRequests')}</span>
+                <span className="community-tab-label-short">{t('community.tabRequestsShort')}</span>
                 {pendingIncomingCount > 0 && (
                   <span className="community-tab-badge">{pendingIncomingCount}</span>
                 )}
@@ -438,7 +478,8 @@ export default function Community() {
                 }}
               >
                 <span aria-hidden="true">💬</span>
-                <span>{t('community.tabConversations')}</span>
+                <span className="community-tab-label-full">{t('community.tabConversations')}</span>
+                <span className="community-tab-label-short">{t('community.tabConversationsShort')}</span>
                 {conversations.length > 0 && (
                   <span className="community-tab-badge">{conversations.length}</span>
                 )}
@@ -1010,6 +1051,8 @@ export default function Community() {
             }}
           >
             <div className="connect-modal-card">
+              <div className="connect-modal-drag-handle" aria-hidden="true" />
+
               <div className="connect-modal-header">
                 <div>
                   <h3 id="connect-dialog-title" className="connect-modal-title">
@@ -1030,93 +1073,177 @@ export default function Community() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitConnect} className="connect-modal-form">
-                {/* Connection Purpose */}
-                <div className="connect-form-group">
-                  <label className="connect-label">{t('community.connectionTypeLabel')}</label>
-                  <div className="connect-purpose-options">
-                    {[
-                      { id: 'travel_buddy', icon: '🧭', label: t('community.connectionTypeTravelBuddy') },
-                      { id: 'advice', icon: '💡', label: t('community.connectionTypeAdvice') },
-                      { id: 'cultural', icon: '🏛️', label: t('community.connectionTypeCultural') },
-                      { id: 'general', icon: '🤝', label: t('community.connectionTypeGeneral') },
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className={`connect-purpose-btn ${connectPurpose === opt.id ? 'active' : ''}`}
-                        onClick={() => setConnectPurpose(opt.id)}
-                      >
-                        <span aria-hidden="true">{opt.icon}</span>
-                        <span>{opt.label}</span>
-                      </button>
-                    ))}
+              <form onSubmit={handleSubmitConnect} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                <div className="connect-modal-body">
+                  {/* Connection Purpose */}
+                  <div className="connect-form-group">
+                    <label className="connect-label">
+                      <span aria-hidden="true">🎯</span>
+                      <span>{t('community.connectionTypeLabel')}</span>
+                    </label>
+                    <div className="connect-purpose-options">
+                      {[
+                        { id: 'travel_buddy', icon: '🧭', label: t('community.connectionTypeTravelBuddy') },
+                        { id: 'advice', icon: '💡', label: t('community.connectionTypeAdvice') },
+                        { id: 'cultural', icon: '🏛️', label: t('community.connectionTypeCultural') },
+                        { id: 'general', icon: '🤝', label: t('community.connectionTypeGeneral') },
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          className={`connect-purpose-btn ${connectPurpose === opt.id ? 'active' : ''}`}
+                          onClick={() => setConnectPurpose(opt.id)}
+                        >
+                          <span aria-hidden="true">{opt.icon}</span>
+                          <span>{opt.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Icebreaker Suggestions */}
+                  <div className="connect-form-group">
+                    <label className="connect-label">
+                      <span aria-hidden="true">✨</span>
+                      <span>{t('community.icebreakerPrompt')}</span>
+                    </label>
+                    <div className="icebreakers-row">
+                      {[
+                        t('community.icebreaker1').replace(
+                          '{interest}',
+                          connectModalUser.sharedInterests?.[0] || connectModalUser.interests?.[0] || (isArabic ? 'الآثار المصرية' : 'Egyptian Antiquities')
+                        ),
+                        t('community.icebreaker2'),
+                        t('community.icebreaker3'),
+                      ].map((ice, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          className="icebreaker-chip"
+                          onClick={() => setConnectMessage(ice)}
+                          title={ice}
+                        >
+                          "{ice}"
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Message input */}
+                  <div className="connect-form-group">
+                    <label htmlFor="connect-msg" className="connect-label">
+                      <span aria-hidden="true">✉️</span>
+                      <span>{t('community.messageLabel')}</span>
+                    </label>
+                    <textarea
+                      id="connect-msg"
+                      rows={3}
+                      className="connect-textarea"
+                      value={connectMessage}
+                      onChange={(e) => setConnectMessage(e.target.value)}
+                      placeholder={t('community.messagePlaceholder')}
+                      required
+                    />
+                  </div>
+
+                  {/* Privacy Guarantee Banner */}
+                  <div className="connect-privacy-note">
+                    <span aria-hidden="true">🔒</span>
+                    <span>{t('community.privacyGuarantee')}</span>
                   </div>
                 </div>
 
-                {/* Icebreaker Suggestions */}
-                <div className="connect-form-group">
-                  <label className="connect-label">{t('community.icebreakerPrompt')}</label>
-                  <div className="icebreakers-row">
-                    {[
-                      t('community.icebreaker1').replace(
-                        '{interest}',
-                        connectModalUser.sharedInterests?.[0] || connectModalUser.interests?.[0] || 'الآثار المصرية'
-                      ),
-                      t('community.icebreaker2'),
-                      t('community.icebreaker3'),
-                    ].map((ice, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className="icebreaker-chip"
-                        onClick={() => setConnectMessage(ice)}
-                      >
-                        "{ice}"
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Message input */}
-                <div className="connect-form-group">
-                  <label htmlFor="connect-msg" className="connect-label">
-                    {t('community.messageLabel')}
-                  </label>
-                  <textarea
-                    id="connect-msg"
-                    rows={4}
-                    className="connect-textarea"
-                    value={connectMessage}
-                    onChange={(e) => setConnectMessage(e.target.value)}
-                    placeholder={t('community.messagePlaceholder')}
-                    required
-                  />
-                </div>
-
-                {/* Privacy Guarantee Banner */}
-                <div className="connect-privacy-note">
-                  <span>{t('community.privacyGuarantee')}</span>
-                </div>
-
-                {/* Modal Footer Actions */}
+                {/* Sticky Modal Footer Actions */}
                 <div className="connect-modal-actions">
                   <button
                     type="button"
-                    className="community-action-btn secondary"
+                    className="secondary"
                     onClick={handleCloseModal}
                   >
                     {t('community.closeModal')}
                   </button>
                   <button
                     type="submit"
-                    className="community-action-btn primary"
+                    className="primary"
                     disabled={sendingConnect || !connectMessage.trim()}
                   >
                     {sendingConnect ? t('community.sendingRequest') : t('community.sendRequestBtn')}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Database Setup Modal Dialog */}
+        {showDbModal && (
+          <div
+            className="connect-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="db-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowDbModal(false);
+            }}
+          >
+            <div className="connect-modal-card db-modal-card">
+              <div className="connect-modal-header">
+                <div>
+                  <h3 id="db-modal-title" className="connect-modal-title">
+                    ⚙️ {t('community.dbModalTitle')}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  className="connect-modal-close"
+                  onClick={() => setShowDbModal(false)}
+                  aria-label={t('community.closeModal')}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="db-modal-body">
+                <ul className="db-instructions-list">
+                  <li>{t('community.dbModalStep1')}</li>
+                  <li>{t('community.dbModalStep2')}</li>
+                </ul>
+
+                <pre className="db-sql-code-box">{COMMUNITY_MESSAGING_SQL}</pre>
+
+                <div className="db-copy-actions">
+                  <button
+                    type="button"
+                    className="db-copy-btn"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(COMMUNITY_MESSAGING_SQL);
+                        setDbCopied(true);
+                        setTimeout(() => setDbCopied(false), 3000);
+                      } catch (err) {
+                        console.warn('Clipboard write failed:', err);
+                      }
+                    }}
+                  >
+                    {dbCopied ? t('community.dbModalCopied') : t('community.dbModalCopyBtn')}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{
+                      padding: '10px 18px',
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      border: '1px solid var(--border)',
+                      fontFamily: 'inherit',
+                      fontWeight: 600,
+                    }}
+                    onClick={() => setShowDbModal(false)}
+                  >
+                    {t('community.closeModal')}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
