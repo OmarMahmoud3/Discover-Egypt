@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchMessages, sendMessage, subscribeToMessages, HERITAGE_AVATARS_MAP } from '../lib/communityService';
+import { supabase } from '../lib/supabase';
+import ReportModal from './ReportModal';
 
 // Deduplicate and reconcile messages (handles optimistic updates and realtime race conditions)
 function reconcileMessage(prevMessages, incoming) {
@@ -45,8 +47,30 @@ export default function ChatDrawer({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [isBanned, setIsBanned] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Check if current user is banned
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let mounted = true;
+    supabase
+      .from('profiles')
+      .select('is_banned')
+      .eq('id', currentUser.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (mounted && data?.is_banned) {
+          setIsBanned(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser?.id]);
 
   // Load message history when drawer opens or conversation changes
   useEffect(() => {
@@ -208,14 +232,28 @@ export default function ChatDrawer({
               </span>
             </div>
           </div>
-          <button
-            type="button"
-            className="chat-drawer-close-btn"
-            onClick={onClose}
-            aria-label={t('community.closeModal')}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              className="chat-drawer-report-btn"
+              onClick={() => setReportModalOpen(true)}
+              title={t('community.reportUser')}
+              aria-label={t('community.reportUser')}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#DC2626' }}>
+                flag
+              </span>
+              <span className="chat-report-label">{t('community.reportUser')}</span>
+            </button>
+            <button
+              type="button"
+              className="chat-drawer-close-btn"
+              onClick={onClose}
+              aria-label={t('community.closeModal')}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Messages Body */}
@@ -280,36 +318,55 @@ export default function ChatDrawer({
           </div>
         )}
 
-        {/* Input Bar */}
-        <form className="chat-drawer-footer" onSubmit={handleSend}>
-          <input
-            ref={inputRef}
-            type="text"
-            className="chat-input-field"
-            placeholder={t('community.typeMessage')}
-            value={inputText}
-            onChange={(e) => {
-              setInputText(e.target.value);
-              if (sendError) setSendError(null);
-            }}
-            onFocus={handleFocus}
-            onKeyDown={handleKeyDown}
-            disabled={sending}
-            maxLength={1000}
-          />
-          <button
-            type="submit"
-            className="chat-send-btn"
-            disabled={!inputText.trim() || sending}
-            aria-label={t('community.sendBtn')}
-          >
-            {sending ? (
-              <span className="chat-send-spinner" />
-            ) : (
-              <span>{isArabic ? 'إرسال 🚀' : 'Send 🚀'}</span>
-            )}
-          </button>
-        </form>
+        {/* Input Bar or Banned Notice */}
+        {isBanned ? (
+          <div className="chat-banned-notice-bar" role="alert">
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#DC2626' }}>
+              block
+            </span>
+            <span>{t('community.bannedNotice')}</span>
+          </div>
+        ) : (
+          <form className="chat-drawer-footer" onSubmit={handleSend}>
+            <input
+              ref={inputRef}
+              type="text"
+              className="chat-input-field"
+              placeholder={t('community.typeMessage')}
+              value={inputText}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                if (sendError) setSendError(null);
+              }}
+              onFocus={handleFocus}
+              onKeyDown={handleKeyDown}
+              disabled={sending}
+              maxLength={1000}
+            />
+            <button
+              type="submit"
+              className="chat-send-btn"
+              disabled={!inputText.trim() || sending}
+              aria-label={t('community.sendBtn')}
+            >
+              {sending ? (
+                <span className="chat-send-spinner" />
+              ) : (
+                <span>{isArabic ? 'إرسال 🚀' : 'Send 🚀'}</span>
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* Report Modal */}
+        <ReportModal
+          isOpen={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+          currentUser={currentUser}
+          otherUser={otherUser}
+          conversationId={conversationId}
+          messages={messages}
+        />
       </div>
     </div>
   );

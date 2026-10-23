@@ -24,6 +24,7 @@ export default function AdminSidebar({ open, onClose }) {
     { path: '/admin/places', icon: 'location_on', label: ta('admin.places') },
     { path: '/admin/places/new', icon: 'add_location_alt', label: ta('admin.addPlace') },
     { path: '/admin/users', icon: 'group', label: ta('admin.users') },
+    { path: '/admin/reports', icon: 'shield', label: ta('admin.reports') },
     { path: '/admin/settings', icon: 'settings', label: ta('admin.settings') },
   ];
 

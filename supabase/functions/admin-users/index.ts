@@ -344,8 +344,115 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // 7. Operation: ban_user or unban_user
+    if (action === 'ban_user' || action === 'unban_user') {
+      const { targetUserId, banReason, reportId } = payload;
+      const isBanned = action === 'ban_user';
+
+      if (!targetUserId || typeof targetUserId !== 'string') {
+        return new Response(
+          JSON.stringify({ error: 'Bad Request: targetUserId is required.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Safeguard: Cannot ban self
+      if (isBanned && targetUserId === currentUserId) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: You cannot ban your active administrator account.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Safeguard: Cannot ban an admin
+      const { data: targetProfile } = await adminClient
+        .from('profiles')
+        .select('role')
+        .eq('id', targetUserId)
+        .maybeSingle();
+
+      if (isBanned && targetProfile?.role === 'admin') {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: Administrators cannot be banned.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Update public.profiles
+      const { error: banProfileErr } = await adminClient
+        .from('profiles')
+        .update({
+          is_banned: isBanned,
+          banned_at: isBanned ? new Date().toISOString() : null,
+          ban_reason: isBanned ? (banReason || 'Violating community guidelines') : null,
+          banned_by: isBanned ? currentUserId : null,
+        })
+        .eq('id', targetUserId);
+
+      if (banProfileErr) {
+        return new Response(
+          JSON.stringify({ error: `Failed to update ban status: ${banProfileErr.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Update Auth app_metadata to invalidate or restrict active sessions
+      try {
+        await adminClient.auth.admin.updateUserById(targetUserId, {
+          app_metadata: { is_banned: isBanned },
+        });
+      } catch (authBanErr: any) {
+        console.warn('Could not update Auth metadata for ban:', authBanErr?.message);
+      }
+
+      // Insert audit log
+      try {
+        await adminClient.from('admin_audit_logs').insert([
+          {
+            admin_id: currentUserId,
+            action: isBanned ? 'user_banned' : 'user_unbanned',
+            target_type: 'user',
+            target_id: targetUserId,
+            details: { is_banned: isBanned, report_id: reportId },
+            reason: banReason || '',
+          },
+        ]);
+      } catch (logErr: any) {
+        console.warn('Could not insert admin audit log:', logErr?.message);
+      }
+
+      // If associated with a report and banning user, update report status
+      if (reportId && isBanned) {
+        try {
+          await adminClient
+            .from('chat_reports')
+            .update({
+              status: 'action_taken',
+              action_type: 'user_banned',
+              resolved_by: currentUserId,
+              resolved_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', reportId);
+        } catch {
+          // ignore
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          user: {
+            id: targetUserId,
+            is_banned: isBanned,
+          },
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ error: `Unknown action: "${action}". Supported actions: list_users, update_user_role.` }),
+      JSON.stringify({ error: `Unknown action: "${action}". Supported actions: list_users, update_user_role, ban_user, unban_user.` }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {

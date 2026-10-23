@@ -32,6 +32,7 @@ const AdminDashboard = lazy(() => import('./Pages/admin/AdminDashboard'));
 const AdminPlaces = lazy(() => import('./Pages/admin/AdminPlaces'));
 const AdminPlaceEdit = lazy(() => import('./Pages/admin/AdminPlaceEdit'));
 const AdminUsers = lazy(() => import('./Pages/admin/AdminUsers'));
+const AdminReports = lazy(() => import('./Pages/admin/AdminReports'));
 const AdminSettings = lazy(() => import('./Pages/admin/AdminSettings'));
 
 function AdminSuspenseFallback() {
@@ -162,6 +163,7 @@ function AppContent() {
             <Route path="places/new" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminPlaceEdit /></Suspense>} />
             <Route path="places/:id" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminPlaceEdit /></Suspense>} />
             <Route path="users" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminUsers /></Suspense>} />
+            <Route path="reports" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminReports /></Suspense>} />
             <Route path="settings" element={<Suspense fallback={<AdminSuspenseFallback />}><AdminSettings /></Suspense>} />
           </Route>
 

@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { adminSetUserBanStatus } from '../../lib/communityService';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import ConfirmDialog from '../../Components/admin/ConfirmDialog';
 
@@ -94,7 +95,7 @@ export default function AdminUsers() {
       // Direct database query fallback
       let query = supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, preferred_language, role, created_at', { count: 'exact' });
+        .select('id, display_name, avatar_url, preferred_language, role, is_banned, ban_reason, created_at', { count: 'exact' });
 
       if (roleFilter === 'admin' || roleFilter === 'user') {
         query = query.eq('role', roleFilter);
@@ -131,6 +132,8 @@ export default function AdminUsers() {
           avatar_url: p.avatar_url || null,
           preferred_language: p.preferred_language || 'ar',
           role: p.role || null,
+          is_banned: Boolean(p.is_banned),
+          ban_reason: p.ban_reason || null,
           has_profile: true,
         };
       });
@@ -173,6 +176,50 @@ export default function AdminUsers() {
   const handleRoleFilterChange = (val) => {
     setRoleFilter(val);
     setPage(1);
+  };
+
+  // Safe Ban/Unban Handler
+  const handleToggleBan = (targetUser) => {
+    const isSelf = targetUser.id === currentAdminProfile?.id || targetUser.id === session?.user?.id;
+    if (isSelf) {
+      showToast('لا يمكنك حظر حسابك الإداري النشط', 'error');
+      return;
+    }
+    if (targetUser.role === 'admin') {
+      showToast('لا يمكن حظر المشرفين', 'error');
+      return;
+    }
+
+    const isBanning = !targetUser.is_banned;
+    const displayName = targetUser.display_name || targetUser.email || targetUser.id.slice(0, 8);
+
+    setConfirmDialog({
+      open: true,
+      title: isBanning ? ta('admin.confirmBanTitle') : ta('admin.confirmUnbanTitle'),
+      message: isBanning
+        ? ta('admin.confirmBanMsg').replace('{name}', displayName)
+        : ta('admin.confirmUnbanMsg').replace('{name}', displayName),
+      variant: isBanning ? 'danger' : 'info',
+      onConfirm: async () => {
+        setActionLoading(true);
+        try {
+          await adminSetUserBanStatus({
+            targetUserId: targetUser.id,
+            isBanned: isBanning,
+            banReason: isBanning ? 'Violating community guidelines' : '',
+            adminId: currentAdminProfile?.id,
+          });
+
+          showToast(isBanning ? ta('admin.banSuccess') : ta('admin.unbanSuccess'), 'success');
+          fetchUsers(true);
+        } catch (err) {
+          console.error('Error toggling ban status:', err);
+          showToast(err?.message || 'Failed to update ban status', 'error');
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   // Safe Role Change Handler
@@ -699,6 +746,11 @@ export default function AdminUsers() {
                                     {ta('admin.youBadge')}
                                   </span>
                                 )}
+                                {u.is_banned && (
+                                  <span className="admin-badge admin-badge-banned" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                    {ta('admin.userBannedBadge')}
+                                  </span>
+                                )}
                               </div>
                             </td>
 
@@ -835,35 +887,57 @@ export default function AdminUsers() {
                               </span>
                             </td>
 
-                            {/* Role Action Button */}
+                            {/* Role Action & Ban Buttons */}
                             <td style={{ textAlign: 'center' }}>
-                              <button
-                                onClick={() => handleRoleChange(u)}
-                                disabled={isCurrentAdmin || actionLoading}
-                                className={`admin-btn ${
-                                  isAdminRole ? 'admin-btn-outline' : 'admin-btn-gold'
-                                }`}
-                                style={{
-                                  padding: '6px 14px',
-                                  fontSize: '12px',
-                                  opacity: isCurrentAdmin ? 0.45 : 1,
-                                  cursor: isCurrentAdmin ? 'not-allowed' : 'pointer',
-                                }}
-                                title={
-                                  isCurrentAdmin
-                                    ? ta('admin.cannotDemoteSelf')
-                                    : isAdminRole
-                                    ? ta('admin.demoteToUser')
-                                    : ta('admin.promoteToAdmin')
-                                }
-                              >
-                                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-                                  {isAdminRole ? 'arrow_downward' : 'upgrade'}
-                                </span>
-                                <span>
-                                  {isAdminRole ? ta('admin.demoteToUser') : ta('admin.promoteToAdmin')}
-                                </span>
-                              </button>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  onClick={() => handleRoleChange(u)}
+                                  disabled={isCurrentAdmin || actionLoading}
+                                  className={`admin-btn ${
+                                    isAdminRole ? 'admin-btn-outline' : 'admin-btn-gold'
+                                  }`}
+                                  style={{
+                                    padding: '6px 12px',
+                                    fontSize: '12px',
+                                    opacity: isCurrentAdmin ? 0.45 : 1,
+                                    cursor: isCurrentAdmin ? 'not-allowed' : 'pointer',
+                                  }}
+                                  title={
+                                    isCurrentAdmin
+                                      ? ta('admin.cannotDemoteSelf')
+                                      : isAdminRole
+                                      ? ta('admin.demoteToUser')
+                                      : ta('admin.promoteToAdmin')
+                                  }
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                                    {isAdminRole ? 'arrow_downward' : 'upgrade'}
+                                  </span>
+                                  <span>
+                                    {isAdminRole ? ta('admin.demoteToUser') : ta('admin.promoteToAdmin')}
+                                  </span>
+                                </button>
+
+                                {!isAdminRole && (
+                                  <button
+                                    onClick={() => handleToggleBan(u)}
+                                    disabled={isCurrentAdmin || actionLoading}
+                                    className={`admin-btn ${u.is_banned ? 'admin-btn-outline' : 'admin-btn-danger'}`}
+                                    style={{
+                                      padding: '6px 10px',
+                                      fontSize: '12px',
+                                      borderColor: u.is_banned ? 'var(--success)' : undefined,
+                                      color: u.is_banned ? 'var(--success)' : undefined,
+                                    }}
+                                    title={u.is_banned ? ta('admin.unbanUserBtn') : ta('admin.banUserBtn')}
+                                  >
+                                    <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+                                      {u.is_banned ? 'lock_open' : 'block'}
+                                    </span>
+                                    <span>{u.is_banned ? ta('admin.unbanUserBtn') : ta('admin.banUserBtn')}</span>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

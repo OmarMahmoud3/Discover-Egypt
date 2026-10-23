@@ -129,14 +129,17 @@ const criticalFiles = [
   'src/Pages/admin/AdminPlaces.jsx',
   'src/Pages/admin/AdminPlaceEdit.jsx',
   'src/Pages/admin/AdminUsers.jsx',
+  'src/Pages/admin/AdminReports.jsx',
   'src/Pages/admin/AdminSettings.jsx',
   'src/styles/admin.css',
   'src/styles/profile.css',
   'src/styles/community.css',
   'src/lib/communityService.js',
   'src/Components/ChatDrawer.jsx',
+  'src/Components/ReportModal.jsx',
   'supabase/community_discovery_schema.sql',
   'supabase/community_messaging_schema.sql',
+  'supabase/chat_reports_and_moderation_schema.sql',
   'jsconfig.json',
   'src/lib/searchUtils.js',
   'src/hooks/useVoiceSearch.js',
@@ -398,6 +401,48 @@ assert(profileSource.includes("navigate('/login'"), 'Profile.jsx redirects to /l
 
 const logInSource = fs.readFileSync(path.resolve('src/Pages/LogIn.jsx'), 'utf8');
 assert(logInSource.includes('location?.state?.message'), 'LogIn.jsx displays post-deletion confirmation toast');
+
+// --- 10. Chat Moderation & User Reporting Verification ---
+console.log('\n[TEST GROUP 10] Chat Moderation, Reporting & Ban Enforcement Verification');
+const modSchemaPath = path.resolve('supabase/chat_reports_and_moderation_schema.sql');
+assert(fs.existsSync(modSchemaPath), 'chat_reports_and_moderation_schema.sql exists');
+const modSchemaCode = fs.readFileSync(modSchemaPath, 'utf8');
+assert(modSchemaCode.includes('CREATE TABLE IF NOT EXISTS public.chat_reports'), 'chat_reports table created');
+assert(modSchemaCode.includes('CREATE TABLE IF NOT EXISTS public.chat_report_evidence'), 'chat_report_evidence table created');
+assert(modSchemaCode.includes('CREATE TABLE IF NOT EXISTS public.admin_audit_logs'), 'admin_audit_logs table created');
+assert(modSchemaCode.includes('CONSTRAINT no_self_report'), 'no_self_report constraint enforced');
+assert(modSchemaCode.includes('submit_chat_report'), 'submit_chat_report RPC defined');
+assert(modSchemaCode.includes('admin_moderate_report'), 'admin_moderate_report RPC defined');
+assert(modSchemaCode.includes('admin_set_user_ban_status'), 'admin_set_user_ban_status RPC defined');
+
+// Verify translation keys
+const reqComKeys = ['reportUser', 'reportUserTitle', 'reportReasonLabel', 'reportEvidenceLabel', 'reportPrivacyNotice', 'submitReportBtn', 'reportSuccessTitle', 'bannedNotice'];
+reqComKeys.forEach((k) => {
+  assert(Boolean(translations.ar?.community?.[k]), `Community AR translation key "${k}" exists`);
+  assert(Boolean(translations.en?.community?.[k]), `Community EN translation key "${k}" exists`);
+});
+
+const reqAdmKeys = ['reports', 'reportsTitle', 'pendingReview', 'investigating', 'actionTaken', 'dismissed', 'frozenEvidenceNotice', 'banUserBtn', 'unbanUserBtn', 'userBannedBadge'];
+reqAdmKeys.forEach((k) => {
+  assert(Boolean(adminTranslations.ar?.admin?.[k]), `Admin AR translation key "${k}" exists`);
+  assert(Boolean(adminTranslations.en?.admin?.[k]), `Admin EN translation key "${k}" exists`);
+});
+
+// Verify UI integration
+const chatDrawerSource = fs.readFileSync(path.resolve('src/Components/ChatDrawer.jsx'), 'utf8');
+assert(chatDrawerSource.includes('ReportModal'), 'ChatDrawer integrates ReportModal');
+assert(chatDrawerSource.includes('chat-drawer-report-btn'), 'ChatDrawer includes report button');
+assert(chatDrawerSource.includes('chat-banned-notice-bar'), 'ChatDrawer renders banned notice');
+
+const adminSidebarCode = fs.readFileSync(path.resolve('src/Components/admin/AdminSidebar.jsx'), 'utf8');
+assert(adminSidebarCode.includes('/admin/reports'), 'AdminSidebar includes /admin/reports');
+
+const appCode = fs.readFileSync(path.resolve('src/App.jsx'), 'utf8');
+assert(appCode.includes('AdminReports'), 'App.jsx registers AdminReports');
+
+const adminUsersCode = fs.readFileSync(path.resolve('src/Pages/admin/AdminUsers.jsx'), 'utf8');
+assert(adminUsersCode.includes('handleToggleBan'), 'AdminUsers implements handleToggleBan');
+assert(adminUsersCode.includes('userBannedBadge'), 'AdminUsers renders userBannedBadge');
 
 // --- Summary ---
 console.log('\n======================================================');

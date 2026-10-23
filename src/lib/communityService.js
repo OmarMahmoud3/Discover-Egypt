@@ -314,6 +314,25 @@ export async function sendConnectionRequest({
     throw new Error('Cannot send a connection request to yourself.');
   }
 
+  // Guard against banned accounts
+  try {
+    const { data: senderProf } = await supabase
+      .from('profiles')
+      .select('is_banned')
+      .eq('id', senderId)
+      .maybeSingle();
+
+    if (senderProf?.is_banned) {
+      return {
+        success: false,
+        isBanned: true,
+        error: 'حسابك معلّق من إرسال طلبات التواصل لمخالفة معايير المجتمع.',
+      };
+    }
+  } catch {
+    // Continue gracefully
+  }
+
   const payload = {
     sender_id: senderId,
     receiver_id: receiverId,
@@ -717,6 +736,23 @@ export async function fetchMessages(conversationId) {
 export async function sendMessage({ conversationId, senderId, content }) {
   if (!conversationId || !senderId || !content?.trim()) {
     throw new Error('conversationId, senderId, and content are required.');
+  }
+
+  // Guard against banned accounts attempting to send messages
+  try {
+    const { data: senderProf } = await supabase
+      .from('profiles')
+      .select('is_banned')
+      .eq('id', senderId)
+      .maybeSingle();
+
+    if (senderProf?.is_banned) {
+      throw new Error('USER_BANNED');
+    }
+  } catch (banErr) {
+    if (banErr.message === 'USER_BANNED') {
+      throw new Error('حسابك معلّق من إرسال الرسائل لمخالفة معايير المجتمع.');
+    }
   }
 
   const payload = {
@@ -1131,3 +1167,667 @@ export async function deleteCurrentUserAccount() {
 
   return { success: true, userId, serverConfirmed: true };
 }
+
+// ==============================================================================
+// CHAT REPORTING, EVIDENCE SNAPSHOTTING & MODERATION SERVICES
+// ==============================================================================
+
+export const REPORT_REASONS = [
+  { id: 'harassment', labelAr: 'مضايقة أو تحرش لفظي', labelEn: 'Harassment or Verbal Abuse', icon: '⚠️' },
+  { id: 'hate_speech', labelAr: 'خطاب كراهية أو تمييز', labelEn: 'Hate Speech or Discrimination', icon: '🚫' },
+  { id: 'spam_scam', labelAr: 'احتيال أو رسائل مزعجة (سبام)', labelEn: 'Scam or Unsolicited Spam', icon: '📢' },
+  { id: 'inappropriate_content', labelAr: 'محتوى غير لائق أو مخل', labelEn: 'Inappropriate or Explicit Content', icon: '🔞' },
+  { id: 'violence_threat', labelAr: 'تهديد أو تحريض على العنف', labelEn: 'Violence or Direct Threat', icon: '🛑' },
+  { id: 'other', labelAr: 'سبب آخر', labelEn: 'Other Violation', icon: '📝' },
+];
+
+export const REPORT_STATUSES = [
+  { id: 'pending', labelAr: 'قيد المراجعة', labelEn: 'Pending Review', color: '#D97706', bg: '#FEF3C7' },
+  { id: 'investigating', labelAr: 'قيد التحقيق', labelEn: 'Investigating', color: '#2563EB', bg: '#DBEAFE' },
+  { id: 'action_taken', labelAr: 'تم اتخاذ إجراء', labelEn: 'Action Taken', color: '#059669', bg: '#D1FAE5' },
+  { id: 'dismissed', labelAr: 'أُغلق دون إجراء', labelEn: 'Dismissed', color: '#6B7280', bg: '#F3F4F6' },
+];
+
+/**
+ * Local fallback helpers for offline/test environment
+ */
+function getLocalReports() {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem('discover_egypt_chat_reports') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalReports(reports) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem('discover_egypt_chat_reports', JSON.stringify(reports));
+  } catch (e) {
+    console.warn('Could not save reports to localStorage:', e);
+  }
+}
+
+function getLocalAuditLogs() {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem('discover_egypt_audit_logs') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalAuditLogs(logs) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem('discover_egypt_audit_logs', JSON.stringify(logs));
+  } catch (e) {
+    console.warn('Could not save audit logs to localStorage:', e);
+  }
+}
+
+/**
+ * Submits a chat report with server-side frozen evidence
+ */
+export async function submitChatReport({
+  reporterId,
+  reportedUserId,
+  conversationId,
+  reason,
+  details = '',
+  messageIds = [],
+}) {
+  if (!reporterId || !reportedUserId || !conversationId || !reason) {
+    throw new Error('reporterId, reportedUserId, conversationId, and reason are required.');
+  }
+
+  if (reporterId === reportedUserId) {
+    throw new Error('You cannot report yourself.');
+  }
+
+  // Strategy 1: Stored Procedure RPC (submit_chat_report)
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('submit_chat_report', {
+      p_reported_user_id: reportedUserId,
+      p_conversation_id: conversationId,
+      p_reason: reason,
+      p_details: details.trim(),
+      p_message_ids: Array.isArray(messageIds) ? messageIds : [],
+    });
+
+    if (!rpcError && rpcData?.success) {
+      return {
+        success: true,
+        reportId: rpcData.report_id,
+        evidenceCount: rpcData.evidence_count,
+        message: rpcData.message,
+      };
+    } else if (rpcError) {
+      // If it's a validation error raised by the RPC (e.g. rate-limit or self-report), rethrow
+      if (rpcError.message && (rpcError.message.includes('Rate Limit') || rpcError.message.includes('Forbidden'))) {
+        throw new Error(rpcError.message);
+      }
+      console.warn('submit_chat_report RPC failed or missing, trying direct insert:', rpcError.message);
+    }
+  } catch (rpcCatch) {
+    if (rpcCatch.message && (rpcCatch.message.includes('Rate Limit') || rpcCatch.message.includes('Forbidden') || rpcCatch.message.includes('Bad Request'))) {
+      throw rpcCatch;
+    }
+    console.warn('submit_chat_report RPC exception:', rpcCatch.message);
+  }
+
+  // Strategy 2: Direct Supabase database insertion
+  try {
+    const newReport = {
+      reporter_id: reporterId,
+      reported_user_id: reportedUserId,
+      conversation_id: conversationId,
+      reason,
+      details: details.trim(),
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: insertedReport, error: insertErr } = await supabase
+      .from('chat_reports')
+      .insert([newReport])
+      .select()
+      .single();
+
+    if (!insertErr && insertedReport) {
+      // Freeze evidence if messages were provided
+      if (Array.isArray(messageIds) && messageIds.length > 0) {
+        try {
+          const { data: actualMsgs } = await supabase
+            .from('messages')
+            .select('id, sender_id, content, created_at')
+            .eq('conversation_id', conversationId)
+            .in('id', messageIds);
+
+          if (Array.isArray(actualMsgs) && actualMsgs.length > 0) {
+            const evidenceRecords = actualMsgs.map((m) => ({
+              report_id: insertedReport.id,
+              message_id: m.id,
+              sender_id: m.sender_id,
+              message_timestamp: m.created_at,
+              message_content: m.content,
+              created_at: new Date().toISOString(),
+            }));
+
+            await supabase.from('chat_report_evidence').insert(evidenceRecords);
+          }
+        } catch (evErr) {
+          console.warn('Could not insert evidence records directly:', evErr);
+        }
+      }
+
+      return {
+        success: true,
+        reportId: insertedReport.id,
+        evidenceCount: messageIds.length,
+      };
+    }
+  } catch (directErr) {
+    console.warn('Direct report insert error:', directErr);
+  }
+
+  // Strategy 3: Local storage fallback for testing / offline demo
+  const localList = getLocalReports();
+  const reportId = 'local-report-' + Date.now();
+  const fallbackReport = {
+    id: reportId,
+    reporter_id: reporterId,
+    reported_user_id: reportedUserId,
+    conversation_id: conversationId,
+    reason,
+    details: details.trim(),
+    status: 'pending',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    evidence_count: messageIds.length,
+    _evidence_snapshot: getLocalMessages()
+      .filter((m) => messageIds.includes(m.id))
+      .map((m) => ({
+        message_id: m.id,
+        sender_id: m.sender_id,
+        message_timestamp: m.created_at,
+        message_content: m.content,
+      })),
+  };
+
+  localList.unshift(fallbackReport);
+  saveLocalReports(localList);
+
+  return {
+    success: true,
+    reportId,
+    evidenceCount: messageIds.length,
+    isLocalFallback: true,
+  };
+}
+
+/**
+ * Fetches reports for the admin dashboard with full profile resolution and evidence counts
+ */
+export async function fetchAdminReports({
+  status = 'all',
+  search = '',
+  page = 1,
+  perPage = 10,
+} = {}) {
+  let reports = [];
+  let total = 0;
+
+  try {
+    let query = supabase
+      .from('chat_reports')
+      .select('id, reporter_id, reported_user_id, conversation_id, reason, details, status, admin_notes, action_type, resolved_by, resolved_at, created_at, updated_at', { count: 'exact' });
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+
+    query = query.order('created_at', { ascending: false });
+
+    const startIndex = (page - 1) * perPage;
+    query = query.range(startIndex, startIndex + perPage - 1);
+
+    const { data, count, error } = await query;
+
+    if (!error && Array.isArray(data)) {
+      reports = data;
+      total = count ?? data.length;
+    } else {
+      // Fallback to local storage
+      reports = getLocalReports();
+      if (status && status !== 'all') {
+        reports = reports.filter((r) => r.status === status);
+      }
+      total = reports.length;
+      reports = reports.slice(startIndex, startIndex + perPage);
+    }
+  } catch (err) {
+    console.warn('Error fetching reports from Supabase:', err);
+    reports = getLocalReports();
+    if (status && status !== 'all') {
+      reports = reports.filter((r) => r.status === status);
+    }
+    total = reports.length;
+    reports = reports.slice((page - 1) * perPage, page * perPage);
+  }
+
+  // Enrich reports with profiles & evidence count
+  if (reports.length > 0) {
+    const userIds = [
+      ...new Set([
+        ...reports.map((r) => r.reporter_id).filter(Boolean),
+        ...reports.map((r) => r.reported_user_id).filter(Boolean),
+      ]),
+    ];
+
+    let profilesMap = {};
+    if (userIds.length > 0) {
+      try {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, role, is_banned, ban_reason')
+          .in('id', userIds);
+
+        if (Array.isArray(profs)) {
+          profs.forEach((p) => {
+            profilesMap[p.id] = p;
+          });
+        }
+      } catch (profErr) {
+        console.warn('Error enriching report profiles:', profErr);
+      }
+    }
+
+    // Get evidence counts per report
+    const reportIds = reports.map((r) => r.id);
+    let evidenceCountsMap = {};
+    try {
+      const { data: evData } = await supabase
+        .from('chat_report_evidence')
+        .select('report_id')
+        .in('report_id', reportIds);
+
+      if (Array.isArray(evData)) {
+        evData.forEach((ev) => {
+          evidenceCountsMap[ev.report_id] = (evidenceCountsMap[ev.report_id] || 0) + 1;
+        });
+      }
+    } catch {
+      // Ignore count error
+    }
+
+    reports = reports.map((r) => ({
+      ...r,
+      reporter: profilesMap[r.reporter_id] || {
+        id: r.reporter_id,
+        display_name: 'مستكشف مصري',
+        avatar_url: 'pharaoh',
+      },
+      reportedUser: profilesMap[r.reported_user_id] || {
+        id: r.reported_user_id,
+        display_name: 'مستكشف مصري',
+        avatar_url: 'sphinx',
+        is_banned: false,
+      },
+      evidenceCount: evidenceCountsMap[r.id] || r.evidence_count || (r._evidence_snapshot ? r._evidence_snapshot.length : 0),
+    }));
+  }
+
+  // Filter by search query if provided
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    reports = reports.filter((r) => {
+      const reporterName = (r.reporter?.display_name || '').toLowerCase();
+      const reportedName = (r.reportedUser?.display_name || '').toLowerCase();
+      const reasonMatch = (r.reason || '').toLowerCase().includes(q);
+      const idMatch = (r.id || '').toLowerCase().includes(q);
+      return reporterName.includes(q) || reportedName.includes(q) || reasonMatch || idMatch;
+    });
+  }
+
+  return {
+    reports,
+    total,
+    page,
+    perPage,
+    totalPages: Math.ceil(total / perPage) || 1,
+  };
+}
+
+/**
+ * Fetches single report details with immutable evidence records and audit history
+ */
+export async function fetchReportDetails(reportId) {
+  if (!reportId) return null;
+
+  let report = null;
+  let evidence = [];
+  let auditLogs = [];
+
+  // 1. Fetch report row
+  try {
+    const { data, error } = await supabase
+      .from('chat_reports')
+      .select('*')
+      .eq('id', reportId)
+      .maybeSingle();
+
+    if (!error && data) {
+      report = data;
+    }
+  } catch (err) {
+    console.warn('Error fetching report detail from DB:', err);
+  }
+
+  // Local fallback
+  if (!report) {
+    const local = getLocalReports();
+    report = local.find((r) => r.id === reportId) || null;
+    if (report && report._evidence_snapshot) {
+      evidence = report._evidence_snapshot;
+    }
+  }
+
+  if (!report) return null;
+
+  // 2. Fetch profiles
+  let reporter = null;
+  let reportedUser = null;
+  try {
+    const { data: profs } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url, role, is_banned, ban_reason, banned_at, city')
+      .in('id', [report.reporter_id, report.reported_user_id]);
+
+    if (Array.isArray(profs)) {
+      reporter = profs.find((p) => p.id === report.reporter_id) || null;
+      reportedUser = profs.find((p) => p.id === report.reported_user_id) || null;
+    }
+  } catch {
+    // Continue
+  }
+
+  // 3. Fetch evidence records
+  if (evidence.length === 0) {
+    try {
+      const { data: evData, error: evErr } = await supabase
+        .from('chat_report_evidence')
+        .select('*')
+        .eq('report_id', reportId)
+        .order('message_timestamp', { ascending: true });
+
+      if (!evErr && Array.isArray(evData)) {
+        evidence = evData;
+      }
+    } catch (err) {
+      console.warn('Error fetching report evidence:', err);
+    }
+  }
+
+  // 4. Fetch audit logs for this report
+  try {
+    const { data: logsData } = await supabase
+      .from('admin_audit_logs')
+      .select('*')
+      .eq('target_id', reportId)
+      .order('created_at', { ascending: false });
+
+    if (Array.isArray(logsData)) {
+      auditLogs = logsData;
+    }
+  } catch {
+    // Local fallback
+    auditLogs = getLocalAuditLogs().filter((l) => l.target_id === reportId);
+  }
+
+  return {
+    ...report,
+    reporter: reporter || { id: report.reporter_id, display_name: 'مستكشف' },
+    reportedUser: reportedUser || { id: report.reported_user_id, display_name: 'مستكشف' },
+    evidence,
+    auditLogs,
+  };
+}
+
+/**
+ * Updates report status and admin notes with audit trail
+ */
+export async function adminModerateReport({
+  reportId,
+  status,
+  adminNotes = '',
+  actionType = 'none',
+  adminId = null,
+}) {
+  if (!reportId || !status) {
+    throw new Error('reportId and status are required.');
+  }
+
+  // Strategy 1: Stored Procedure RPC (admin_moderate_report)
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('admin_moderate_report', {
+      p_report_id: reportId,
+      p_new_status: status,
+      p_admin_notes: adminNotes,
+      p_action_type: actionType,
+    });
+
+    if (!rpcError && (rpcData?.success || rpcData === true)) {
+      return { success: true, reportId, status };
+    }
+  } catch (err) {
+    console.warn('admin_moderate_report RPC failed, attempting direct table update:', err);
+  }
+
+  // Strategy 2: Direct Table Update
+  const updatePayload = {
+    status,
+    admin_notes: adminNotes,
+    action_type: actionType,
+    resolved_by: adminId,
+    resolved_at: ['action_taken', 'dismissed'].includes(status) ? new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('chat_reports')
+      .update(updatePayload)
+      .eq('id', reportId)
+      .select()
+      .single();
+
+    if (!error && data) {
+      // Insert audit log
+      if (adminId) {
+        try {
+          await supabase.from('admin_audit_logs').insert([
+            {
+              admin_id: adminId,
+              action: 'report_status_updated',
+              target_type: 'chat_report',
+              target_id: reportId,
+              details: { new_status: status, action_type: actionType },
+              reason: adminNotes,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        } catch {
+          // Ignore audit insert error
+        }
+      }
+      return { success: true, data };
+    }
+  } catch (directErr) {
+    console.warn('Direct update failed:', directErr);
+  }
+
+  // Strategy 3: Local storage fallback
+  const local = getLocalReports();
+  const idx = local.findIndex((r) => r.id === reportId);
+  if (idx !== -1) {
+    local[idx] = { ...local[idx], ...updatePayload };
+    saveLocalReports(local);
+  }
+
+  const localLogs = getLocalAuditLogs();
+  localLogs.unshift({
+    id: 'local-log-' + Date.now(),
+    admin_id: adminId || 'admin',
+    action: 'report_status_updated',
+    target_type: 'chat_report',
+    target_id: reportId,
+    details: { new_status: status, action_type: actionType },
+    reason: adminNotes,
+    created_at: new Date().toISOString(),
+  });
+  saveLocalAuditLogs(localLogs);
+
+  return { success: true, local: true };
+}
+
+/**
+ * Bans or unbans a user account across the platform
+ */
+export async function adminSetUserBanStatus({
+  targetUserId,
+  isBanned,
+  banReason = '',
+  reportId = null,
+  adminId = null,
+}) {
+  if (!targetUserId || typeof isBanned !== 'boolean') {
+    throw new Error('targetUserId and isBanned boolean are required.');
+  }
+
+  // Strategy 1: Stored Procedure RPC (admin_set_user_ban_status)
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('admin_set_user_ban_status', {
+      p_target_user_id: targetUserId,
+      p_is_banned: isBanned,
+      p_ban_reason: banReason,
+      p_report_id: reportId,
+    });
+
+    if (!rpcError && (rpcData?.success || rpcData === true)) {
+      return { success: true, targetUserId, isBanned };
+    }
+  } catch (err) {
+    console.warn('admin_set_user_ban_status RPC failed, trying direct profile update:', err);
+  }
+
+  // Strategy 2: Direct Profile Update
+  const profileUpdate = {
+    is_banned: isBanned,
+    banned_at: isBanned ? new Date().toISOString() : null,
+    ban_reason: isBanned ? (banReason || 'Violating community guidelines') : null,
+    banned_by: isBanned ? adminId : null,
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(profileUpdate)
+      .eq('id', targetUserId)
+      .select();
+
+    if (!error && data && data.length > 0) {
+      // Log in audit logs
+      if (adminId) {
+        try {
+          await supabase.from('admin_audit_logs').insert([
+            {
+              admin_id: adminId,
+              action: isBanned ? 'user_banned' : 'user_unbanned',
+              target_type: 'user',
+              target_id: targetUserId,
+              details: { is_banned: isBanned, report_id: reportId },
+              reason: banReason,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        } catch {
+          // ignore
+        }
+      }
+
+      // If associated with a report, update report status as well
+      if (reportId && isBanned) {
+        try {
+          await supabase
+            .from('chat_reports')
+            .update({
+              status: 'action_taken',
+              action_type: 'user_banned',
+              resolved_by: adminId,
+              resolved_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', reportId);
+        } catch {
+          // ignore
+        }
+      }
+
+      return { success: true, user: data[0] };
+    }
+  } catch (err) {
+    console.warn('Direct profile ban update failed:', err);
+  }
+
+  // Strategy 3: Local audit log fallback
+  const localLogs = getLocalAuditLogs();
+  localLogs.unshift({
+    id: 'local-log-' + Date.now(),
+    admin_id: adminId || 'admin',
+    action: isBanned ? 'user_banned' : 'user_unbanned',
+    target_type: 'user',
+    target_id: targetUserId,
+    details: { is_banned: isBanned, report_id: reportId },
+    reason: banReason,
+    created_at: new Date().toISOString(),
+  });
+  saveLocalAuditLogs(localLogs);
+
+  return { success: true, local: true };
+}
+
+/**
+ * Fetches admin audit logs
+ */
+export async function fetchAdminAuditLogs({
+  targetType = null,
+  targetId = null,
+  limit = 50,
+} = {}) {
+  try {
+    let query = supabase
+      .from('admin_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (targetType) query = query.eq('target_type', targetType);
+    if (targetId) query = query.eq('target_id', targetId);
+
+    const { data, error } = await query;
+    if (!error && Array.isArray(data)) {
+      return data;
+    }
+  } catch (err) {
+    console.warn('Error fetching audit logs from Supabase:', err);
+  }
+
+  let local = getLocalAuditLogs();
+  if (targetType) local = local.filter((l) => l.target_type === targetType);
+  if (targetId) local = local.filter((l) => l.target_id === targetId);
+  return local.slice(0, limit);
+}
+
