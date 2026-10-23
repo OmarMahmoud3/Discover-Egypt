@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useTransition } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { supabase } from '../../lib/supabase';
 import {
   fetchAdminReports,
   fetchReportDetails,
@@ -87,6 +88,29 @@ export default function AdminReports() {
         perPage,
       });
 
+      if (res?.supabaseError) {
+        const err = res.supabaseError;
+        let formattedMsg = '';
+        if (err.code === '42501' || err.status === 403) {
+          formattedMsg = isArabic
+            ? `خطأ في الصلاحيات (403 Forbidden / 42501): سياسات RLS تمنع قراءة جدول البلاغات. تأكد أن حسابك مسجل كمشرف (role = 'admin') في Supabase.`
+            : `Database Permission Denied (403 / 42501): RLS blocked reading chat_reports. Verify that your account has role = 'admin'.`;
+        } else if (err.code === '42P01') {
+          formattedMsg = isArabic
+            ? `جدول البلاغات غير موجود في Supabase (42P01: Table not found). يرجى تطبيق كود SQL للتهيئة.`
+            : `Chat reports table not found (42P01). Please apply the moderation SQL schema.`;
+        } else if (err.status === 401 || err.code === 'PGRST301') {
+          formattedMsg = isArabic
+            ? `خطأ في المصادقة (401 Unauthorized): جلسة الدخول غير صالحة أو منتهية. يرجى تسجيل الدخول مجدداً.`
+            : `Authentication error (401): Session expired or invalid. Please re-login.`;
+        } else {
+          formattedMsg = isArabic
+            ? `تنبيه قاعدة البيانات: ${err.message || 'خطأ غير محدد'} (${err.code || 'UNKNOWN'})`
+            : `Database Notice: ${err.message || 'Unknown error'} (${err.code || 'UNKNOWN'})`;
+        }
+        setError(formattedMsg);
+      }
+
       setReports(res.reports || []);
       setTotalCount(res.total || 0);
       setTotalPages(res.totalPages || 1);
@@ -108,7 +132,7 @@ export default function AdminReports() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [statusFilter, search, page, perPage]);
+  }, [statusFilter, search, page, perPage, isArabic]);
 
   useEffect(() => {
     let active = true;
@@ -116,8 +140,45 @@ export default function AdminReports() {
       if (active) setModerationDbStatus(status);
     });
     loadReports();
+
+    // Supabase Realtime subscription on public.chat_reports
+    let channel = null;
+    try {
+      channel = supabase
+        .channel('realtime:chat_reports_admin')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'chat_reports' },
+          (payload) => {
+            console.log('[AdminReports] Realtime update on chat_reports:', payload);
+            loadReports(true);
+          }
+        )
+        .subscribe();
+    } catch (rtErr) {
+      console.warn('Realtime subscription not available:', rtErr);
+    }
+
+    // Custom window event listeners for instantaneous client sync
+    const handleReportSubmitted = () => {
+      loadReports(true);
+    };
+    const handleBanChanged = () => {
+      loadReports(true);
+    };
+
+    window.addEventListener('community:report_submitted', handleReportSubmitted);
+    window.addEventListener('community:ban_status_changed', handleBanChanged);
+
     return () => {
       active = false;
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
+      window.removeEventListener('community:report_submitted', handleReportSubmitted);
+      window.removeEventListener('community:ban_status_changed', handleBanChanged);
     };
   }, [loadReports]);
 

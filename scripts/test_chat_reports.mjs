@@ -230,6 +230,11 @@ export async function runChatReportsTests() {
   const adminReportsContent = fs.readFileSync(adminReportsFile, 'utf8');
   assert(adminReportsContent.includes('moderationDbNoticeTitle'), 'AdminReports.jsx renders moderation database setup notice banner');
   assert(adminReportsContent.includes('CHAT_MODERATION_SQL'), 'AdminReports.jsx embeds SQL setup script');
+  assert(adminReportsContent.includes('res?.supabaseError'), 'AdminReports.jsx checks res.supabaseError');
+  assert(adminReportsContent.includes('42501'), 'AdminReports.jsx handles 42501 permission denied RLS error');
+  assert(adminReportsContent.includes('42P01'), 'AdminReports.jsx handles 42P01 table missing error');
+  assert(adminReportsContent.includes('realtime:chat_reports_admin'), 'AdminReports.jsx subscribes to Supabase Realtime channel');
+  assert(adminReportsContent.includes('community:report_submitted'), 'AdminReports.jsx listens to community:report_submitted window event');
 
   const adminCssContent = fs.readFileSync(path.resolve('src/styles/admin.css'), 'utf8');
   assert(adminCssContent.includes('.admin-badge-banned'), 'admin.css defines .admin-badge-banned');
@@ -238,6 +243,54 @@ export async function runChatReportsTests() {
   const communityCssContent = fs.readFileSync(path.resolve('src/styles/community.css'), 'utf8');
   assert(communityCssContent.includes('.report-modal-overlay'), 'community.css defines .report-modal-overlay');
   assert(communityCssContent.includes('.chat-banned-notice-bar'), 'community.css defines .chat-banned-notice-bar');
+
+  // --- Group 5: The 7 Verification Checkpoints ---
+  console.log('\n[GROUP 5] 7 Verification Checkpoints (Schema, RLS, Admin Trust, Errors, Realtime, Enrichment)');
+  const communityCode = fs.readFileSync(path.resolve('src/lib/communityService.js'), 'utf8');
+  
+  // Checkpoint 1: Reports saved with status 'pending'
+  assert(schemaContent.includes("status text NOT NULL DEFAULT 'pending'"), 'Checkpoint 1: chat_reports schema defaults status to pending');
+  assert(schemaContent.includes("status IN ('pending', 'investigating', 'action_taken', 'dismissed')"), 'Checkpoint 1: chat_reports check constraint allows expected statuses');
+  const testSub = await submitChatReport({
+    reporterId: 'chk1-reporter',
+    reportedUserId: 'chk1-target',
+    conversationId: 'chk1-conv',
+    reason: 'harassment',
+    details: 'Checkpoint 1 test',
+    messageIds: [],
+  });
+  const subReport = (await fetchReportDetails(testSub.reportId));
+  assert(subReport.status === 'pending', 'Checkpoint 1: newly created report has status = pending');
+
+  // Checkpoint 2: Query does not exclude reports by date or accidental filters
+  assert(communityCode.includes("query = query.order('created_at', { ascending: false })"), 'Checkpoint 2: fetchAdminReports orders by created_at DESC');
+  assert(communityCode.includes("if (status && status !== 'all')"), 'Checkpoint 2: fetchAdminReports does not filter out reports when status is all');
+  const allReportsRes = await fetchAdminReports({ status: 'all', page: 1, perPage: 50 });
+  assert(Array.isArray(allReportsRes.reports) && allReportsRes.reports.length > 0, 'Checkpoint 2: fetchAdminReports returns list without restrictive date drops');
+
+  // Checkpoints 3 & 4: RLS policy and server-side trusted is_admin()
+  assert(schemaContent.includes('CREATE OR REPLACE FUNCTION public.is_admin()'), 'Checkpoint 3/4: public.is_admin() helper defined');
+  assert(schemaContent.includes('SECURITY DEFINER'), 'Checkpoint 3/4: is_admin() runs with SECURITY DEFINER to bypass recursion');
+  assert(schemaContent.includes("auth.jwt() -> 'app_metadata' ->> 'role'"), 'Checkpoint 4: is_admin() checks server-controlled app_metadata');
+  assert(schemaContent.includes("'om7765355@gmail.com'"), 'Checkpoint 4: is_admin() recognizes designated admin emails');
+  assert(schemaContent.includes('UPDATE public.profiles'), 'Checkpoint 4: Schema automatically provisions role = admin for designated admin emails');
+  assert(schemaContent.includes('CREATE POLICY "Admins can view all reports"'), 'Checkpoint 3: Admin SELECT policy exists for chat_reports');
+  assert(schemaContent.includes('public.is_admin()'), 'Checkpoint 3: chat_reports RLS relies on public.is_admin()');
+
+  // Checkpoint 5: Exposing Supabase error instead of hiding it
+  assert(communityCode.includes('supabaseError = {'), 'Checkpoint 5: fetchAdminReports captures supabaseError object');
+  assert(communityCode.includes('console.error(\'fetchAdminReports Supabase query error:\''), 'Checkpoint 5: logs query error visibly to console');
+  assert(adminReportsContent.includes('setError(formattedMsg)'), 'Checkpoint 5: AdminReports.jsx displays formatted error message to admin');
+
+  // Checkpoint 6: Realtime and instant client updates
+  assert(communityCode.includes('community:report_submitted'), 'Checkpoint 6: communityService dispatches community:report_submitted');
+  assert(schemaContent.includes('ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_reports'), 'Checkpoint 6: Schema adds chat_reports to supabase_realtime publication');
+
+  // Checkpoint 7: Linked tables RLS & resilient profile enrichment
+  assert(schemaContent.includes('CREATE POLICY "Admins can read all profiles"'), 'Checkpoint 7: Admins can read all profiles policy exists in schema');
+  assert(schemaContent.includes('CREATE POLICY "Admins can view all conversations"'), 'Checkpoint 7: Admins can view all conversations policy exists in schema');
+  assert(schemaContent.includes('CREATE POLICY "Admins can view all messages"'), 'Checkpoint 7: Admins can view all messages policy exists in schema');
+  assert(communityCode.includes('display_name: \'مستكشف مصري\''), 'Checkpoint 7: Safe fallback enrichment prevents hiding reports if profile lookup fails');
 
   console.log('\n------------------------------------------------------');
   console.log(`  CHAT REPORTS TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);

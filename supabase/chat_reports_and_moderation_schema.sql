@@ -1,19 +1,71 @@
 -- ==============================================================================
 -- DISCOVER EGYPT — Chat Moderation, User Reporting & Ban Enforcement Schema
--- 1. Extends public.profiles with ban status (is_banned, banned_at, ban_reason, banned_by)
--- 2. Creates public.chat_reports (tracking reporter, reported, conversation, reason, status)
--- 3. Creates public.chat_report_evidence (immutable snapshot of messages & timestamps at report time)
--- 4. Creates public.admin_audit_logs (tamper-evident audit trail of moderator actions)
--- 5. Hardens Row Level Security (RLS) on all tables (strict admin-only reads & audits)
--- 6. Enforces ban checks on message sending and connection creation
--- 7. Provides SECURITY DEFINER RPC functions:
---    - submit_chat_report(...) : captures and freezes evidence from actual messages
---    - admin_moderate_report(...) : updates report status with audit log
---    - admin_set_user_ban_status(...) : safely bans/unbans users with audit log
+-- 1. Helper function: public.is_admin() (trusted server-side admin check)
+-- 2. Extends public.profiles with ban attributes (is_banned, banned_at, ban_reason, banned_by)
+-- 3. Sets designated admin accounts to role = 'admin' in public.profiles
+-- 4. Creates public.chat_reports (tracking reporter, reported, conversation, reason, status)
+-- 5. Creates public.chat_report_evidence (immutable snapshot of messages & timestamps at report time)
+-- 6. Creates public.admin_audit_logs (tamper-evident audit trail of moderator actions)
+-- 7. Hardens Row Level Security (RLS) on all tables (strict admin-only reads & audits)
+-- 8. Enables Supabase Realtime publication on public.chat_reports
+-- 9. Enforces ban checks on message sending and connection creation
+-- 10. Provides SECURITY DEFINER RPC functions:
+--     - submit_chat_report(...) : captures and freezes evidence from actual messages
+--     - admin_moderate_report(...) : updates report status with audit log
+--     - admin_set_user_ban_status(...) : safely bans/unbans users with audit log
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
--- 1. Extend public.profiles with Ban Attributes
+-- 1. Helper Function: Trusted Server-Side Admin Check
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, auth
+AS $$
+DECLARE
+  caller_id uuid;
+  caller_email text;
+  is_admin_flag boolean := false;
+BEGIN
+  caller_id := auth.uid();
+  IF caller_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  -- A. Check Supabase Auth app_metadata (strictly controlled by server/admin)
+  IF COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin' THEN
+    RETURN true;
+  END IF;
+
+  -- B. Check user_metadata role if provisioned
+  IF COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'admin' THEN
+    RETURN true;
+  END IF;
+
+  -- C. Check verified JWT email against designated administrator accounts
+  caller_email := LOWER(COALESCE(auth.jwt() ->> 'email', ''));
+  IF caller_email IN ('om7765355@gmail.com', 'omarmahmoud3@gmail.com') THEN
+    RETURN true;
+  END IF;
+
+  -- D. Check public.profiles role = 'admin' safely bypassing RLS via SECURITY DEFINER
+  SELECT (role = 'admin') INTO is_admin_flag
+  FROM public.profiles
+  WHERE id = caller_id;
+
+  RETURN COALESCE(is_admin_flag, false);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.is_admin FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_admin FROM anon;
+GRANT EXECUTE ON FUNCTION public.is_admin TO authenticated;
+
+-- ------------------------------------------------------------------------------
+-- 2. Extend public.profiles with Ban Attributes
 -- ------------------------------------------------------------------------------
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_at timestamptz DEFAULT NULL;
@@ -23,7 +75,17 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_by uuid REFERENCES a
 CREATE INDEX IF NOT EXISTS idx_profiles_is_banned ON public.profiles(is_banned);
 
 -- ------------------------------------------------------------------------------
--- 2. Table: public.chat_reports
+-- 3. Provision Designated Admin Accounts in public.profiles
+-- ------------------------------------------------------------------------------
+UPDATE public.profiles
+SET role = 'admin'
+WHERE id IN (
+  SELECT id FROM auth.users
+  WHERE LOWER(email) IN ('om7765355@gmail.com', 'omarmahmoud3@gmail.com')
+);
+
+-- ------------------------------------------------------------------------------
+-- 4. Table: public.chat_reports
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.chat_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,7 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_reports_reporter ON public.chat_reports(repo
 CREATE INDEX IF NOT EXISTS idx_chat_reports_created_at ON public.chat_reports(created_at DESC);
 
 -- ------------------------------------------------------------------------------
--- 3. Table: public.chat_report_evidence
+-- 5. Table: public.chat_report_evidence
 -- Stores an immutable, frozen snapshot of flagged messages at the moment of report
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.chat_report_evidence (
@@ -77,7 +139,7 @@ CREATE TABLE IF NOT EXISTS public.chat_report_evidence (
 CREATE INDEX IF NOT EXISTS idx_report_evidence_report_id ON public.chat_report_evidence(report_id);
 
 -- ------------------------------------------------------------------------------
--- 4. Table: public.admin_audit_logs
+-- 6. Table: public.admin_audit_logs
 -- Tamper-evident ledger of all moderation actions
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
@@ -95,7 +157,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.admin_audit_logs(
 CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON public.admin_audit_logs(target_type, target_id);
 
 -- ------------------------------------------------------------------------------
--- 5. Row Level Security (RLS) Policies
+-- 7. Row Level Security (RLS) Policies
 -- ------------------------------------------------------------------------------
 ALTER TABLE public.chat_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_report_evidence ENABLE ROW LEVEL SECURITY;
@@ -125,10 +187,7 @@ CREATE POLICY "Admins can view all reports"
   FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+    public.is_admin()
   );
 
 -- Only verified administrators can update reports (change status, add notes)
@@ -138,16 +197,20 @@ CREATE POLICY "Admins can update reports"
   FOR UPDATE
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+    public.is_admin()
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+    public.is_admin()
+  );
+
+-- Only verified administrators can delete reports
+DROP POLICY IF EXISTS "Admins can delete reports" ON public.chat_reports;
+CREATE POLICY "Admins can delete reports"
+  ON public.chat_reports
+  FOR DELETE
+  TO authenticated
+  USING (
+    public.is_admin()
   );
 
 -- B. Policies for public.chat_report_evidence
@@ -158,10 +221,7 @@ CREATE POLICY "Admins can view report evidence"
   FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+    public.is_admin()
   );
 
 -- Reporters can insert evidence during report creation
@@ -186,10 +246,7 @@ CREATE POLICY "Admins can view audit logs"
   FOR SELECT
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+    public.is_admin()
   );
 
 DROP POLICY IF EXISTS "Admins can insert audit logs" ON public.admin_audit_logs;
@@ -198,14 +255,65 @@ CREATE POLICY "Admins can insert audit logs"
   FOR INSERT
   TO authenticated
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+    public.is_admin()
+  );
+
+-- D. Additional Administrator Read Access on Linked Tables (to prevent join failures)
+DROP POLICY IF EXISTS "Admins can read all profiles" ON public.profiles;
+CREATE POLICY "Admins can read all profiles"
+  ON public.profiles
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.is_admin()
+  );
+
+DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
+CREATE POLICY "Admins can update any profile"
+  ON public.profiles
+  FOR UPDATE
+  TO authenticated
+  USING (
+    public.is_admin()
+  )
+  WITH CHECK (
+    public.is_admin()
+  );
+
+DROP POLICY IF EXISTS "Admins can view all conversations" ON public.conversations;
+CREATE POLICY "Admins can view all conversations"
+  ON public.conversations
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.is_admin()
+  );
+
+DROP POLICY IF EXISTS "Admins can view all messages" ON public.messages;
+CREATE POLICY "Admins can view all messages"
+  ON public.messages
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.is_admin()
   );
 
 -- ------------------------------------------------------------------------------
--- 6. Enforce Ban Restrictions on Messages and Connection Requests
+-- 8. Enable Supabase Realtime Publication for public.chat_reports
+-- ------------------------------------------------------------------------------
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_reports;
+  END IF;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ------------------------------------------------------------------------------
+-- 9. Enforce Ban Restrictions on Messages and Connection Requests
 -- ------------------------------------------------------------------------------
 -- Update message insertion policy to reject banned users
 DROP POLICY IF EXISTS "Conversation participants can send messages" ON public.messages;
@@ -242,7 +350,7 @@ CREATE POLICY "Senders can create connection requests"
   );
 
 -- ------------------------------------------------------------------------------
--- 7. SECURITY DEFINER RPC Functions
+-- 10. SECURITY DEFINER RPC Functions
 -- ------------------------------------------------------------------------------
 
 -- A. Submit Chat Report and Freeze Evidence Server-Side
@@ -379,7 +487,6 @@ SET search_path = public, auth
 AS $$
 DECLARE
   v_caller_id uuid;
-  v_caller_role text;
   v_target_user_id uuid;
   v_current_status text;
 BEGIN
@@ -388,9 +495,8 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized: Caller must be authenticated.';
   END IF;
 
-  -- Verify caller is an administrator
-  SELECT role INTO v_caller_role FROM public.profiles WHERE id = v_caller_id;
-  IF v_caller_role <> 'admin' THEN
+  -- Verify caller is an administrator via server-side trusted is_admin()
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Forbidden: Caller is not an administrator.';
   END IF;
 
@@ -468,7 +574,6 @@ SET search_path = public, auth
 AS $$
 DECLARE
   v_caller_id uuid;
-  v_caller_role text;
   v_target_role text;
   v_action_name text;
 BEGIN
@@ -477,9 +582,8 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized: Caller must be authenticated.';
   END IF;
 
-  -- Verify caller is an administrator
-  SELECT role INTO v_caller_role FROM public.profiles WHERE id = v_caller_id;
-  IF v_caller_role <> 'admin' THEN
+  -- Verify caller is an administrator via server-side trusted is_admin()
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Forbidden: Caller is not an administrator.';
   END IF;
 

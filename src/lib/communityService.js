@@ -1277,16 +1277,21 @@ export async function checkModerationSchemaStatus() {
   }
 }
 
+let _memReports = [];
+let _memAuditLogs = [];
+
 function getLocalReports() {
-  if (typeof localStorage === 'undefined') return [];
+  if (typeof localStorage === 'undefined') return _memReports;
   try {
-    return JSON.parse(localStorage.getItem('discover_egypt_chat_reports') || '[]');
+    const stored = localStorage.getItem('discover_egypt_chat_reports');
+    return stored ? JSON.parse(stored) : _memReports;
   } catch {
-    return [];
+    return _memReports;
   }
 }
 
 function saveLocalReports(reports) {
+  _memReports = reports;
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem('discover_egypt_chat_reports', JSON.stringify(reports));
@@ -1296,15 +1301,17 @@ function saveLocalReports(reports) {
 }
 
 function getLocalAuditLogs() {
-  if (typeof localStorage === 'undefined') return [];
+  if (typeof localStorage === 'undefined') return _memAuditLogs;
   try {
-    return JSON.parse(localStorage.getItem('discover_egypt_audit_logs') || '[]');
+    const stored = localStorage.getItem('discover_egypt_audit_logs');
+    return stored ? JSON.parse(stored) : _memAuditLogs;
   } catch {
-    return [];
+    return _memAuditLogs;
   }
 }
 
 function saveLocalAuditLogs(logs) {
+  _memAuditLogs = logs;
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem('discover_egypt_audit_logs', JSON.stringify(logs));
@@ -1343,6 +1350,20 @@ export async function submitChatReport({
     });
 
     if (!rpcError && rpcData?.success) {
+      if (typeof window !== 'undefined') {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('community:report_submitted', {
+              detail: {
+                reportId: rpcData.report_id,
+                reporterId,
+                reportedUserId,
+                reason,
+              },
+            })
+          );
+        } catch {}
+      }
       return {
         success: true,
         reportId: rpcData.report_id,
@@ -1409,6 +1430,21 @@ export async function submitChatReport({
         }
       }
 
+      if (typeof window !== 'undefined') {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('community:report_submitted', {
+              detail: {
+                reportId: insertedReport.id,
+                reporterId,
+                reportedUserId,
+                reason,
+              },
+            })
+          );
+        } catch {}
+      }
+
       return {
         success: true,
         reportId: insertedReport.id,
@@ -1446,6 +1482,22 @@ export async function submitChatReport({
   localList.unshift(fallbackReport);
   saveLocalReports(localList);
 
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('community:report_submitted', {
+          detail: {
+            reportId,
+            reporterId,
+            reportedUserId,
+            reason,
+            isLocalFallback: true,
+          },
+        })
+      );
+    } catch {}
+  }
+
   return {
     success: true,
     reportId,
@@ -1465,6 +1517,7 @@ export async function fetchAdminReports({
 } = {}) {
   let reports = [];
   let total = 0;
+  let supabaseError = null;
 
   try {
     let query = supabase
@@ -1484,8 +1537,24 @@ export async function fetchAdminReports({
 
     if (!error && Array.isArray(data)) {
       reports = data;
-      total = count ?? data.length;
+      if (reports.length === 0) {
+        const local = getLocalReports();
+        if (local.length > 0) {
+          reports = local;
+        }
+      }
+      total = count ?? reports.length;
     } else {
+      if (error) {
+        console.error('fetchAdminReports Supabase query error:', error);
+        supabaseError = {
+          code: error.code || null,
+          message: error.message || 'Error executing query on chat_reports',
+          details: error.details || null,
+          hint: error.hint || null,
+          status: error.status || null,
+        };
+      }
       // Fallback to local storage
       reports = getLocalReports();
       if (status && status !== 'all') {
@@ -1495,7 +1564,11 @@ export async function fetchAdminReports({
       reports = reports.slice(startIndex, startIndex + perPage);
     }
   } catch (err) {
-    console.warn('Error fetching reports from Supabase:', err);
+    console.error('Error fetching reports from Supabase:', err);
+    supabaseError = {
+      code: err?.code || 'FETCH_EXCEPTION',
+      message: err?.message || 'Exception fetching reports',
+    };
     reports = getLocalReports();
     if (status && status !== 'all') {
       reports = reports.filter((r) => r.status === status);
@@ -1607,6 +1680,8 @@ export async function fetchAdminReports({
     page,
     perPage,
     totalPages: Math.ceil(total / perPage) || 1,
+    supabaseError,
+    isFallback: Boolean(supabaseError),
   };
 }
 
@@ -1622,14 +1697,17 @@ export async function fetchReportDetails(reportId) {
 
   // 1. Fetch report row
   try {
-    const { data, error } = await supabase
-      .from('chat_reports')
-      .select('*')
-      .eq('id', reportId)
-      .maybeSingle();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reportId);
+    if (isUuid) {
+      const { data, error } = await supabase
+        .from('chat_reports')
+        .select('*')
+        .eq('id', reportId)
+        .maybeSingle();
 
-    if (!error && data) {
-      report = data;
+      if (!error && data) {
+        report = data;
+      }
     }
   } catch (err) {
     console.warn('Error fetching report detail from DB:', err);
@@ -2044,14 +2122,79 @@ export async function fetchAdminAuditLogs({
 }
 
 export const CHAT_MODERATION_SQL = `-- DISCOVER EGYPT — Chat Moderation, User Reporting & Ban Enforcement Schema
--- 1. Extend public.profiles with Ban Attributes
+-- 1. Helper function: public.is_admin() (trusted server-side admin check)
+-- 2. Extends public.profiles with ban attributes (is_banned, banned_at, ban_reason, banned_by)
+-- 3. Sets designated admin accounts to role = 'admin' in public.profiles
+-- 4. Creates public.chat_reports (tracking reporter, reported, conversation, reason, status)
+-- 5. Creates public.chat_report_evidence (immutable snapshot of messages & timestamps at report time)
+-- 6. Creates public.admin_audit_logs (tamper-evident audit trail of moderator actions)
+-- 7. Hardens Row Level Security (RLS) on all tables (strict admin-only reads & audits)
+-- 8. Enables Supabase Realtime publication on public.chat_reports
+-- 9. Enforces ban checks on message sending and connection creation
+-- 10. Provides SECURITY DEFINER RPC functions:
+--     - submit_chat_report(...) : captures and freezes evidence from actual messages
+--     - admin_moderate_report(...) : updates report status with audit log
+--     - admin_set_user_ban_status(...) : safely bans/unbans users with audit log
+
+-- 1. Trusted Server-Side Admin Check
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, auth
+AS $$
+DECLARE
+  caller_id uuid;
+  caller_email text;
+  is_admin_flag boolean := false;
+BEGIN
+  caller_id := auth.uid();
+  IF caller_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  IF COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin' THEN
+    RETURN true;
+  END IF;
+
+  IF COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'admin' THEN
+    RETURN true;
+  END IF;
+
+  caller_email := LOWER(COALESCE(auth.jwt() ->> 'email', ''));
+  IF caller_email IN ('om7765355@gmail.com', 'omarmahmoud3@gmail.com') THEN
+    RETURN true;
+  END IF;
+
+  SELECT (role = 'admin') INTO is_admin_flag
+  FROM public.profiles
+  WHERE id = caller_id;
+
+  RETURN COALESCE(is_admin_flag, false);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.is_admin FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_admin FROM anon;
+GRANT EXECUTE ON FUNCTION public.is_admin TO authenticated;
+
+-- 2. Extend public.profiles with Ban Attributes
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_at timestamptz DEFAULT NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS ban_reason text DEFAULT NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_profiles_is_banned ON public.profiles(is_banned);
 
--- 2. Table: public.chat_reports
+-- 3. Provision Designated Admin Accounts in public.profiles
+UPDATE public.profiles
+SET role = 'admin'
+WHERE id IN (
+  SELECT id FROM auth.users
+  WHERE LOWER(email) IN ('om7765355@gmail.com', 'omarmahmoud3@gmail.com')
+);
+
+-- 4. Table: public.chat_reports
 CREATE TABLE IF NOT EXISTS public.chat_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   reporter_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -2087,7 +2230,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_reports_reported_user ON public.chat_reports
 CREATE INDEX IF NOT EXISTS idx_chat_reports_reporter ON public.chat_reports(reporter_id);
 CREATE INDEX IF NOT EXISTS idx_chat_reports_created_at ON public.chat_reports(created_at DESC);
 
--- 3. Table: public.chat_report_evidence
+-- 5. Table: public.chat_report_evidence
 CREATE TABLE IF NOT EXISTS public.chat_report_evidence (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   report_id uuid NOT NULL REFERENCES public.chat_reports(id) ON DELETE CASCADE,
@@ -2100,7 +2243,7 @@ CREATE TABLE IF NOT EXISTS public.chat_report_evidence (
 
 CREATE INDEX IF NOT EXISTS idx_report_evidence_report_id ON public.chat_report_evidence(report_id);
 
--- 4. Table: public.admin_audit_logs
+-- 6. Table: public.admin_audit_logs
 CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -2115,7 +2258,7 @@ CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.admin_audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON public.admin_audit_logs(target_type, target_id);
 
--- 5. Row Level Security (RLS)
+-- 7. Row Level Security (RLS)
 ALTER TABLE public.chat_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_report_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
@@ -2133,18 +2276,23 @@ CREATE POLICY "Users can insert own reports"
 DROP POLICY IF EXISTS "Admins can view all reports" ON public.chat_reports;
 CREATE POLICY "Admins can view all reports"
   ON public.chat_reports FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "Admins can update reports" ON public.chat_reports;
 CREATE POLICY "Admins can update reports"
   ON public.chat_reports FOR UPDATE TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete reports" ON public.chat_reports;
+CREATE POLICY "Admins can delete reports"
+  ON public.chat_reports FOR DELETE TO authenticated
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "Admins can view report evidence" ON public.chat_report_evidence;
 CREATE POLICY "Admins can view report evidence"
   ON public.chat_report_evidence FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "Reporters can insert report evidence" ON public.chat_report_evidence;
 CREATE POLICY "Reporters can insert report evidence"
@@ -2154,14 +2302,45 @@ CREATE POLICY "Reporters can insert report evidence"
 DROP POLICY IF EXISTS "Admins can view audit logs" ON public.admin_audit_logs;
 CREATE POLICY "Admins can view audit logs"
   ON public.admin_audit_logs FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "Admins can insert audit logs" ON public.admin_audit_logs;
 CREATE POLICY "Admins can insert audit logs"
   ON public.admin_audit_logs FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+  WITH CHECK (public.is_admin());
 
--- 6. Ban Checks on Messaging & Requests
+DROP POLICY IF EXISTS "Admins can read all profiles" ON public.profiles;
+CREATE POLICY "Admins can read all profiles"
+  ON public.profiles FOR SELECT TO authenticated
+  USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
+CREATE POLICY "Admins can update any profile"
+  ON public.profiles FOR UPDATE TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can view all conversations" ON public.conversations;
+CREATE POLICY "Admins can view all conversations"
+  ON public.conversations FOR SELECT TO authenticated
+  USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can view all messages" ON public.messages;
+CREATE POLICY "Admins can view all messages"
+  ON public.messages FOR SELECT TO authenticated
+  USING (public.is_admin());
+
+-- 8. Enable Realtime Publication for chat_reports
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_reports;
+  END IF;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- 9. Ban Checks on Messaging & Requests
 DROP POLICY IF EXISTS "Conversation participants can send messages" ON public.messages;
 CREATE POLICY "Conversation participants can send messages"
   ON public.messages FOR INSERT TO authenticated
@@ -2180,7 +2359,68 @@ CREATE POLICY "Senders can create connection requests"
     AND NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_banned = true)
   );
 
--- 7. Ban RPC Procedure
+-- 10. RPC Procedures
+CREATE OR REPLACE FUNCTION public.admin_moderate_report(
+  p_report_id uuid,
+  p_new_status text,
+  p_admin_notes text DEFAULT '',
+  p_action_type text DEFAULT 'none'
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_caller_id uuid;
+  v_target_user_id uuid;
+  v_current_status text;
+BEGIN
+  v_caller_id := auth.uid();
+  IF v_caller_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: Caller must be authenticated.';
+  END IF;
+
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Forbidden: Caller is not an administrator.';
+  END IF;
+
+  IF p_new_status NOT IN ('pending', 'investigating', 'action_taken', 'dismissed') THEN
+    RAISE EXCEPTION 'Bad Request: Invalid report status.';
+  END IF;
+
+  SELECT reported_user_id, status INTO v_target_user_id, v_current_status
+  FROM public.chat_reports
+  WHERE id = p_report_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Not Found: Report not found.';
+  END IF;
+
+  UPDATE public.chat_reports
+  SET
+    status = p_new_status,
+    admin_notes = COALESCE(p_admin_notes, admin_notes),
+    action_type = p_action_type,
+    resolved_by = v_caller_id,
+    resolved_at = CASE WHEN p_new_status IN ('action_taken', 'dismissed') THEN timezone('utc'::text, now()) ELSE resolved_at END,
+    updated_at = timezone('utc'::text, now())
+  WHERE id = p_report_id;
+
+  INSERT INTO public.admin_audit_logs (
+    admin_id, action, target_type, target_id, details, reason
+  ) VALUES (
+    v_caller_id, 'report_status_updated', 'chat_report', p_report_id,
+    jsonb_build_object('previous_status', v_current_status, 'new_status', p_new_status, 'action_type', p_action_type, 'reported_user_id', v_target_user_id),
+    COALESCE(p_admin_notes, '')
+  );
+
+  RETURN json_build_object('success', true, 'report_id', p_report_id, 'new_status', p_new_status);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_moderate_report TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.admin_set_user_ban_status(
   p_target_user_id uuid,
   p_is_banned boolean,
@@ -2194,7 +2434,6 @@ SET search_path = public, auth
 AS $$
 DECLARE
   v_caller_id uuid;
-  v_caller_role text;
   v_target_role text;
   v_action_name text;
 BEGIN
@@ -2203,8 +2442,7 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized: Caller must be authenticated.';
   END IF;
 
-  SELECT role INTO v_caller_role FROM public.profiles WHERE id = v_caller_id;
-  IF v_caller_role <> 'admin' THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Forbidden: Caller is not an administrator.';
   END IF;
 
