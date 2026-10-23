@@ -7,6 +7,9 @@ import {
   fetchReportDetails,
   adminModerateReport,
   adminSetUserBanStatus,
+  getUserBanInfo,
+  CHAT_MODERATION_SQL,
+  checkModerationSchemaStatus,
   REPORT_REASONS,
   REPORT_STATUSES,
 } from '../../lib/communityService';
@@ -31,6 +34,11 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+
+  // Moderation Schema status & setup modal
+  const [moderationDbStatus, setModerationDbStatus] = useState({ isInstalled: true });
+  const [showDbModal, setShowDbModal] = useState(false);
+  const [dbCopied, setDbCopied] = useState(false);
 
   // Selected report for detail modal
   const [selectedReportId, setSelectedReportId] = useState(null);
@@ -103,7 +111,14 @@ export default function AdminReports() {
   }, [statusFilter, search, page, perPage]);
 
   useEffect(() => {
+    let active = true;
+    checkModerationSchemaStatus().then((status) => {
+      if (active) setModerationDbStatus(status);
+    });
     loadReports();
+    return () => {
+      active = false;
+    };
   }, [loadReports]);
 
   // Open detail modal & load full immutable evidence snapshot
@@ -167,25 +182,61 @@ export default function AdminReports() {
     if (!activeReport?.reported_user_id || banActionLoading) return;
 
     setBanActionLoading(true);
+    const reason = banReasonInput.trim() || 'Violating community standards in chat';
+
+    // Optimistically update active report and reports list
+    setActiveReport((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: 'action_taken',
+            action_type: 'user_banned',
+            reportedUser: {
+              ...prev.reportedUser,
+              is_banned: true,
+              ban_reason: reason,
+            },
+          }
+        : prev
+    );
+
+    setReports((prev) =>
+      prev.map((r) =>
+        r.id === activeReport.id || r.reported_user_id === activeReport.reported_user_id
+          ? {
+              ...r,
+              status: r.id === activeReport.id ? 'action_taken' : r.status,
+              action_type: r.id === activeReport.id ? 'user_banned' : r.action_type,
+              reportedUser: {
+                ...r.reportedUser,
+                is_banned: true,
+                ban_reason: reason,
+              },
+            }
+          : r
+      )
+    );
+
     try {
       await adminSetUserBanStatus({
         targetUserId: activeReport.reported_user_id,
         isBanned: true,
-        banReason: banReasonInput.trim() || 'Violating community standards in chat',
+        banReason: reason,
         reportId: activeReport.id,
         adminId: currentAdminProfile?.id,
       });
 
       showToast(ta('admin.banSuccess'), 'success');
       setBanDialogOpen(false);
-      loadReports(true);
-      const updated = await fetchReportDetails(activeReport.id);
-      setActiveReport(updated);
       setModStatus('action_taken');
       setModActionType('user_banned');
+      loadReports(true);
+      const updated = await fetchReportDetails(activeReport.id);
+      if (updated) setActiveReport(updated);
     } catch (err) {
       console.error('Error banning user:', err);
       showToast(err?.message || 'Failed to ban user', 'error');
+      loadReports(true);
     } finally {
       setBanActionLoading(false);
     }
@@ -203,6 +254,36 @@ export default function AdminReports() {
       variant: 'info',
       onConfirm: async () => {
         setBanActionLoading(true);
+
+        // Optimistically update active report and reports list
+        setActiveReport((prev) =>
+          prev
+            ? {
+                ...prev,
+                reportedUser: {
+                  ...prev.reportedUser,
+                  is_banned: false,
+                  ban_reason: null,
+                },
+              }
+            : prev
+        );
+
+        setReports((prev) =>
+          prev.map((r) =>
+            r.reported_user_id === activeReport.reported_user_id
+              ? {
+                  ...r,
+                  reportedUser: {
+                    ...r.reportedUser,
+                    is_banned: false,
+                    ban_reason: null,
+                  },
+                }
+              : r
+          )
+        );
+
         try {
           await adminSetUserBanStatus({
             targetUserId: activeReport.reported_user_id,
@@ -215,10 +296,11 @@ export default function AdminReports() {
           showToast(ta('admin.unbanSuccess'), 'success');
           loadReports(true);
           const updated = await fetchReportDetails(activeReport.id);
-          setActiveReport(updated);
+          if (updated) setActiveReport(updated);
         } catch (err) {
           console.error('Error lifting ban:', err);
           showToast(err?.message || 'Failed to unban user', 'error');
+          loadReports(true);
         } finally {
           setBanActionLoading(false);
         }
@@ -292,6 +374,56 @@ export default function AdminReports() {
               {ta('admin.retry')}
             </button>
           </div>
+        )}
+
+        {/* Moderation & Ban Database Setup Notice Banner */}
+        {moderationDbStatus.isInstalled === false && (
+          <aside
+            style={{
+              padding: '14px 18px',
+              borderRadius: '12px',
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              color: '#92400E',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              lineHeight: 1.5,
+              marginBottom: '16px',
+            }}
+            role="alert"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#D97706' }}>
+                warning
+              </span>
+              <div>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#78350F' }}>
+                  {ta('admin.moderationDbNoticeTitle')}
+                </strong>
+                <span>{ta('admin.moderationDbNoticeDesc')}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDbModal(true)}
+              className="admin-btn admin-btn-primary"
+              style={{
+                backgroundColor: '#D97706',
+                borderColor: '#B45309',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                padding: '8px 16px',
+                fontWeight: 600,
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>code</span>
+              <span>{ta('admin.moderationDbNoticeBtn')}</span>
+            </button>
+          </aside>
         )}
 
         {/* Top Stats Grid */}
@@ -899,6 +1031,88 @@ export default function AdminReports() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ open: false })}
       />
+
+      {/* Moderation SQL Setup Modal */}
+      {showDbModal && (
+        <div
+          className="connect-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mod-db-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowDbModal(false);
+          }}
+        >
+          <div className="connect-modal-card db-modal-card" style={{ maxWidth: '680px', width: '92%' }}>
+            <div className="connect-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <h3 id="mod-db-modal-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>⚙️</span>
+                <span>{ta('admin.moderationDbModalTitle')}</span>
+              </h3>
+              <button
+                type="button"
+                className="admin-btn admin-btn-ghost"
+                onClick={() => setShowDbModal(false)}
+                style={{ padding: '4px 8px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <ul style={{ margin: '0 0 16px 0', paddingInlineStart: '20px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                <li>{ta('admin.moderationDbModalStep1')}</li>
+                <li>{ta('admin.moderationDbModalStep2')}</li>
+              </ul>
+
+              <pre
+                style={{
+                  backgroundColor: '#1E293B',
+                  color: '#F8FAFC',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  fontFamily: 'monospace',
+                  direction: 'ltr',
+                  textAlign: 'left',
+                  whiteSpace: 'pre',
+                }}
+              >
+                {CHAT_MODERATION_SQL}
+              </pre>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => setShowDbModal(false)}
+                >
+                  {ta('admin.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-primary"
+                  style={{ backgroundColor: 'var(--secondary)', color: '#FFFFFF', fontWeight: 700 }}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(CHAT_MODERATION_SQL);
+                      setDbCopied(true);
+                      showToast(ta('admin.moderationDbModalCopied'), 'success');
+                      setTimeout(() => setDbCopied(false), 3000);
+                    } catch (err) {
+                      console.warn('Clipboard write failed:', err);
+                    }
+                  }}
+                >
+                  <span>{dbCopied ? '✓ ' + ta('admin.moderationDbModalCopied') : ta('admin.moderationDbModalCopyBtn')}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

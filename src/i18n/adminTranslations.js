@@ -214,6 +214,16 @@ export const adminTranslations = {
       banSuccess: 'تم حظر المستخدم وتسجيل الإجراء الإداري بنجاح.',
       unbanSuccess: 'تم رفع الحظر عن المستخدم بنجاح.',
       statusUpdatedSuccess: 'تم تحديث حالة البلاغ بنجاح.',
+
+      // Database Setup Banner & Modal for Moderation & Banning
+      moderationDbNoticeTitle: 'تفعيل ميزة الحظر والبلاغات الدائمة في Supabase',
+      moderationDbNoticeDesc: 'لتطبيق الحظر الدائم على مستوى قاعدة البيانات وحفظ سجلات البلاغات، يرجى تشغيل كود SQL في Supabase SQL Editor.',
+      moderationDbNoticeBtn: '⚙️ نسخ كود SQL للتفعيل',
+      moderationDbModalTitle: 'تفعيل جداول الحظر والبلاغات في Supabase',
+      moderationDbModalStep1: 'افتح لوحة تحكم مشروعك في Supabase واذهب إلى قسم SQL Editor.',
+      moderationDbModalStep2: 'الصق الكود التالي واضغط على زر Run لتفعيل أعمدة الحظر وجداول البلاغات والأدلة والدوال الآمنة.',
+      moderationDbModalCopyBtn: '📋 نسخ كود SQL بالكامل',
+      moderationDbModalCopied: 'تم نسخ الكود بنجاح! ✓',
     },
   },
   en: {
@@ -427,6 +437,16 @@ export const adminTranslations = {
       banSuccess: 'User was banned and audit log recorded successfully.',
       unbanSuccess: 'User ban was lifted successfully.',
       statusUpdatedSuccess: 'Report status updated successfully.',
+
+      // Database Setup Banner & Modal for Moderation & Banning
+      moderationDbNoticeTitle: 'Activate Permanent Ban & Reports in Supabase',
+      moderationDbNoticeDesc: 'To enforce bans permanently at the database level and activate tamper-proof evidence logs, run the SQL script in Supabase SQL Editor.',
+      moderationDbNoticeBtn: '⚙️ Copy SQL Setup Code',
+      moderationDbModalTitle: 'Activate Ban & Reports Schema in Supabase',
+      moderationDbModalStep1: 'Open your Supabase project dashboard and navigate to the SQL Editor.',
+      moderationDbModalStep2: 'Paste the SQL script below and click Run to activate ban columns, reports, evidence tables, and secure RPCs.',
+      moderationDbModalCopyBtn: '📋 Copy Full SQL Code',
+      moderationDbModalCopied: 'Copied Successfully! ✓',
     },
   },
 };

@@ -19,6 +19,8 @@ import {
   adminModerateReport,
   adminSetUserBanStatus,
   fetchAdminAuditLogs,
+  getUserBanInfo,
+  isUserLocallyBanned,
   REPORT_REASONS,
   REPORT_STATUSES,
 } from '../src/lib/communityService.js';
@@ -177,6 +179,25 @@ export async function runChatReportsTests() {
   }
   assert(invalidBanBlocked, 'adminSetUserBanStatus validates required targetUserId');
 
+  // Ban & Unban Registry Lifecycle Verification
+  const testUserId = 'test-banned-user-' + Date.now();
+  await adminSetUserBanStatus({
+    targetUserId: testUserId,
+    isBanned: true,
+    banReason: 'Automated test violation',
+  });
+
+  const banInfo = getUserBanInfo(testUserId);
+  assert(banInfo && banInfo.is_banned === true, 'adminSetUserBanStatus persists ban record');
+  assert(banInfo && banInfo.ban_reason === 'Automated test violation', 'Ban reason preserved accurately in registry');
+  assert(isUserLocallyBanned(testUserId) === true, 'isUserLocallyBanned confirms user is banned');
+
+  await adminSetUserBanStatus({
+    targetUserId: testUserId,
+    isBanned: false,
+  });
+  assert(isUserLocallyBanned(testUserId) === false, 'adminSetUserBanStatus clears ban status when isBanned: false');
+
   // --- Group 4: Component Files & Route Registration ---
   console.log('\n[GROUP 4] Components, UI & Route Registration Verification');
   const reportModalFile = path.resolve('src/Components/ReportModal.jsx');
@@ -190,6 +211,7 @@ export async function runChatReportsTests() {
   assert(chatDrawerContent.includes('chat-drawer-report-btn'), 'ChatDrawer.jsx includes report button');
   assert(chatDrawerContent.includes('isBanned'), 'ChatDrawer.jsx checks isBanned status');
   assert(chatDrawerContent.includes('chat-banned-notice-bar'), 'ChatDrawer.jsx renders banned notice banner');
+  assert(chatDrawerContent.includes('isUserLocallyBanned'), 'ChatDrawer.jsx checks local ban registry');
 
   const adminSidebarContent = fs.readFileSync(path.resolve('src/Components/admin/AdminSidebar.jsx'), 'utf8');
   assert(adminSidebarContent.includes('/admin/reports'), 'AdminSidebar.jsx links to /admin/reports');
@@ -202,6 +224,12 @@ export async function runChatReportsTests() {
   assert(adminUsersContent.includes('adminSetUserBanStatus'), 'AdminUsers.jsx imports adminSetUserBanStatus');
   assert(adminUsersContent.includes('handleToggleBan'), 'AdminUsers.jsx implements handleToggleBan');
   assert(adminUsersContent.includes('userBannedBadge'), 'AdminUsers.jsx renders userBannedBadge');
+  assert(adminUsersContent.includes('moderationDbNoticeTitle'), 'AdminUsers.jsx renders moderation database setup notice banner');
+  assert(adminUsersContent.includes('CHAT_MODERATION_SQL'), 'AdminUsers.jsx embeds SQL setup script');
+
+  const adminReportsContent = fs.readFileSync(adminReportsFile, 'utf8');
+  assert(adminReportsContent.includes('moderationDbNoticeTitle'), 'AdminReports.jsx renders moderation database setup notice banner');
+  assert(adminReportsContent.includes('CHAT_MODERATION_SQL'), 'AdminReports.jsx embeds SQL setup script');
 
   const adminCssContent = fs.readFileSync(path.resolve('src/styles/admin.css'), 'utf8');
   assert(adminCssContent.includes('.admin-badge-banned'), 'admin.css defines .admin-badge-banned');

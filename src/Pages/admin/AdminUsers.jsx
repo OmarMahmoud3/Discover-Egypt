@@ -3,7 +3,12 @@ import { useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAdminTranslation } from '../../lib/useAdminTranslation';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { adminSetUserBanStatus } from '../../lib/communityService';
+import {
+  adminSetUserBanStatus,
+  getUserBanInfo,
+  CHAT_MODERATION_SQL,
+  checkModerationSchemaStatus,
+} from '../../lib/communityService';
 import AdminHeader from '../../Components/admin/AdminHeader';
 import ConfirmDialog from '../../Components/admin/ConfirmDialog';
 
@@ -27,6 +32,9 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState('all');
 
   const [edgeFunctionAvailable, setEdgeFunctionAvailable] = useState(null);
+  const [moderationDbStatus, setModerationDbStatus] = useState({ isInstalled: true });
+  const [showDbModal, setShowDbModal] = useState(false);
+  const [dbCopied, setDbCopied] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false });
@@ -75,7 +83,16 @@ export default function AdminUsers() {
 
       // If Edge Function succeeded, use real Auth-backed data
       if (!edgeRes.error && edgeRes.data && Array.isArray(edgeRes.data.users)) {
-        setUsers(edgeRes.data.users);
+        const enrichedUsers = edgeRes.data.users.map((u) => {
+          const banInfo = getUserBanInfo(u.id);
+          return {
+            ...u,
+            is_banned: Boolean(u.is_banned || banInfo?.is_banned),
+            ban_reason: u.ban_reason || banInfo?.ban_reason || null,
+          };
+        });
+
+        setUsers(enrichedUsers);
         setTotalCount(edgeRes.data.total ?? edgeRes.data.users.length);
         setTotalAuthUsers(edgeRes.data.totalAuthUsers ?? edgeRes.data.total ?? edgeRes.data.users.length);
         setTotalPages(edgeRes.data.totalPages ?? 1);
@@ -117,11 +134,45 @@ export default function AdminUsers() {
         .order('created_at', { ascending: false })
         .range((page - 1) * perPage, page * perPage - 1);
 
-      const { data: profileData, count, error: profileErr } = await query;
-      if (profileErr) throw profileErr;
+      let { data: profileData, count, error: profileErr } = await query;
+      if (profileErr) {
+        // Fallback without is_banned / ban_reason if column is not yet added in Supabase
+        let fallbackQuery = supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, preferred_language, role, created_at', { count: 'exact' });
+
+        if (roleFilter === 'admin' || roleFilter === 'user') {
+          fallbackQuery = fallbackQuery.eq('role', roleFilter);
+        } else if (roleFilter === 'unassigned') {
+          fallbackQuery = fallbackQuery.is('role', null);
+        }
+
+        if (search.trim()) {
+          const term = search.trim();
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term);
+          if (isUuid) {
+            fallbackQuery = fallbackQuery.or(`display_name.ilike.%${term}%,id.eq.${term}`);
+          } else {
+            fallbackQuery = fallbackQuery.ilike('display_name', `%${term}%`);
+          }
+        }
+
+        fallbackQuery = fallbackQuery
+          .order('created_at', { ascending: false })
+          .range((page - 1) * perPage, page * perPage - 1);
+
+        const fbRes = await fallbackQuery;
+        if (fbRes.error) throw fbRes.error;
+        profileData = fbRes.data;
+        count = fbRes.count;
+      }
 
       const mappedUsers = (profileData || []).map((p) => {
         const isCurrent = p.id === session?.user?.id;
+        const banInfo = getUserBanInfo(p.id);
+        const isBanned = Boolean(p.is_banned || banInfo?.is_banned);
+        const banReason = p.ban_reason || banInfo?.ban_reason || null;
+
         return {
           id: p.id,
           email: isCurrent ? (session?.user?.email || '') : '',
@@ -132,8 +183,8 @@ export default function AdminUsers() {
           avatar_url: p.avatar_url || null,
           preferred_language: p.preferred_language || 'ar',
           role: p.role || null,
-          is_banned: Boolean(p.is_banned),
-          ban_reason: p.ban_reason || null,
+          is_banned: isBanned,
+          ban_reason: banReason,
           has_profile: true,
         };
       });
@@ -151,9 +202,12 @@ export default function AdminUsers() {
     }
   }, [page, perPage, search, roleFilter, edgeFunctionAvailable, session, ta]);
 
-  // Initial load
+  // Initial load & check moderation schema status
   useEffect(() => {
     let active = true;
+    checkModerationSchemaStatus().then((status) => {
+      if (active) setModerationDbStatus(status);
+    });
     const execute = async () => {
       if (active) {
         await fetchUsers();
@@ -202,6 +256,20 @@ export default function AdminUsers() {
       variant: isBanning ? 'danger' : 'info',
       onConfirm: async () => {
         setActionLoading(true);
+
+        // Optimistically update users list immediately
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === targetUser.id
+              ? {
+                  ...u,
+                  is_banned: isBanning,
+                  ban_reason: isBanning ? 'Violating community guidelines' : null,
+                }
+              : u
+          )
+        );
+
         try {
           await adminSetUserBanStatus({
             targetUserId: targetUser.id,
@@ -215,6 +283,7 @@ export default function AdminUsers() {
         } catch (err) {
           console.error('Error toggling ban status:', err);
           showToast(err?.message || 'Failed to update ban status', 'error');
+          fetchUsers(true);
         } finally {
           setActionLoading(false);
         }
@@ -465,6 +534,55 @@ export default function AdminUsers() {
               {ta('admin.edgeFunctionNotice')}
             </div>
           </div>
+        )}
+
+        {/* Moderation & Ban Database Setup Notice Banner */}
+        {moderationDbStatus.isInstalled === false && (
+          <aside
+            style={{
+              padding: '14px 18px',
+              borderRadius: '12px',
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              color: '#92400E',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              lineHeight: 1.5,
+            }}
+            role="alert"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', color: '#D97706' }}>
+                warning
+              </span>
+              <div>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#78350F' }}>
+                  {ta('admin.moderationDbNoticeTitle')}
+                </strong>
+                <span>{ta('admin.moderationDbNoticeDesc')}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDbModal(true)}
+              className="admin-btn admin-btn-primary"
+              style={{
+                backgroundColor: '#D97706',
+                borderColor: '#B45309',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                padding: '8px 16px',
+                fontWeight: 600,
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>code</span>
+              <span>{ta('admin.moderationDbNoticeBtn')}</span>
+            </button>
+          </aside>
         )}
 
         {/* Main Users Card */}
@@ -1239,6 +1357,88 @@ export default function AdminUsers() {
             {toast.type === 'error' ? 'error' : 'check_circle'}
           </span>
           <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Moderation SQL Setup Modal */}
+      {showDbModal && (
+        <div
+          className="connect-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mod-db-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowDbModal(false);
+          }}
+        >
+          <div className="connect-modal-card db-modal-card" style={{ maxWidth: '680px', width: '92%' }}>
+            <div className="connect-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <h3 id="mod-db-modal-title" style={{ margin: 0, fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>⚙️</span>
+                <span>{ta('admin.moderationDbModalTitle')}</span>
+              </h3>
+              <button
+                type="button"
+                className="admin-btn admin-btn-ghost"
+                onClick={() => setShowDbModal(false)}
+                style={{ padding: '4px 8px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <ul style={{ margin: '0 0 16px 0', paddingInlineStart: '20px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                <li>{ta('admin.moderationDbModalStep1')}</li>
+                <li>{ta('admin.moderationDbModalStep2')}</li>
+              </ul>
+
+              <pre
+                style={{
+                  backgroundColor: '#1E293B',
+                  color: '#F8FAFC',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  fontFamily: 'monospace',
+                  direction: 'ltr',
+                  textAlign: 'left',
+                  whiteSpace: 'pre',
+                }}
+              >
+                {CHAT_MODERATION_SQL}
+              </pre>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => setShowDbModal(false)}
+                >
+                  {ta('admin.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-primary"
+                  style={{ backgroundColor: 'var(--secondary)', color: '#FFFFFF', fontWeight: 700 }}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(CHAT_MODERATION_SQL);
+                      setDbCopied(true);
+                      showToast(ta('admin.moderationDbModalCopied'), 'success');
+                      setTimeout(() => setDbCopied(false), 3000);
+                    } catch (err) {
+                      console.warn('Clipboard write failed:', err);
+                    }
+                  }}
+                >
+                  <span>{dbCopied ? '✓ ' + ta('admin.moderationDbModalCopied') : ta('admin.moderationDbModalCopyBtn')}</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>

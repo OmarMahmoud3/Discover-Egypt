@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { fetchMessages, sendMessage, subscribeToMessages, HERITAGE_AVATARS_MAP } from '../lib/communityService';
+import { fetchMessages, sendMessage, subscribeToMessages, HERITAGE_AVATARS_MAP, isUserLocallyBanned } from '../lib/communityService';
 import { supabase } from '../lib/supabase';
 import ReportModal from './ReportModal';
 
@@ -48,7 +48,7 @@ export default function ChatDrawer({
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [isBanned, setIsBanned] = useState(false);
+  const [isBanned, setIsBanned] = useState(() => isUserLocallyBanned(currentUser?.id));
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -56,19 +56,37 @@ export default function ChatDrawer({
   useEffect(() => {
     if (!currentUser?.id) return;
     let mounted = true;
+
+    // Check local registry first
+    if (isUserLocallyBanned(currentUser.id)) {
+      setIsBanned(true);
+    }
+
+    // Check database if column exists
     supabase
       .from('profiles')
       .select('is_banned')
       .eq('id', currentUser.id)
       .maybeSingle()
-      .then(({ data }) => {
-        if (mounted && data?.is_banned) {
+      .then(({ data, error }) => {
+        if (mounted && !error && data?.is_banned) {
           setIsBanned(true);
         }
       })
       .catch(() => {});
+
+    // Listen to real-time ban events
+    const handleBanChanged = (e) => {
+      if (e.detail?.targetUserId === currentUser.id && mounted) {
+        setIsBanned(Boolean(e.detail.isBanned));
+      }
+    };
+
+    window.addEventListener('community:ban_status_changed', handleBanChanged);
+
     return () => {
       mounted = false;
+      window.removeEventListener('community:ban_status_changed', handleBanChanged);
     };
   }, [currentUser?.id]);
 

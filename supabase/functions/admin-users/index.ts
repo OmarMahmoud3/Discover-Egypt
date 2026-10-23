@@ -160,15 +160,26 @@ const handler = async (req: Request): Promise<Response> => {
       const authUsers = authData?.users || [];
 
       // Retrieve all profiles from public.profiles
-      const { data: profiles, error: listProfilesErr } = await adminClient
+      let profiles: any[] = [];
+      const { data: profData, error: listProfilesErr } = await adminClient
         .from('profiles')
-        .select('id, display_name, avatar_url, preferred_language, role, created_at');
+        .select('id, display_name, avatar_url, preferred_language, role, is_banned, ban_reason, created_at');
 
-      if (listProfilesErr) {
-        return new Response(
-          JSON.stringify({ error: `Failed to retrieve profiles: ${listProfilesErr.message}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (!listProfilesErr && profData) {
+        profiles = profData;
+      } else {
+        // Fallback if is_banned column is not yet present in profiles schema
+        const { data: fallbackProfiles, error: fbErr } = await adminClient
+          .from('profiles')
+          .select('id, display_name, avatar_url, preferred_language, role, created_at');
+
+        if (fbErr) {
+          return new Response(
+            JSON.stringify({ error: `Failed to retrieve profiles: ${fbErr.message}` }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        profiles = fallbackProfiles || [];
       }
 
       const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
@@ -177,6 +188,8 @@ const handler = async (req: Request): Promise<Response> => {
       let mergedUsers = authUsers.map((u: any) => {
         const p: any = profileMap.get(u.id);
         const isConfirmed = Boolean(u.email_confirmed_at || u.confirmed_at);
+        const isBanned = Boolean(p?.is_banned || u.app_metadata?.is_banned);
+        const banReason = p?.ban_reason || u.app_metadata?.ban_reason || null;
 
         return {
           id: u.id,
@@ -188,6 +201,8 @@ const handler = async (req: Request): Promise<Response> => {
           avatar_url: p?.avatar_url || null,
           preferred_language: p?.preferred_language || null,
           role: p?.role || null, // null if no profile or role exists
+          is_banned: isBanned,
+          ban_reason: banReason,
           has_profile: Boolean(p),
           last_sign_in_at: u.last_sign_in_at || null,
         };
@@ -379,27 +394,28 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Update public.profiles
-      const { error: banProfileErr } = await adminClient
-        .from('profiles')
-        .update({
-          is_banned: isBanned,
-          banned_at: isBanned ? new Date().toISOString() : null,
-          ban_reason: isBanned ? (banReason || 'Violating community guidelines') : null,
-          banned_by: isBanned ? currentUserId : null,
-        })
-        .eq('id', targetUserId);
+      try {
+        const { error: banProfileErr } = await adminClient
+          .from('profiles')
+          .update({
+            is_banned: isBanned,
+            banned_at: isBanned ? new Date().toISOString() : null,
+            ban_reason: isBanned ? (banReason || 'Violating community guidelines') : null,
+            banned_by: isBanned ? currentUserId : null,
+          })
+          .eq('id', targetUserId);
 
-      if (banProfileErr) {
-        return new Response(
-          JSON.stringify({ error: `Failed to update ban status: ${banProfileErr.message}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (banProfileErr) {
+          console.warn('Could not update profiles table for ban (column may be pending in schema):', banProfileErr.message);
+        }
+      } catch (profCatchErr: any) {
+        console.warn('Exception updating profiles for ban:', profCatchErr?.message);
       }
 
       // Update Auth app_metadata to invalidate or restrict active sessions
       try {
         await adminClient.auth.admin.updateUserById(targetUserId, {
-          app_metadata: { is_banned: isBanned },
+          app_metadata: { is_banned: isBanned, ban_reason: isBanned ? (banReason || 'Violating community guidelines') : null },
         });
       } catch (authBanErr: any) {
         console.warn('Could not update Auth metadata for ban:', authBanErr?.message);

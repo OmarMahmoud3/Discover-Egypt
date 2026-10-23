@@ -315,6 +315,14 @@ export async function sendConnectionRequest({
   }
 
   // Guard against banned accounts
+  if (isUserLocallyBanned(senderId)) {
+    return {
+      success: false,
+      isBanned: true,
+      error: 'حسابك معلّق من إرسال طلبات التواصل لمخالفة معايير المجتمع.',
+    };
+  }
+
   try {
     const { data: senderProf } = await supabase
       .from('profiles')
@@ -739,6 +747,10 @@ export async function sendMessage({ conversationId, senderId, content }) {
   }
 
   // Guard against banned accounts attempting to send messages
+  if (isUserLocallyBanned(senderId)) {
+    throw new Error('حسابك معلّق من إرسال الرسائل لمخالفة معايير المجتمع.');
+  }
+
   try {
     const { data: senderProf } = await supabase
       .from('profiles')
@@ -1189,8 +1201,82 @@ export const REPORT_STATUSES = [
 ];
 
 /**
- * Local fallback helpers for offline/test environment
+ * Local fallback helpers for offline/test environment & resilient ban registry
  */
+let _memBannedUsers = {};
+
+export const BANNED_USERS_KEY = 'discover_egypt_banned_users';
+
+export function getBannedUsersRegistry() {
+  if (typeof localStorage === 'undefined') return _memBannedUsers;
+  try {
+    const raw = localStorage.getItem(BANNED_USERS_KEY);
+    return raw ? JSON.parse(raw) : _memBannedUsers;
+  } catch {
+    return _memBannedUsers;
+  }
+}
+
+export function saveBannedUsersRegistry(registry) {
+  _memBannedUsers = { ...(registry || {}) };
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(BANNED_USERS_KEY, JSON.stringify(registry || {}));
+  } catch (e) {
+    console.warn('Could not save banned users registry to localStorage:', e);
+  }
+}
+
+export function getUserBanInfo(userId) {
+  if (!userId) return null;
+  const registry = getBannedUsersRegistry();
+  return registry[userId] || null;
+}
+
+export function isUserLocallyBanned(userId) {
+  if (!userId) return false;
+  const registry = getBannedUsersRegistry();
+  return Boolean(registry[userId]?.is_banned);
+}
+
+export async function isUserBanned(userId) {
+  if (!userId) return false;
+  if (isUserLocallyBanned(userId)) return true;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('is_banned')
+      .eq('id', userId)
+      .maybeSingle();
+    return Boolean(data?.is_banned);
+  } catch {
+    return false;
+  }
+}
+
+export async function checkModerationSchemaStatus() {
+  try {
+    const { error: rErr } = await supabase
+      .from('chat_reports')
+      .select('id', { head: true, count: 'exact' })
+      .limit(1);
+
+    const { error: bErr } = await supabase
+      .from('profiles')
+      .select('is_banned', { head: true })
+      .limit(1);
+
+    const isInstalled = !rErr && !bErr;
+    return {
+      isInstalled,
+      reportsTableMissing: Boolean(rErr),
+      banColumnMissing: Boolean(bErr),
+    };
+  } catch {
+    return { isInstalled: false, reportsTableMissing: true, banColumnMissing: true };
+  }
+}
+
 function getLocalReports() {
   if (typeof localStorage === 'undefined') return [];
   try {
@@ -1430,15 +1516,27 @@ export async function fetchAdminReports({
     let profilesMap = {};
     if (userIds.length > 0) {
       try {
-        const { data: profs } = await supabase
+        const { data: profs, error: profErr } = await supabase
           .from('profiles')
           .select('id, display_name, avatar_url, role, is_banned, ban_reason')
           .in('id', userIds);
 
-        if (Array.isArray(profs)) {
+        if (!profErr && Array.isArray(profs)) {
           profs.forEach((p) => {
             profilesMap[p.id] = p;
           });
+        } else {
+          // Fallback if is_banned column is not yet present in profiles schema
+          const { data: fallbackProfs } = await supabase
+            .from('profiles')
+            .select('id, display_name, avatar_url, role')
+            .in('id', userIds);
+
+          if (Array.isArray(fallbackProfs)) {
+            fallbackProfs.forEach((p) => {
+              profilesMap[p.id] = p;
+            });
+          }
         }
       } catch (profErr) {
         console.warn('Error enriching report profiles:', profErr);
@@ -1463,21 +1561,32 @@ export async function fetchAdminReports({
       // Ignore count error
     }
 
-    reports = reports.map((r) => ({
-      ...r,
-      reporter: profilesMap[r.reporter_id] || {
-        id: r.reporter_id,
-        display_name: 'مستكشف مصري',
-        avatar_url: 'pharaoh',
-      },
-      reportedUser: profilesMap[r.reported_user_id] || {
+    reports = reports.map((r) => {
+      const repUser = profilesMap[r.reported_user_id] || {
         id: r.reported_user_id,
         display_name: 'مستكشف مصري',
         avatar_url: 'sphinx',
         is_banned: false,
-      },
-      evidenceCount: evidenceCountsMap[r.id] || r.evidence_count || (r._evidence_snapshot ? r._evidence_snapshot.length : 0),
-    }));
+      };
+      const banInfo = getUserBanInfo(r.reported_user_id);
+      const isBanned = Boolean(repUser.is_banned || banInfo?.is_banned);
+      const banReason = repUser.ban_reason || banInfo?.ban_reason || null;
+
+      return {
+        ...r,
+        reporter: profilesMap[r.reporter_id] || {
+          id: r.reporter_id,
+          display_name: 'مستكشف مصري',
+          avatar_url: 'pharaoh',
+        },
+        reportedUser: {
+          ...repUser,
+          is_banned: isBanned,
+          ban_reason: banReason,
+        },
+        evidenceCount: evidenceCountsMap[r.id] || r.evidence_count || (r._evidence_snapshot ? r._evidence_snapshot.length : 0),
+      };
+    });
   }
 
   // Filter by search query if provided
@@ -1541,17 +1650,49 @@ export async function fetchReportDetails(reportId) {
   let reporter = null;
   let reportedUser = null;
   try {
-    const { data: profs } = await supabase
+    const { data: profs, error: profsErr } = await supabase
       .from('profiles')
       .select('id, display_name, avatar_url, role, is_banned, ban_reason, banned_at, city')
       .in('id', [report.reporter_id, report.reported_user_id]);
 
-    if (Array.isArray(profs)) {
+    if (!profsErr && Array.isArray(profs)) {
       reporter = profs.find((p) => p.id === report.reporter_id) || null;
       reportedUser = profs.find((p) => p.id === report.reported_user_id) || null;
+    } else {
+      // Fallback if is_banned column is missing
+      const { data: fallbackProfs } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url, role, city')
+        .in('id', [report.reporter_id, report.reported_user_id]);
+
+      if (Array.isArray(fallbackProfs)) {
+        reporter = fallbackProfs.find((p) => p.id === report.reporter_id) || null;
+        reportedUser = fallbackProfs.find((p) => p.id === report.reported_user_id) || null;
+      }
     }
   } catch {
     // Continue
+  }
+
+  // Overlay ban info from resilient registry
+  if (reportedUser) {
+    const banInfo = getUserBanInfo(reportedUser.id);
+    if (banInfo) {
+      reportedUser = {
+        ...reportedUser,
+        is_banned: Boolean(reportedUser.is_banned || banInfo.is_banned),
+        ban_reason: reportedUser.ban_reason || banInfo.ban_reason,
+        banned_at: reportedUser.banned_at || banInfo.banned_at,
+      };
+    }
+  } else if (report.reported_user_id) {
+    const banInfo = getUserBanInfo(report.reported_user_id);
+    reportedUser = {
+      id: report.reported_user_id,
+      display_name: 'مستكشف مصري',
+      is_banned: Boolean(banInfo?.is_banned),
+      ban_reason: banInfo?.ban_reason || null,
+    };
   }
 
   // 3. Fetch evidence records
@@ -1707,6 +1848,8 @@ export async function adminSetUserBanStatus({
     throw new Error('targetUserId and isBanned boolean are required.');
   }
 
+  let serverSuccess = false;
+
   // Strategy 1: Stored Procedure RPC (admin_set_user_ban_status)
   try {
     const { data: rpcData, error: rpcError } = await supabase.rpc('admin_set_user_ban_status', {
@@ -1717,72 +1860,132 @@ export async function adminSetUserBanStatus({
     });
 
     if (!rpcError && (rpcData?.success || rpcData === true)) {
-      return { success: true, targetUserId, isBanned };
+      serverSuccess = true;
     }
   } catch (err) {
-    console.warn('admin_set_user_ban_status RPC failed, trying direct profile update:', err);
+    console.warn('admin_set_user_ban_status RPC failed, trying Edge Function fallback:', err);
   }
 
-  // Strategy 2: Direct Profile Update
-  const profileUpdate = {
-    is_banned: isBanned,
-    banned_at: isBanned ? new Date().toISOString() : null,
-    ban_reason: isBanned ? (banReason || 'Violating community guidelines') : null,
-    banned_by: isBanned ? adminId : null,
-  };
+  // Strategy 2: Edge Function 'admin-users' (with service-role key on server)
+  if (!serverSuccess) {
+    try {
+      const edgeRes = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: isBanned ? 'ban_user' : 'unban_user',
+          targetUserId,
+          banReason: banReason || (isBanned ? 'Violating community guidelines' : ''),
+          reportId,
+        },
+      });
 
+      if (!edgeRes.error && edgeRes.data?.success) {
+        serverSuccess = true;
+      }
+    } catch (edgeErr) {
+      console.warn('admin-users Edge Function invocation failed, falling back to direct table update:', edgeErr);
+    }
+  }
+
+  // Strategy 3: Direct Profile Update
+  if (!serverSuccess) {
+    const profileUpdate = {
+      is_banned: isBanned,
+      banned_at: isBanned ? new Date().toISOString() : null,
+      ban_reason: isBanned ? (banReason || 'Violating community guidelines') : null,
+      banned_by: isBanned ? adminId : null,
+    };
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', targetUserId)
+        .select();
+
+      if (!error && data && data.length > 0) {
+        serverSuccess = true;
+      }
+    } catch (err) {
+      console.warn('Direct profile ban update failed (column may be pending):', err);
+    }
+  }
+
+  // Database audit logs (optional best-effort)
+  if (adminId) {
+    try {
+      await supabase.from('admin_audit_logs').insert([
+        {
+          admin_id: adminId,
+          action: isBanned ? 'user_banned' : 'user_unbanned',
+          target_type: 'user',
+          target_id: targetUserId,
+          details: { is_banned: isBanned, report_id: reportId },
+          reason: banReason,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch {
+      // ignore
+    }
+  }
+
+  // If associated with a report and banning user, update report status in database
+  if (reportId && isBanned) {
+    try {
+      await supabase
+        .from('chat_reports')
+        .update({
+          status: 'action_taken',
+          action_type: 'user_banned',
+          resolved_by: adminId,
+          resolved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', reportId);
+    } catch {
+      // ignore
+    }
+  }
+
+  // Strategy 4: Resilient Local Banned Registry Persistence
+  const registry = getBannedUsersRegistry();
+  if (isBanned) {
+    registry[targetUserId] = {
+      is_banned: true,
+      ban_reason: banReason || 'Violating community guidelines',
+      banned_at: new Date().toISOString(),
+      banned_by: adminId,
+      report_id: reportId,
+    };
+  } else {
+    delete registry[targetUserId];
+  }
+  saveBannedUsersRegistry(registry);
+
+  // Strategy 5: Update Local Reports store if matching
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(profileUpdate)
-      .eq('id', targetUserId)
-      .select();
-
-    if (!error && data && data.length > 0) {
-      // Log in audit logs
-      if (adminId) {
-        try {
-          await supabase.from('admin_audit_logs').insert([
-            {
-              admin_id: adminId,
-              action: isBanned ? 'user_banned' : 'user_unbanned',
-              target_type: 'user',
-              target_id: targetUserId,
-              details: { is_banned: isBanned, report_id: reportId },
-              reason: banReason,
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        } catch {
-          // ignore
+    const local = getLocalReports();
+    let updatedReports = false;
+    for (let i = 0; i < local.length; i++) {
+      if (local[i].reported_user_id === targetUserId) {
+        if (!local[i].reportedUser) local[i].reportedUser = { id: targetUserId };
+        local[i].reportedUser.is_banned = isBanned;
+        local[i].reportedUser.ban_reason = isBanned ? banReason : null;
+        if (isBanned && (local[i].id === reportId || !reportId)) {
+          local[i].status = 'action_taken';
+          local[i].action_type = 'user_banned';
         }
+        updatedReports = true;
       }
-
-      // If associated with a report, update report status as well
-      if (reportId && isBanned) {
-        try {
-          await supabase
-            .from('chat_reports')
-            .update({
-              status: 'action_taken',
-              action_type: 'user_banned',
-              resolved_by: adminId,
-              resolved_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', reportId);
-        } catch {
-          // ignore
-        }
-      }
-
-      return { success: true, user: data[0] };
+    }
+    if (updatedReports) {
+      saveLocalReports(local);
     }
   } catch (err) {
-    console.warn('Direct profile ban update failed:', err);
+    console.warn('Could not update local reports with ban status:', err);
   }
 
-  // Strategy 3: Local audit log fallback
+  // Strategy 6: Save in Local Audit Log
   const localLogs = getLocalAuditLogs();
   localLogs.unshift({
     id: 'local-log-' + Date.now(),
@@ -1796,7 +1999,16 @@ export async function adminSetUserBanStatus({
   });
   saveLocalAuditLogs(localLogs);
 
-  return { success: true, local: true };
+  // Strategy 7: Realtime DOM Event Broadcast so open UI components immediately react
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('community:ban_status_changed', {
+        detail: { targetUserId, isBanned, banReason, adminId },
+      })
+    );
+  }
+
+  return { success: true, targetUserId, isBanned, serverConfirmed: serverSuccess };
 }
 
 /**
@@ -1830,4 +2042,214 @@ export async function fetchAdminAuditLogs({
   if (targetId) local = local.filter((l) => l.target_id === targetId);
   return local.slice(0, limit);
 }
+
+export const CHAT_MODERATION_SQL = `-- DISCOVER EGYPT — Chat Moderation, User Reporting & Ban Enforcement Schema
+-- 1. Extend public.profiles with Ban Attributes
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_at timestamptz DEFAULT NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS ban_reason text DEFAULT NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_profiles_is_banned ON public.profiles(is_banned);
+
+-- 2. Table: public.chat_reports
+CREATE TABLE IF NOT EXISTS public.chat_reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  reported_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  conversation_id uuid NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+  reason text NOT NULL CHECK (
+    reason IN (
+      'harassment',
+      'hate_speech',
+      'spam_scam',
+      'inappropriate_content',
+      'violence_threat',
+      'other'
+    )
+  ),
+  details text DEFAULT '',
+  status text NOT NULL DEFAULT 'pending' CHECK (
+    status IN ('pending', 'investigating', 'action_taken', 'dismissed')
+  ),
+  admin_notes text DEFAULT '',
+  action_type text DEFAULT NULL CHECK (
+    action_type IS NULL OR action_type IN ('none', 'warned', 'user_banned', 'content_removed')
+  ),
+  resolved_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  resolved_at timestamptz DEFAULT NULL,
+  created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL,
+  CONSTRAINT no_self_report CHECK (reporter_id <> reported_user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_reports_status ON public.chat_reports(status);
+CREATE INDEX IF NOT EXISTS idx_chat_reports_reported_user ON public.chat_reports(reported_user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_reports_reporter ON public.chat_reports(reporter_id);
+CREATE INDEX IF NOT EXISTS idx_chat_reports_created_at ON public.chat_reports(created_at DESC);
+
+-- 3. Table: public.chat_report_evidence
+CREATE TABLE IF NOT EXISTS public.chat_report_evidence (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id uuid NOT NULL REFERENCES public.chat_reports(id) ON DELETE CASCADE,
+  message_id uuid NOT NULL REFERENCES public.messages(id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  message_timestamp timestamptz NOT NULL,
+  message_content text NOT NULL,
+  created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_evidence_report_id ON public.chat_report_evidence(report_id);
+
+-- 4. Table: public.admin_audit_logs
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE SET NULL,
+  action text NOT NULL,
+  target_type text NOT NULL CHECK (target_type IN ('chat_report', 'user')),
+  target_id uuid NOT NULL,
+  details jsonb DEFAULT '{}'::jsonb,
+  reason text DEFAULT '',
+  created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.admin_audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON public.admin_audit_logs(target_type, target_id);
+
+-- 5. Row Level Security (RLS)
+ALTER TABLE public.chat_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_report_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON TABLE public.chat_reports TO authenticated;
+GRANT ALL ON TABLE public.chat_report_evidence TO authenticated;
+GRANT ALL ON TABLE public.admin_audit_logs TO authenticated;
+
+DROP POLICY IF EXISTS "Users can insert own reports" ON public.chat_reports;
+CREATE POLICY "Users can insert own reports"
+  ON public.chat_reports FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = reporter_id AND reporter_id <> reported_user_id);
+
+DROP POLICY IF EXISTS "Admins can view all reports" ON public.chat_reports;
+CREATE POLICY "Admins can view all reports"
+  ON public.chat_reports FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+DROP POLICY IF EXISTS "Admins can update reports" ON public.chat_reports;
+CREATE POLICY "Admins can update reports"
+  ON public.chat_reports FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+DROP POLICY IF EXISTS "Admins can view report evidence" ON public.chat_report_evidence;
+CREATE POLICY "Admins can view report evidence"
+  ON public.chat_report_evidence FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+DROP POLICY IF EXISTS "Reporters can insert report evidence" ON public.chat_report_evidence;
+CREATE POLICY "Reporters can insert report evidence"
+  ON public.chat_report_evidence FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM public.chat_reports r WHERE r.id = chat_report_evidence.report_id AND r.reporter_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Admins can view audit logs" ON public.admin_audit_logs;
+CREATE POLICY "Admins can view audit logs"
+  ON public.admin_audit_logs FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+DROP POLICY IF EXISTS "Admins can insert audit logs" ON public.admin_audit_logs;
+CREATE POLICY "Admins can insert audit logs"
+  ON public.admin_audit_logs FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- 6. Ban Checks on Messaging & Requests
+DROP POLICY IF EXISTS "Conversation participants can send messages" ON public.messages;
+CREATE POLICY "Conversation participants can send messages"
+  ON public.messages FOR INSERT TO authenticated
+  WITH CHECK (
+    auth.uid() = sender_id
+    AND NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_banned = true)
+    AND EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = messages.conversation_id AND (c.participant1_id = auth.uid() OR c.participant2_id = auth.uid()))
+  );
+
+DROP POLICY IF EXISTS "Senders can create connection requests" ON public.community_connections;
+CREATE POLICY "Senders can create connection requests"
+  ON public.community_connections FOR INSERT TO authenticated
+  WITH CHECK (
+    auth.uid() = sender_id 
+    AND sender_id <> receiver_id
+    AND NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.is_banned = true)
+  );
+
+-- 7. Ban RPC Procedure
+CREATE OR REPLACE FUNCTION public.admin_set_user_ban_status(
+  p_target_user_id uuid,
+  p_is_banned boolean,
+  p_ban_reason text DEFAULT '',
+  p_report_id uuid DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  v_caller_id uuid;
+  v_caller_role text;
+  v_target_role text;
+  v_action_name text;
+BEGIN
+  v_caller_id := auth.uid();
+  IF v_caller_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: Caller must be authenticated.';
+  END IF;
+
+  SELECT role INTO v_caller_role FROM public.profiles WHERE id = v_caller_id;
+  IF v_caller_role <> 'admin' THEN
+    RAISE EXCEPTION 'Forbidden: Caller is not an administrator.';
+  END IF;
+
+  IF p_target_user_id = v_caller_id AND p_is_banned IS TRUE THEN
+    RAISE EXCEPTION 'Forbidden: You cannot ban your active administrator account.';
+  END IF;
+
+  SELECT role INTO v_target_role FROM public.profiles WHERE id = p_target_user_id;
+  IF v_target_role = 'admin' AND p_is_banned IS TRUE THEN
+    RAISE EXCEPTION 'Forbidden: Administrators cannot be banned. Demote role first if necessary.';
+  END IF;
+
+  UPDATE public.profiles
+  SET
+    is_banned = p_is_banned,
+    banned_at = CASE WHEN p_is_banned THEN timezone('utc'::text, now()) ELSE NULL END,
+    ban_reason = CASE WHEN p_is_banned THEN COALESCE(p_ban_reason, 'Violating community guidelines') ELSE NULL END,
+    banned_by = CASE WHEN p_is_banned THEN v_caller_id ELSE NULL END
+  WHERE id = p_target_user_id;
+
+  v_action_name := CASE WHEN p_is_banned THEN 'user_banned' ELSE 'user_unbanned' END;
+
+  INSERT INTO public.admin_audit_logs (
+    admin_id, action, target_type, target_id, details, reason
+  ) VALUES (
+    v_caller_id, v_action_name, 'user', p_target_user_id,
+    jsonb_build_object('is_banned', p_is_banned, 'associated_report_id', p_report_id),
+    COALESCE(p_ban_reason, '')
+  );
+
+  IF p_report_id IS NOT NULL AND p_is_banned IS TRUE THEN
+    UPDATE public.chat_reports
+    SET
+      status = 'action_taken',
+      action_type = 'user_banned',
+      resolved_by = v_caller_id,
+      resolved_at = timezone('utc'::text, now()),
+      updated_at = timezone('utc'::text, now())
+    WHERE id = p_report_id;
+  END IF;
+
+  RETURN json_build_object('success', true, 'user_id', p_target_user_id, 'is_banned', p_is_banned);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_set_user_ban_status TO authenticated;
+`;
 
