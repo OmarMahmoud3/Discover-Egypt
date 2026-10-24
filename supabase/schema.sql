@@ -20,7 +20,11 @@ GRANT ALL ON TABLE public.profiles TO anon, authenticated, service_role;
 
 -- 2. Auto-create profile trigger on new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
 BEGIN
   INSERT INTO public.profiles (id, display_name, avatar_url, preferred_language, role)
   VALUES (
@@ -37,7 +41,7 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Recreate trigger cleanly
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -104,7 +108,11 @@ CREATE OR REPLACE FUNCTION public.admin_update_user_role(
   target_user_id uuid,
   new_role text
 )
-RETURNS json AS $$
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
 DECLARE
   caller_id uuid;
   caller_role text;
@@ -153,7 +161,7 @@ BEGIN
     'new_role', new_role
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.admin_update_user_role TO authenticated;
 

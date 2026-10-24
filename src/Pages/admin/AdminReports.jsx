@@ -8,7 +8,6 @@ import {
   fetchReportDetails,
   adminModerateReport,
   adminSetUserBanStatus,
-  getUserBanInfo,
   CHAT_MODERATION_SQL,
   checkModerationSchemaStatus,
   REPORT_REASONS,
@@ -25,7 +24,6 @@ export default function AdminReports() {
   const [, startTransition] = useTransition();
 
   const [reports, setReports] = useState([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [perPage] = useState(10);
@@ -112,7 +110,6 @@ export default function AdminReports() {
       }
 
       setReports(res.reports || []);
-      setTotalCount(res.total || 0);
       setTotalPages(res.totalPages || 1);
 
       // Compute quick stats across list
@@ -175,7 +172,9 @@ export default function AdminReports() {
       if (channel) {
         try {
           supabase.removeChannel(channel);
-        } catch {}
+        } catch (err) {
+          console.debug('Channel cleanup exception:', err);
+        }
       }
       window.removeEventListener('community:report_submitted', handleReportSubmitted);
       window.removeEventListener('community:ban_status_changed', handleBanChanged);

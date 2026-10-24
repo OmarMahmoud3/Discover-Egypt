@@ -1,13 +1,27 @@
-const { chromium } = require('C:/Users/om776/AppData/Roaming/npm/node_modules/@playwright/cli/node_modules/playwright');
+let chromium;
+try {
+  ({ chromium } = require('playwright'));
+} catch {
+  try {
+    ({ chromium } = require('C:/Users/om776/AppData/Roaming/npm/node_modules/@playwright/cli/node_modules/playwright'));
+  } catch (err) {
+    console.error('Playwright could not be loaded. Please install playwright locally or globally.', err?.message);
+    process.exit(0);
+  }
+}
+
 const fs = require('fs');
 const path = require('path');
 
-const BASE_URL = 'http://localhost:5174';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:5173';
 const SCREENSHOT_DIR = path.join(__dirname, 'test-results', 'screenshots');
-const ARTIFACT_DIR = 'C:/Users/om776/.gemini/antigravity-ide/brain/cf1f975c-7b39-4934-b30d-0c0d1d60f82a';
+const ARTIFACT_DIR = process.env.ARTIFACT_DIR || path.join(__dirname, 'test-results', 'artifacts');
 
 if (!fs.existsSync(SCREENSHOT_DIR)) {
   fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+}
+if (!fs.existsSync(ARTIFACT_DIR)) {
+  fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
 }
 
 async function run() {

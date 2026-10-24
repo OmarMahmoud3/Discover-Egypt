@@ -64,8 +64,9 @@ CREATE POLICY "Public discovery profiles are viewable by all"
   FOR SELECT
   TO anon, authenticated
   USING (
-    COALESCE(is_public, true) = true
+    (COALESCE(is_public, true) = true AND COALESCE(is_banned, false) = false)
     OR auth.uid() = id
+    OR (auth.uid() IS NOT NULL AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'))
   );
 
 -- Ensure table permissions for both anonymous and authenticated roles

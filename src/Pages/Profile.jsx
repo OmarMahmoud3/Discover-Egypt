@@ -21,6 +21,8 @@ const HERITAGE_AVATARS = [
   { id: 'falcon', emoji: '🦅', labelAr: 'صقر حورس', labelEn: 'Royal Falcon' },
 ];
 
+const VALID_TABS = ['personal', 'preferences', 'security', 'favorites', 'interests'];
+
 export default function Profile() {
   const navigate = useNavigate();
   const { session, profile, isAdmin, handleLogout, handleDeleteAccount, refreshProfile } = useAdminAuth();
@@ -31,9 +33,8 @@ export default function Profile() {
   // URL search params for active tab deep-linking
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTabParam = searchParams.get('tab');
-  const validTabs = ['personal', 'preferences', 'security', 'favorites', 'interests'];
   const [activeTab, setActiveTab] = useState(
-    validTabs.includes(initialTabParam) ? initialTabParam : 'personal'
+    VALID_TABS.includes(initialTabParam) ? initialTabParam : 'personal'
   );
 
   const handleTabChange = (tabKey) => {
@@ -42,7 +43,7 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    if (initialTabParam && validTabs.includes(initialTabParam)) {
+    if (initialTabParam && VALID_TABS.includes(initialTabParam)) {
       setActiveTab(initialTabParam);
     }
   }, [initialTabParam]);

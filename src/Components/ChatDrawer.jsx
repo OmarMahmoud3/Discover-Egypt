@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchMessages, sendMessage, subscribeToMessages, HERITAGE_AVATARS_MAP, isUserLocallyBanned } from '../lib/communityService';
 import { supabase } from '../lib/supabase';

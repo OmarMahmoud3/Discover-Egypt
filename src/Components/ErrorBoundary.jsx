@@ -73,7 +73,7 @@ export default class ErrorBoundary extends Component {
             {this.state.error && (
               <div style={{ textAlign: 'left', background: '#FEF2F2', border: '1px solid #F87171', borderRadius: '8px', padding: '12px', margin: '16px 0', fontSize: '13px', color: '#991B1B', wordBreak: 'break-word', whiteSpace: 'pre-wrap', direction: 'ltr' }}>
                 <strong>Error: </strong>{this.state.error.message || String(this.state.error)}
-                {this.state.error.stack && (
+                {import.meta.env.DEV && this.state.error.stack && (
                   <pre style={{ marginTop: '8px', fontSize: '11px', maxHeight: '180px', overflowY: 'auto' }}>
                     {this.state.error.stack}
                   </pre>

@@ -4,8 +4,11 @@ import { supabase } from '../lib/supabase';
 
 const AdminAuthContext = createContext();
 
-// Known administrator emails with permanent fallback privileges
-const KNOWN_ADMIN_EMAILS = ['om7765355@gmail.com', 'omarmahmoud3@gmail.com'];
+// Administrator emails with permanent fallback privileges (configurable via VITE_ADMIN_EMAILS)
+const envAdminEmails = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ADMIN_EMAILS)
+  ? import.meta.env.VITE_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase())
+  : null;
+const KNOWN_ADMIN_EMAILS = envAdminEmails || ['om7765355@gmail.com', 'omarmahmoud3@gmail.com'];
 
 /**
  * AdminAuthProvider
@@ -133,6 +136,14 @@ export function AdminAuthProvider({ children }) {
     let initialized = false;
 
     const getTestSession = () => {
+      // Security: Only permit test session fallback during local development / testing environments
+      const isLocalEnv = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        Boolean(import.meta.env?.DEV)
+      );
+      if (!isLocalEnv) return null;
+
       try {
         const testSessionStr = typeof localStorage !== 'undefined' ? localStorage.getItem('discover_egypt_test_session') : null;
         if (testSessionStr) {
@@ -204,7 +215,8 @@ export function AdminAuthProvider({ children }) {
 
   const userEmail = (session?.user?.email || '').toLowerCase().trim();
   const isKnownAdmin = KNOWN_ADMIN_EMAILS.includes(userEmail);
-  const isMetadataAdmin = session?.user?.app_metadata?.role === 'admin' || session?.user?.user_metadata?.role === 'admin';
+  // Security: only app_metadata is server-controlled and trustworthy; user_metadata is user-editable
+  const isMetadataAdmin = session?.user?.app_metadata?.role === 'admin';
 
   const isAuthenticated = !!session;
   const isAdmin = profile?.role === 'admin' || isKnownAdmin || isMetadataAdmin;

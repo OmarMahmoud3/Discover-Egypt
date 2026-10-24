@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION public.delete_own_user()
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
   current_user_id uuid;

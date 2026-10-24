@@ -409,7 +409,7 @@ export async function sendConnectionRequest({
  */
 export async function fetchIncomingRequests(userId) {
   if (!userId) return [];
-  let requests = [];
+  let requests;
 
   try {
     const { data, error } = await supabase
@@ -466,7 +466,7 @@ export async function fetchIncomingRequests(userId) {
  */
 export async function fetchOutgoingRequests(userId) {
   if (!userId) return [];
-  let requests = [];
+  let requests;
 
   try {
     const { data, error } = await supabase
@@ -639,7 +639,7 @@ export async function getOrCreateConversation({ connectionId = null, user1Id, us
  */
 export async function fetchConversations(userId) {
   if (!userId) return [];
-  let conversations = [];
+  let conversations;
 
   try {
     const { data, error } = await supabase
@@ -709,7 +709,7 @@ export async function fetchConversations(userId) {
 export async function fetchMessages(conversationId) {
   if (!conversationId) return [];
 
-  let list = [];
+  let list;
   try {
     const { data, error } = await supabase
       .from('messages')
@@ -763,7 +763,7 @@ export async function sendMessage({ conversationId, senderId, content }) {
     }
   } catch (banErr) {
     if (banErr.message === 'USER_BANNED') {
-      throw new Error('حسابك معلّق من إرسال الرسائل لمخالفة معايير المجتمع.');
+      throw new Error('حسابك معلّق من إرسال الرسائل لمخالفة معايير المجتمع.', { cause: banErr });
     }
   }
 
@@ -1362,7 +1362,9 @@ export async function submitChatReport({
               },
             })
           );
-        } catch {}
+        } catch (eventErr) {
+          console.debug('Event dispatch exception:', eventErr);
+        }
       }
       return {
         success: true,
@@ -1442,7 +1444,9 @@ export async function submitChatReport({
               },
             })
           );
-        } catch {}
+        } catch (eventErr) {
+          console.debug('Event dispatch exception:', eventErr);
+        }
       }
 
       return {
@@ -1495,7 +1499,9 @@ export async function submitChatReport({
           },
         })
       );
-    } catch {}
+    } catch (eventErr) {
+      console.debug('Event dispatch exception:', eventErr);
+    }
   }
 
   return {
@@ -1515,8 +1521,8 @@ export async function fetchAdminReports({
   page = 1,
   perPage = 10,
 } = {}) {
-  let reports = [];
-  let total = 0;
+  let reports;
+  let total;
   let supabaseError = null;
 
   try {
@@ -2142,7 +2148,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
-SET search_path = public, auth
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
   caller_id uuid;
@@ -2155,10 +2161,6 @@ BEGIN
   END IF;
 
   IF COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin' THEN
-    RETURN true;
-  END IF;
-
-  IF COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'admin' THEN
     RETURN true;
   END IF;
 

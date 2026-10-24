@@ -114,16 +114,18 @@ export default function Community() {
     }
   }, [session, currentUserInterests, lang]);
 
+  const currentUserId = session?.user?.id;
+
   // Load requests and conversations
   const loadRequestsAndConversations = useCallback(async () => {
-    if (!session?.user?.id) return;
+    if (!currentUserId) return;
     setRequestsLoading(true);
     setConversationsLoading(true);
     try {
       const [incoming, outgoing, convs] = await Promise.all([
-        fetchIncomingRequests(session.user.id),
-        fetchOutgoingRequests(session.user.id),
-        fetchConversations(session.user.id),
+        fetchIncomingRequests(currentUserId),
+        fetchOutgoingRequests(currentUserId),
+        fetchConversations(currentUserId),
       ]);
       setIncomingRequests(incoming || []);
       setOutgoingRequests(outgoing || []);
@@ -134,7 +136,7 @@ export default function Community() {
       setRequestsLoading(false);
       setConversationsLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [currentUserId]);
 
   useEffect(() => {
     loadProfiles();

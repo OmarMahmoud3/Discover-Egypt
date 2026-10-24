@@ -171,6 +171,36 @@ CREATE POLICY "Conversation participants can mark messages as read"
 
 
 
+-- 3.1 Rate Limiting Trigger on Messages (prevents automated flooding / DoS)
+CREATE OR REPLACE FUNCTION public.check_message_rate_limit()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+  recent_msg_count integer;
+BEGIN
+  -- Prevent automated flooding: max 15 messages per 10 seconds per sender
+  SELECT count(*) INTO recent_msg_count
+  FROM public.messages
+  WHERE sender_id = NEW.sender_id
+    AND created_at >= (timezone('utc'::text, now()) - interval '10 seconds');
+
+  IF recent_msg_count >= 15 THEN
+    RAISE EXCEPTION 'Rate limit exceeded: You are sending messages too quickly. Please wait a few seconds.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_check_message_rate_limit ON public.messages;
+CREATE TRIGGER trigger_check_message_rate_limit
+  BEFORE INSERT ON public.messages
+  FOR EACH ROW
+  EXECUTE FUNCTION public.check_message_rate_limit();
+
 -- 4. Enable Supabase Realtime Publication for instant delivery
 -- This broadcasts INSERT and UPDATE events to authenticated subscribers
 DO $$

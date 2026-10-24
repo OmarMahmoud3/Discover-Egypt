@@ -1,13 +1,26 @@
-const { chromium } = require('C:/Users/om776/AppData/Roaming/npm/node_modules/@playwright/cli/node_modules/playwright');
+let chromium;
+try {
+  ({ chromium } = require('playwright'));
+} catch {
+  try {
+    ({ chromium } = require('C:/Users/om776/AppData/Roaming/npm/node_modules/@playwright/cli/node_modules/playwright'));
+  } catch (err) {
+    console.error('Playwright could not be loaded. Please install playwright locally or globally.', err?.message);
+    process.exit(0);
+  }
+}
+
 const path = require('path');
 const fs = require('fs');
 
+const BASE_URL = process.env.BASE_URL || 'http://localhost:4173';
 const OUT_DIR = path.join(__dirname, '..', 'audit-screenshots', 'favorites-responsive');
 if (!fs.existsSync(OUT_DIR)) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 }
 
 async function run() {
+  if (!chromium) return;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const viewports = [
     { name: 'desktop-1920', width: 1920, height: 1080 },
@@ -35,7 +48,7 @@ async function run() {
         localStorage.setItem('discover_egypt_lang', l);
       }, lang);
 
-      await page.goto('http://localhost:4173/favorites', { waitUntil: 'networkidle' });
+      await page.goto(`${BASE_URL}/favorites`, { waitUntil: 'networkidle' });
       try {
         await page.waitForSelector('.journal-entry-card', { timeout: 8000 });
       } catch (e) {

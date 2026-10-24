@@ -94,9 +94,12 @@ export default function LogIn({ session, onClose }) {
         if (error) throw error;
 
         const emailClean = (email || '').toLowerCase().trim();
-        const isAdminUser = ['om7765355@gmail.com', 'omarmahmoud3@gmail.com'].includes(emailClean) ||
-          data?.user?.app_metadata?.role === 'admin' ||
-          data?.user?.user_metadata?.role === 'admin';
+        const envAdminEmails = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ADMIN_EMAILS)
+          ? import.meta.env.VITE_ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase())
+          : null;
+        const adminEmails = envAdminEmails || ['om7765355@gmail.com', 'omarmahmoud3@gmail.com'];
+        const isAdminUser = adminEmails.includes(emailClean) ||
+          data?.user?.app_metadata?.role === 'admin';
 
         setMessage(t('auth.successLogin'));
         setTimeout(() => {

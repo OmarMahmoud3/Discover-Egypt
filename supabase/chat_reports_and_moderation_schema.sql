@@ -23,7 +23,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
-SET search_path = public, auth
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
   caller_id uuid;
@@ -40,18 +40,13 @@ BEGIN
     RETURN true;
   END IF;
 
-  -- B. Check user_metadata role if provisioned
-  IF COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'admin' THEN
-    RETURN true;
-  END IF;
-
-  -- C. Check verified JWT email against designated administrator accounts
+  -- B. Check verified JWT email against designated administrator accounts
   caller_email := LOWER(COALESCE(auth.jwt() ->> 'email', ''));
   IF caller_email IN ('om7765355@gmail.com', 'omarmahmoud3@gmail.com') THEN
     RETURN true;
   END IF;
 
-  -- D. Check public.profiles role = 'admin' safely bypassing RLS via SECURITY DEFINER
+  -- C. Check public.profiles role = 'admin' safely bypassing RLS via SECURITY DEFINER
   SELECT (role = 'admin') INTO is_admin_flag
   FROM public.profiles
   WHERE id = caller_id;
